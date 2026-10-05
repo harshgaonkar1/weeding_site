@@ -1,0 +1,1051 @@
+// API Service for Multi-Wedding, Guest Logistics & Call Center Management
+
+const API_BASE_URL = "http://localhost:5000/api";
+
+// Initial fallback users
+export const DEFAULT_USERS = {
+  admin: {
+    id: "user_admin_01",
+    name: "Manish",
+    email: "admin@weddingsite.com",
+    role: "admin",
+    phone: "+91 98765 00001",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+  },
+  callCenter: {
+    id: "user_agent_01",
+    name: "Sarah (Call Desk)",
+    email: "callcenter@weddingsite.com",
+    role: "call_center",
+    phone: "+91 98765 00002",
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+  },
+};
+
+// Initial seed / fallback weddings
+const INITIAL_FALLBACK_WEDDINGS = [
+  {
+    id: "wedding_01",
+    groom_name: "Aaditya Roy",
+    bride_name: "Ananya Sharma",
+    wedding_date: "2026-11-28",
+    venue: "The Oberoi Udaivilas",
+    city: "Udaipur, Rajasthan",
+    cover_theme: "emerald",
+    notes: "Royal Palace Wedding with 3-day celebrations & Sangeet",
+    client_username: "aaditya_ananya",
+    client_password: "Aaditya@2026",
+    total_guests: 2,
+    confirmed_guests: 2,
+    bride_guests: 1,
+    groom_guests: 1,
+  },
+  {
+    id: "wedding_02",
+    groom_name: "Rohan Varma",
+    bride_name: "Priya Desai",
+    wedding_date: "2026-12-15",
+    venue: "Taj Exotica Resort & Spa",
+    city: "Goa",
+    cover_theme: "rose",
+    notes: "Beachside sunset wedding and Sangeet evening",
+    client_username: "rohan_priya",
+    client_password: "Rohan@2026",
+    total_guests: 1,
+    confirmed_guests: 1,
+    bride_guests: 1,
+    groom_guests: 0,
+  },
+  {
+    id: "wedding_03",
+    groom_name: "Aarav Kapoor",
+    bride_name: "Meera Singhania",
+    wedding_date: "2027-01-20",
+    venue: "ITC Grand Chola",
+    city: "Chennai",
+    cover_theme: "purple",
+    notes: "Traditional South Indian & North Indian fusion wedding",
+    client_username: "aarav_meera",
+    client_password: "Aarav@2027",
+    total_guests: 0,
+    confirmed_guests: 0,
+    bride_guests: 0,
+    groom_guests: 0,
+  },
+];
+
+// Initial seed guests scoped to weddings
+const INITIAL_FALLBACK_GUESTS = [
+  {
+    id: "guest_viggnesh_02",
+    wedding_id: "wedding_01",
+    sr_no: 2,
+    guest_name: "Viggnesh",
+    contact: "88888888",
+    side: "Groom",
+    rsvp_status: "Confirmed",
+    id_card_received: "Yes",
+    arrival_date: "2026-09-07",
+    arrival_time: "10:00 AM",
+    arrival_location: "Mumbai Int. Airport (T2)",
+    arrival_flight_train_no: "AI-682",
+    departure_date: "2026-09-10",
+    departure_time: "06:30 PM",
+    departure_location: "Mumbai Int. Airport (T2)",
+    departure_flight_train_no: "AI-894",
+    id_card_copy: null,
+    special_request: "Vegetarian breakfast preference",
+    call_count: 3,
+    call_status: "RSVP Confirmed",
+    last_called_at: "2026-09-20 11:30:00",
+    last_call_summary: "Confirmed 3-day stay and room requirement. Requested airport cab on arrival.",
+    created_at: "2026-09-01T10:00:00.000Z",
+  },
+  {
+    id: "guest_manish_04",
+    wedding_id: "wedding_01",
+    sr_no: 4,
+    guest_name: "Manish",
+    contact: "352148752",
+    side: "Bride",
+    rsvp_status: "Confirmed",
+    id_card_received: "Yes",
+    arrival_date: "2024-09-20",
+    arrival_time: "02:15 PM",
+    arrival_location: "Delhi Airport Terminal 3",
+    arrival_flight_train_no: "6E-409",
+    departure_date: "2024-09-23",
+    departure_time: "11:00 AM",
+    departure_location: "Delhi Airport Terminal 3",
+    departure_flight_train_no: "6E-412",
+    id_card_copy: "government_id_verified.pdf",
+    special_request: "Need wheelchair assistance and vegetarian meal preference.",
+    call_count: 1,
+    call_status: "Connected",
+    last_called_at: "2026-09-22 15:00:00",
+    last_call_summary: "Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle.",
+    created_at: "2026-09-02T12:30:00.000Z",
+  },
+  {
+    id: "guest_sophia_01",
+    wedding_id: "wedding_02",
+    sr_no: 1,
+    guest_name: "Sophia Rodriguez",
+    contact: "+91 98765 43210",
+    side: "Bride",
+    rsvp_status: "Confirmed",
+    id_card_received: "Yes",
+    arrival_date: "2026-12-14",
+    arrival_time: "01:00 PM",
+    arrival_location: "Goa Dabolim Airport (GOI)",
+    arrival_flight_train_no: "6E-241",
+    departure_date: "2026-12-17",
+    departure_time: "11:30 AM",
+    departure_location: "Goa Dabolim Airport (GOI)",
+    departure_flight_train_no: "6E-244",
+    id_card_copy: "passport_sophia.pdf",
+    special_request: "Sea-facing room preference",
+    call_count: 2,
+    call_status: "Callback Requested",
+    last_called_at: "2026-09-23 10:15:00",
+    last_call_summary: "Called 2nd time. Sophia requested a callback on Friday to confirm travel dates.",
+    created_at: "2026-09-03T14:00:00.000Z",
+  },
+];
+
+// Initial fallback call logs
+const INITIAL_FALLBACK_CALL_LOGS = {
+  guest_viggnesh_02: [
+    {
+      id: "call_log_01",
+      guest_id: "guest_viggnesh_02",
+      call_number: 1,
+      agent_name: "Sarah (Call Desk)",
+      call_outcome: "No Answer",
+      call_summary: "Called at 11:00 AM. Phone rang without answer. Scheduled 2nd attempt for tomorrow.",
+      called_at: "2026-09-18 11:00:00",
+    },
+    {
+      id: "call_log_02",
+      guest_id: "guest_viggnesh_02",
+      call_number: 2,
+      agent_name: "Sarah (Call Desk)",
+      call_outcome: "Connected",
+      call_summary: "Spoke with guest. He requested time till evening to verify flight AI-682 tickets.",
+      called_at: "2026-09-19 14:30:00",
+    },
+    {
+      id: "call_log_03",
+      guest_id: "guest_viggnesh_02",
+      call_number: 3,
+      agent_name: "Sarah (Call Desk)",
+      call_outcome: "RSVP Confirmed",
+      call_summary: "3rd call checkpoint complete. Confirmed 3-day stay, vegetarian breakfast, and cab pickup at Mumbai T2.",
+      called_at: "2026-09-20 11:30:00",
+    },
+  ],
+  guest_manish_04: [
+    {
+      id: "call_log_04",
+      guest_id: "guest_manish_04",
+      call_number: 1,
+      agent_name: "Sarah (Call Desk)",
+      call_outcome: "Connected",
+      call_summary: "1st call checkpoint: Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle pickup.",
+      called_at: "2026-09-22 15:00:00",
+    },
+  ],
+};
+
+// Helper to manage localStorage cache
+const getCachedWeddings = () => {
+  try {
+    const cached = localStorage.getItem("manish_weddings_data");
+    const weddingList = cached ? JSON.parse(cached) : INITIAL_FALLBACK_WEDDINGS;
+    const guests = getCachedGuests();
+
+    return weddingList.map((w) => {
+      const wGuests = guests.filter((g) => g.wedding_id === w.id);
+      const confirmed = wGuests.filter(
+        (g) => (g.rsvp_status || "").toLowerCase() === "confirmed"
+      ).length;
+      const bride = wGuests.filter(
+        (g) => (g.side || "").toLowerCase() === "bride"
+      ).length;
+      const groom = wGuests.filter(
+        (g) => (g.side || "").toLowerCase() === "groom"
+      ).length;
+      return {
+        ...w,
+        total_guests: wGuests.length,
+        confirmed_guests: confirmed,
+        bride_guests: bride,
+        groom_guests: groom,
+      };
+    });
+  } catch (e) { }
+  return INITIAL_FALLBACK_WEDDINGS;
+};
+
+const setCachedWeddings = (weddings) => {
+  try {
+    localStorage.setItem("manish_weddings_data", JSON.stringify(weddings));
+  } catch (e) { }
+};
+
+const getCachedGuests = () => {
+  try {
+    const cached = localStorage.getItem("manish_guest_data_v3");
+    if (cached) return JSON.parse(cached);
+  } catch (e) { }
+  return INITIAL_FALLBACK_GUESTS;
+};
+
+const setCachedGuests = (guests) => {
+  try {
+    localStorage.setItem("manish_guest_data_v3", JSON.stringify(guests));
+  } catch (e) { }
+};
+
+const getCachedCallLogs = (guestId) => {
+  try {
+    const all = JSON.parse(localStorage.getItem("manish_call_logs_v1") || "{}");
+    return all[guestId] || INITIAL_FALLBACK_CALL_LOGS[guestId] || [];
+  } catch (e) { }
+  return INITIAL_FALLBACK_CALL_LOGS[guestId] || [];
+};
+
+const setCachedCallLogs = (guestId, logs) => {
+  try {
+    const all = JSON.parse(localStorage.getItem("manish_call_logs_v1") || "{}");
+    all[guestId] = logs;
+    localStorage.setItem("manish_call_logs_v1", JSON.stringify(all));
+  } catch (e) { }
+};
+
+// Calculate stats from list
+export const calculateStatsFromList = (guests = []) => {
+  const total = guests.length;
+
+  const groomGuests = guests.filter((g) => (g.side || "").toLowerCase() === "groom");
+  const brideGuests = guests.filter((g) => (g.side || "").toLowerCase() === "bride");
+
+  const groomCount = groomGuests.length;
+  const brideCount = brideGuests.length;
+
+  // RSVP Check helpers
+  const isConfirmedRsvp = (status = "") => status.toLowerCase() === "confirmed";
+  const isPendingRsvp = (status = "") => status.toLowerCase() === "pending";
+  const isDeclinedRsvp = (status = "") => {
+    const s = status.toLowerCase();
+    return s === "declined" || s.includes("regret") || s.includes("not attending") || s.includes("not coming") || s === "no";
+  };
+
+  // RSVP Confirmed
+  const confirmed = guests.filter((g) => isConfirmedRsvp(g.rsvp_status || "")).length;
+  const groomConfirmed = groomGuests.filter((g) => isConfirmedRsvp(g.rsvp_status || "")).length;
+  const brideConfirmed = brideGuests.filter((g) => isConfirmedRsvp(g.rsvp_status || "")).length;
+
+  // RSVP Pending
+  const pending = guests.filter((g) => isPendingRsvp(g.rsvp_status || "")).length;
+  const groomPending = groomGuests.filter((g) => isPendingRsvp(g.rsvp_status || "")).length;
+  const bridePending = brideGuests.filter((g) => isPendingRsvp(g.rsvp_status || "")).length;
+
+  // RSVP Regrets / Declined (Not Coming)
+  const declined = guests.filter((g) => isDeclinedRsvp(g.rsvp_status || "")).length;
+  const groomDeclined = groomGuests.filter((g) => isDeclinedRsvp(g.rsvp_status || "")).length;
+  const brideDeclined = brideGuests.filter((g) => isDeclinedRsvp(g.rsvp_status || "")).length;
+
+  // ID Cards
+  const idReceived = guests.filter(
+    (g) => (g.id_card_received || "").toLowerCase() === "yes"
+  ).length;
+  const groomIdReceived = groomGuests.filter(
+    (g) => (g.id_card_received || "").toLowerCase() === "yes"
+  ).length;
+  const brideIdReceived = brideGuests.filter(
+    (g) => (g.id_card_received || "").toLowerCase() === "yes"
+  ).length;
+
+  // Confirmed Flight / Travel Details
+  const hasFlight = (g) =>
+    (g.arrival_flight_train_no && g.arrival_flight_train_no.trim() !== "") ||
+    (g.arrival_date && g.arrival_date.trim() !== "") ||
+    (g.departure_flight_train_no && g.departure_flight_train_no.trim() !== "") ||
+    (g.departure_date && g.departure_date.trim() !== "");
+
+  const flightReceived = guests.filter(hasFlight).length;
+  const groomFlightReceived = groomGuests.filter(hasFlight).length;
+  const brideFlightReceived = brideGuests.filter(hasFlight).length;
+
+  // Travel Logistics stats
+  const arrivalSet = guests.filter(
+    (g) => g.arrival_date || g.arrival_flight_train_no || g.arrival_time
+  ).length;
+  const groomArrivalSet = groomGuests.filter(
+    (g) => g.arrival_date || g.arrival_flight_train_no || g.arrival_time
+  ).length;
+  const brideArrivalSet = brideGuests.filter(
+    (g) => g.arrival_date || g.arrival_flight_train_no || g.arrival_time
+  ).length;
+
+  const departureSet = guests.filter(
+    (g) => g.departure_date || g.departure_flight_train_no || g.departure_time
+  ).length;
+  const groomDepartureSet = groomGuests.filter(
+    (g) => g.departure_date || g.departure_flight_train_no || g.departure_time
+  ).length;
+  const brideDepartureSet = brideGuests.filter(
+    (g) => g.departure_date || g.departure_flight_train_no || g.departure_time
+  ).length;
+
+  const specialRequests = guests.filter(
+    (g) => g.special_request && g.special_request.trim() !== ""
+  ).length;
+
+  const notCalled = guests.filter((g) => !g.call_count || g.call_count === 0).length;
+  const call1 = guests.filter((g) => g.call_count === 1).length;
+  const call2 = guests.filter((g) => g.call_count === 2).length;
+  const call3Done = guests.filter((g) => (g.call_count || 0) >= 3).length;
+  const groomCall3Done = groomGuests.filter((g) => (g.call_count || 0) >= 3).length;
+  const brideCall3Done = brideGuests.filter((g) => (g.call_count || 0) >= 3).length;
+
+  const groomCallsInProgress = Math.max(0, groomCount - groomCall3Done);
+  const brideCallsInProgress = Math.max(0, brideCount - brideCall3Done);
+
+  const callConnected = guests.filter(
+    (g) => (g.call_status || "").toLowerCase().includes("connected") || (g.call_status || "").toLowerCase().includes("confirmed")
+  ).length;
+  const callback = guests.filter(
+    (g) => (g.call_status || "").toLowerCase().includes("callback")
+  ).length;
+
+  return {
+    totalRegistered: total,
+    groomSideCount: groomCount,
+    brideSideCount: brideCount,
+    bothSideCount: 0,
+
+    rsvpConfirmed: confirmed,
+    rsvpConfirmedPercentage: total > 0 ? Math.round((confirmed / total) * 100) : 0,
+    groomRsvpConfirmed: groomConfirmed,
+    brideRsvpConfirmed: brideConfirmed,
+    bothRsvpConfirmed: 0,
+
+    rsvpPending: pending,
+    rsvpPendingPercentage: total > 0 ? Math.round((pending / total) * 100) : 0,
+    groomRsvpPending: groomPending,
+    brideRsvpPending: bridePending,
+    bothRsvpPending: 0,
+
+    rsvpDeclined: declined,
+    rsvpDeclinedPercentage: total > 0 ? Math.round((declined / total) * 100) : 0,
+    groomRsvpDeclined: groomDeclined,
+    brideRsvpDeclined: brideDeclined,
+    bothRsvpDeclined: 0,
+
+    idCardReceived: idReceived,
+    idCardReceivedPercentage: total > 0 ? Math.round((idReceived / total) * 100) : 0,
+    groomIdCardReceived: groomIdReceived,
+    brideIdCardReceived: brideIdReceived,
+    bothIdCardReceived: 0,
+
+    flightDetailsReceived: flightReceived,
+    flightDetailsPercentage: total > 0 ? Math.round((flightReceived / total) * 100) : 0,
+    groomFlightDetailsReceived: groomFlightReceived,
+    brideFlightDetailsReceived: brideFlightReceived,
+    bothFlightDetailsReceived: 0,
+
+    arrivalSetCount: arrivalSet,
+    groomArrivalSet: groomArrivalSet,
+    brideArrivalSet: brideArrivalSet,
+
+    departureSetCount: departureSet,
+    groomDepartureSet: groomDepartureSet,
+    brideDepartureSet: brideDepartureSet,
+
+    specialRequests: specialRequests,
+    notCalledCount: notCalled,
+    call1Count: call1,
+    call2Count: call2,
+    call3CompletedCount: call3Done,
+    call3Percentage: total > 0 ? Math.round((call3Done / total) * 100) : 0,
+    groomCall3CompletedCount: groomCall3Done,
+    brideCall3CompletedCount: brideCall3Done,
+    groomCallsInProgress: groomCallsInProgress,
+    brideCallsInProgress: brideCallsInProgress,
+
+    callConnectedCount: callConnected,
+    callbackCount: callback,
+  };
+};
+
+// Helper to auto-generate marriage client portal credentials
+export const generateWeddingCredentials = (groomName = "", brideName = "", weddingDate = "") => {
+  const groomFirst = (groomName || "groom").trim().split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "") || "groom";
+  const brideFirst = (brideName || "bride").trim().split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "") || "bride";
+  const username = `${groomFirst}_${brideFirst}`;
+
+  let year = "2026";
+  if (weddingDate && weddingDate.length >= 4) {
+    const matchedYear = weddingDate.match(/\d{4}/);
+    if (matchedYear) year = matchedYear[0];
+  }
+
+  const capGroom = groomFirst.charAt(0).toUpperCase() + groomFirst.slice(1);
+  const password = `${capGroom}@${year}`;
+
+  return { username, password };
+};
+
+export const api = {
+  // ------------------- AUTHENTICATION -------------------
+  async login(identifier, password) {
+    const cleanId = (identifier || "").trim();
+    const cleanPass = (password || "").trim();
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanId, username: cleanId, password: cleanPass }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json;
+      } else {
+        const errorJson = await res.json().catch(() => ({}));
+        throw new Error(errorJson.message || "Invalid credentials");
+      }
+    } catch (e) {
+      if (e.message && e.message !== "Failed to fetch") {
+        throw e;
+      }
+    }
+
+    // Client fallback login
+    const idLower = cleanId.toLowerCase();
+
+    // 1. Admin Fallback
+    if (idLower === "admin" || idLower.includes("admin")) {
+      if (cleanPass !== "manish1122" && cleanPass !== "admin123") {
+        throw new Error("Invalid Admin password. Default is manish1122 or admin123.");
+      }
+      return {
+        success: true,
+        message: "Welcome back, Manish (Admin)!",
+        user: DEFAULT_USERS.admin,
+        token: `mock_admin_${Date.now()}`,
+      };
+    }
+
+    // 2. Call Center Fallback
+    if (idLower === "callcenter" || idLower.includes("call") || idLower.includes("agent") || idLower === "telecaller") {
+      if (cleanPass !== "call123" && cleanPass !== "callcenter123") {
+        throw new Error("Invalid Call Center password. Default is call123.");
+      }
+      return {
+        success: true,
+        message: "Welcome back, Sarah (Call Center Desk)!",
+        user: DEFAULT_USERS.callCenter,
+        token: `mock_call_center_${Date.now()}`,
+      };
+    }
+
+    // 3. Marriage / Client Portal Fallback
+    const weddings = getCachedWeddings();
+    const matchingWedding = weddings.find((w) => {
+      const userMatch =
+        (w.client_username && w.client_username.toLowerCase() === idLower) ||
+        (w.id && w.id.toLowerCase() === idLower) ||
+        `${w.groom_name?.toLowerCase()}_${w.bride_name?.toLowerCase()}`.replace(/\s+/g, "") === idLower;
+
+      const passMatch = w.client_password && w.client_password.trim() === cleanPass;
+      return userMatch && passMatch;
+    });
+
+    if (matchingWedding) {
+      const clientUser = {
+        id: `marriage_${matchingWedding.id}`,
+        name: `${matchingWedding.groom_name} & ${matchingWedding.bride_name}`,
+        email: `${matchingWedding.client_username || matchingWedding.id}@weddingportal.com`,
+        username: matchingWedding.client_username || matchingWedding.id,
+        role: "marriage_client",
+        wedding_id: matchingWedding.id,
+        venue: matchingWedding.venue,
+        city: matchingWedding.city,
+        wedding_date: matchingWedding.wedding_date,
+        cover_theme: matchingWedding.cover_theme,
+        avatar: null,
+        is_view_only: true,
+        wedding: matchingWedding,
+      };
+
+      return {
+        success: true,
+        message: `Welcome to ${matchingWedding.groom_name} & ${matchingWedding.bride_name}'s Wedding Portal!`,
+        user: clientUser,
+        token: `mock_client_${matchingWedding.id}_${Date.now()}`,
+      };
+    }
+
+    throw new Error("Invalid username, User ID, or password. Please check your credentials.");
+  },
+
+  async getMe(userId) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/me?userId=${userId}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json.user;
+      }
+    } catch (e) { }
+    return null;
+  },
+
+  // ------------------- WEDDINGS (MARRIAGE CARDS) -------------------
+  async fetchWeddings() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/weddings`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setCachedWeddings(json.data);
+          return json.data;
+        }
+      }
+    } catch (e) { }
+    return getCachedWeddings();
+  },
+
+  async createWedding(weddingData) {
+    // Generate credentials if not supplied
+    const creds = generateWeddingCredentials(
+      weddingData.groom_name,
+      weddingData.bride_name,
+      weddingData.wedding_date
+    );
+
+    const payload = {
+      ...weddingData,
+      client_username: weddingData.client_username || creds.username,
+      client_password: weddingData.client_password || creds.password,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/weddings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json.data;
+      }
+    } catch (e) { }
+
+    const list = getCachedWeddings();
+    const newWedding = {
+      ...payload,
+      id: `wedding_${Date.now().toString(36)}`,
+      created_at: new Date().toISOString(),
+      total_guests: 0,
+      confirmed_guests: 0,
+      bride_guests: 0,
+      groom_guests: 0,
+    };
+    const updated = [newWedding, ...list];
+    setCachedWeddings(updated);
+    return newWedding;
+  },
+
+  async updateWedding(id, weddingData) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(weddingData),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json.data;
+      }
+    } catch (e) { }
+
+    const list = getCachedWeddings();
+    const idx = list.findIndex((w) => w.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...weddingData };
+      setCachedWeddings(list);
+      return list[idx];
+    }
+    return null;
+  },
+
+  async deleteWedding(id) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return true;
+      }
+    } catch (e) { }
+
+    const list = getCachedWeddings().filter((w) => w.id !== id);
+    setCachedWeddings(list);
+    const guests = getCachedGuests().filter((g) => g.wedding_id !== id);
+    setCachedGuests(guests);
+    return true;
+  },
+
+  // ------------------- GUESTS & CALL TRACKING -------------------
+  async fetchGuests({
+    weddingId = "all",
+    side = "All",
+    search = "",
+    rsvp = "All",
+    idCard = "All",
+    callStatus = "All",
+    callAttempts = "All",
+  } = {}) {
+    try {
+      const params = new URLSearchParams();
+      if (weddingId && weddingId !== "all") params.append("weddingId", weddingId);
+      if (side && side !== "All") params.append("side", side);
+      if (search) params.append("search", search);
+      if (rsvp && rsvp !== "All") params.append("rsvp", rsvp);
+      if (idCard && idCard !== "All") params.append("idCard", idCard);
+      if (callStatus && callStatus !== "All") params.append("callStatus", callStatus);
+      if (callAttempts && callAttempts !== "All") params.append("callAttempts", callAttempts);
+
+      const res = await fetch(`${API_BASE_URL}/guests?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          return { data: json.data, source: "backend" };
+        }
+      }
+    } catch (e) { }
+
+    // Local client fallback
+    let list = getCachedGuests();
+    if (weddingId && weddingId !== "all") {
+      list = list.filter((g) => g.wedding_id === weddingId);
+    }
+    if (side && side !== "All") {
+      list = list.filter((g) => (g.side || "").toLowerCase() === side.toLowerCase());
+    }
+    if (search && search.trim() !== "") {
+      const q = search.toLowerCase().trim();
+      list = list.filter(
+        (g) =>
+          (g.guest_name && g.guest_name.toLowerCase().includes(q)) ||
+          (g.contact && g.contact.toLowerCase().includes(q)) ||
+          (g.arrival_flight_train_no && g.arrival_flight_train_no.toLowerCase().includes(q)) ||
+          (g.departure_flight_train_no && g.departure_flight_train_no.toLowerCase().includes(q)) ||
+          (g.arrival_location && g.arrival_location.toLowerCase().includes(q)) ||
+          (g.departure_location && g.departure_location.toLowerCase().includes(q)) ||
+          (g.special_request && g.special_request.toLowerCase().includes(q)) ||
+          (g.last_call_summary && g.last_call_summary.toLowerCase().includes(q))
+      );
+    }
+    if (rsvp && rsvp !== "All") {
+      list = list.filter((g) => (g.rsvp_status || "").toLowerCase() === rsvp.toLowerCase());
+    }
+    if (idCard && idCard !== "All") {
+      const isYes = idCard.includes("Yes") || idCard.toLowerCase() === "yes";
+      list = list.filter((g) => (g.id_card_received || "").toLowerCase() === (isYes ? "yes" : "no"));
+    }
+    if (callStatus && callStatus !== "All") {
+      list = list.filter((g) => (g.call_status || "").toLowerCase() === callStatus.toLowerCase());
+    }
+    if (callAttempts && callAttempts !== "All") {
+      if (callAttempts === "0" || callAttempts === "Not Called") {
+        list = list.filter((g) => !g.call_count || g.call_count === 0);
+      } else if (callAttempts === "1" || callAttempts === "1 Call") {
+        list = list.filter((g) => g.call_count === 1);
+      } else if (callAttempts === "2" || callAttempts === "2 Calls") {
+        list = list.filter((g) => g.call_count === 2);
+      } else if (callAttempts === "3+" || callAttempts === "3 Calls Completed" || callAttempts === "3") {
+        list = list.filter((g) => (g.call_count || 0) >= 3);
+      }
+    }
+
+    return { data: list, source: "local" };
+  },
+
+  async fetchStats(weddingId = "all") {
+    try {
+      const params = weddingId && weddingId !== "all" ? `?weddingId=${weddingId}` : "";
+      const res = await fetch(`${API_BASE_URL}/guests/stats${params}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) return json.data;
+      }
+    } catch (e) { }
+
+    let list = getCachedGuests();
+    if (weddingId && weddingId !== "all") {
+      list = list.filter((g) => g.wedding_id === weddingId);
+    }
+    return calculateStatsFromList(list);
+  },
+
+  async createGuest(guestData) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/guests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(guestData),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json.data;
+      }
+    } catch (e) { }
+
+    const list = getCachedGuests();
+    const nextSr = list.length > 0 ? Math.max(...list.map((g) => Number(g.sr_no) || 0)) + 1 : 1;
+    const newGuest = {
+      ...guestData,
+      id: `guest_${Date.now().toString(36)}`,
+      sr_no: guestData.sr_no || nextSr,
+      wedding_id: guestData.wedding_id || "wedding_01",
+      side: guestData.side || "Groom",
+      call_count: guestData.call_count || 0,
+      call_status: guestData.call_status || "Not Called",
+      created_at: new Date().toISOString(),
+    };
+    const updatedList = [...list, newGuest];
+    setCachedGuests(updatedList);
+    return newGuest;
+  },
+
+  async bulkImportGuests(weddingId, guestList) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/guests/bulk-import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wedding_id: weddingId, guests: guestList }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json;
+      }
+    } catch (e) { }
+
+    // Fallback local cache
+    const list = getCachedGuests();
+    let nextSr = list.length > 0 ? Math.max(...list.map((g) => Number(g.sr_no) || 0)) + 1 : 1;
+    const newItems = guestList.map((g) => ({
+      ...g,
+      id: g.id || `guest_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      sr_no: g.sr_no || nextSr++,
+      wedding_id: weddingId || "wedding_01",
+      side: g.side || "Groom",
+      call_count: g.call_count || 0,
+      call_status: g.call_status || "Not Called",
+      created_at: new Date().toISOString(),
+    }));
+    setCachedGuests([...list, ...newItems]);
+    return { success: true, count: newItems.length, data: newItems };
+  },
+
+  async updateGuest(id, guestData) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/guests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(guestData),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json.data;
+      }
+    } catch (e) { }
+
+    const list = getCachedGuests();
+    const idx = list.findIndex((g) => g.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...guestData };
+      setCachedGuests(list);
+      return list[idx];
+    }
+    return null;
+  },
+
+  async deleteGuest(id) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/guests/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return true;
+      }
+    } catch (e) { }
+
+    const list = getCachedGuests().filter((g) => g.id !== id);
+    setCachedGuests(list);
+    return true;
+  },
+
+  // ------------------- CALL LOGS & CHECKPOINTS -------------------
+  async fetchGuestCallLogs(guestId) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/call-logs/guest/${guestId}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setCachedCallLogs(guestId, json.data);
+          return { data: json.data, guest: json.guest };
+        }
+      }
+    } catch (e) { }
+
+    const logs = getCachedCallLogs(guestId);
+    return { data: logs };
+  },
+
+  async createCallLog(logData) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/call-logs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(logData),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json;
+      }
+    } catch (e) { }
+
+    // Fallback local call logging
+    const guestLogs = getCachedCallLogs(logData.guest_id);
+    const newCallNumber = guestLogs.length + 1;
+    const newLog = {
+      id: `call_log_${Date.now().toString(36)}`,
+      guest_id: logData.guest_id,
+      wedding_id: logData.wedding_id || "wedding_01",
+      call_number: newCallNumber,
+      agent_name: logData.agent_name || "Call Desk Agent",
+      call_outcome: logData.call_outcome || "Connected",
+      call_summary: logData.call_summary,
+      callback_date: logData.callback_date || null,
+      called_at: new Date().toISOString(),
+    };
+
+    const updatedLogs = [...guestLogs, newLog];
+    setCachedCallLogs(logData.guest_id, updatedLogs);
+
+    // Update guest in cache
+    const guests = getCachedGuests();
+    const guestIdx = guests.findIndex((g) => g.id === logData.guest_id);
+    if (guestIdx !== -1) {
+      guests[guestIdx].call_count = newCallNumber;
+      guests[guestIdx].call_status = logData.call_outcome || "Connected";
+      guests[guestIdx].last_called_at = new Date().toISOString();
+      guests[guestIdx].last_call_summary = logData.call_summary;
+      if (logData.update_rsvp) {
+        guests[guestIdx].rsvp_status = logData.update_rsvp;
+      }
+      setCachedGuests(guests);
+    }
+
+    return { success: true, data: newLog };
+  },
+
+  async updateCallLog(id, logData, guestId) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/call-logs/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(logData),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json.data;
+      }
+    } catch (e) { }
+
+    if (guestId) {
+      const logs = getCachedCallLogs(guestId);
+      const idx = logs.findIndex((l) => l.id === id);
+      if (idx !== -1) {
+        logs[idx] = { ...logs[idx], ...logData };
+        setCachedCallLogs(guestId, logs);
+        return logs[idx];
+      }
+    }
+    return null;
+  },
+
+  async deleteCallLog(id, guestId) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/call-logs/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return true;
+      }
+    } catch (e) { }
+
+    if (guestId) {
+      const logs = getCachedCallLogs(guestId).filter((l) => l.id !== id);
+      setCachedCallLogs(guestId, logs);
+    }
+    return true;
+  },
+
+  async fetchCallingStats(weddingId = "all") {
+    try {
+      const params = weddingId && weddingId !== "all" ? `?weddingId=${weddingId}` : "";
+      const res = await fetch(`${API_BASE_URL}/call-logs/stats${params}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) return json.data;
+      }
+    } catch (e) { }
+
+    const guests = getCachedGuests();
+    const filtered = weddingId && weddingId !== "all" ? guests.filter((g) => g.wedding_id === weddingId) : guests;
+    return {
+      totalGuests: filtered.length,
+      notCalledCount: filtered.filter((g) => !g.call_count || g.call_count === 0).length,
+      call1Count: filtered.filter((g) => g.call_count === 1).length,
+      call2Count: filtered.filter((g) => g.call_count === 2).length,
+      call3CompletedCount: filtered.filter((g) => (g.call_count || 0) >= 3).length,
+      connectedCount: filtered.filter((g) => (g.call_status || "").toLowerCase().includes("connected")).length,
+      callbackCount: filtered.filter((g) => (g.call_status || "").toLowerCase().includes("callback")).length,
+    };
+  },
+
+  // ------------------- CSV EXPORT -------------------
+  async exportCsv(weddingId = "all", side = "All", callStatus = "All", callAttempts = "All") {
+    try {
+      const params = new URLSearchParams();
+      if (weddingId && weddingId !== "all") params.append("weddingId", weddingId);
+      if (side && side !== "All") params.append("side", side);
+      if (callStatus && callStatus !== "All") params.append("callStatus", callStatus);
+      if (callAttempts && callAttempts !== "All") params.append("callAttempts", callAttempts);
+
+      const res = await fetch(`${API_BASE_URL}/guests/export/csv?${params.toString()}`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `guest_logistics_and_calls_${weddingId || "all"}_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return true;
+      }
+    } catch (e) { }
+
+    // Client fallback CSV
+    let list = getCachedGuests();
+    if (weddingId && weddingId !== "all") {
+      list = list.filter((g) => g.wedding_id === weddingId);
+    }
+    const headers = [
+      "Sr No",
+      "ID",
+      "Wedding ID",
+      "Guest Name",
+      "Contact",
+      "Side (Bride/Groom)",
+      "RSVP Status",
+      "ID Card Received",
+      "Call Attempts Count",
+      "Call Status",
+      "Last Call Discussion Notes",
+      "Arrival Date",
+      "Arrival Time",
+      "Arrival Location",
+      "Arrival Flight/Train No",
+      "Departure Date",
+      "Departure Time",
+      "Departure Location",
+      "Departure Flight/Train No",
+      "Special Request",
+    ];
+    const escapeCsv = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
+    const rows = list.map((g) => [
+      escapeCsv(g.sr_no),
+      escapeCsv(g.id),
+      escapeCsv(g.wedding_id),
+      escapeCsv(g.guest_name),
+      escapeCsv(g.contact),
+      escapeCsv(g.side),
+      escapeCsv(g.rsvp_status),
+      escapeCsv(g.id_card_received),
+      escapeCsv(`${g.call_count || 0} calls`),
+      escapeCsv(g.call_status || "Not Called"),
+      escapeCsv(g.last_call_summary || "None"),
+      escapeCsv(g.arrival_date),
+      escapeCsv(g.arrival_time),
+      escapeCsv(g.arrival_location),
+      escapeCsv(g.arrival_flight_train_no),
+      escapeCsv(g.departure_date),
+      escapeCsv(g.departure_time),
+      escapeCsv(g.departure_location),
+      escapeCsv(g.departure_flight_train_no),
+      escapeCsv(g.special_request),
+    ]);
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `guest_logistics_and_calls_${weddingId || "all"}_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    return true;
+  },
+};
