@@ -1,23 +1,36 @@
 # Dependencies
 node_modules/
+**/node_modules/
 dist/
 build/
 
 # Environment variables
 .env
 .env.local
-.env
 .env.*
+*.env
+**/.env
+**/.env.*
+**/*.env
 !.env.example
+!**/.env.example
 
 # Google Credentials & Secrets
 **/google_cred/
 **/google_cred/*
+**/google _cred/
+**/google _cred/*
 **/*service-account*.json
 **/*credentials*.json
 **/marriage-data-*.json
 google-credentials.json
 credentials.json
+
+# Exports & Generated files
+exports/
+**/exports/
+*.xlsx
+*.csv
 
 # Logs & Temporary Files
 *.log
