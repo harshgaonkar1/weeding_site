@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Calendar,
   MapPin,
@@ -10,6 +9,7 @@ import {
   Sparkles,
   CheckCircle2,
   KeyRound,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export default function WeddingCard({
@@ -18,6 +18,7 @@ export default function WeddingCard({
   onEdit,
   onDelete,
   onViewCredentials,
+  onOpenGoogleSheet,
 }) {
   const themeStyles = {
     emerald: {
@@ -73,6 +74,21 @@ export default function WeddingCard({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onOpenGoogleSheet && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenGoogleSheet(wedding);
+                }}
+                className="px-2.5 py-1 rounded-full bg-[#84e030]/25 hover:bg-[#84e030]/40 border border-[#84e030]/50 text-white transition-all text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
+                title="Live Google Sheet Two-Way Sync"
+              >
+                <FileSpreadsheet className="w-3 h-3 text-[#84e030]" />
+                <span>Sheet</span>
+              </button>
+            )}
+
             {onViewCredentials && (
               <button
                 type="button"

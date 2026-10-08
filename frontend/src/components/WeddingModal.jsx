@@ -161,7 +161,7 @@ export default function WeddingModal({
                 {initialData ? "Edit Marriage Card" : "Create New Marriage Card"}
               </h3>
               <p className="text-xs text-slate-500">
-                Set up wedding event & auto-generate client view credentials
+                Set up wedding event, auto-create Excel (.xlsx) sheet & client portal access
               </p>
             </div>
           </div>

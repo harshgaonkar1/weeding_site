@@ -50,7 +50,7 @@ export default function GuestTable({
         </div>
         <h3 className="text-sm font-bold text-slate-900">No guests found</h3>
         <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-          Try adjusting search filters, or click "Upload Excel" at the top to import guest spreadsheets.
+          Try adjusting search filters, or click "+ Add Guest" to register new guests.
         </p>
       </div>
     );

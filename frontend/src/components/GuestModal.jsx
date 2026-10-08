@@ -30,7 +30,6 @@ export default function GuestModal({
   isOpen,
   onClose,
   onSubmit,
-  onOpenExcelModal,
   initialData = null,
   isSubmitting = false,
   nextSrNo = 3,

@@ -1,4 +1,5 @@
 import { GuestModel } from "../models/guestModel.js";
+import { GoogleSheetsService } from "../services/googleSheetsService.js";
 
 // Helper for CSV escaping
 const escapeCsvField = (field) => {
@@ -95,6 +96,14 @@ export const guestController = {
       }
 
       const newGuest = await GuestModel.create(req.body);
+
+      // Auto-sync new guest to linked Google Sheet
+      if (newGuest?.wedding_id) {
+        GoogleSheetsService.pushGuestsToGoogleSheet(newGuest.wedding_id).catch((e) =>
+          console.warn("Auto Google Sheet sync note on create:", e.message)
+        );
+      }
+
       res.status(201).json({
         success: true,
         message: "Guest added successfully",
@@ -122,6 +131,14 @@ export const guestController = {
       }
 
       const imported = await GuestModel.bulkCreate(wedding_id, guests);
+
+      // Auto-sync imported guests to linked Google Sheet
+      if (wedding_id) {
+        GoogleSheetsService.pushGuestsToGoogleSheet(wedding_id).catch((e) =>
+          console.warn("Auto Google Sheet sync note on bulk import:", e.message)
+        );
+      }
+
       res.status(201).json({
         success: true,
         count: imported.length,
@@ -149,6 +166,14 @@ export const guestController = {
           message: `Guest with ID ${id} not found`,
         });
       }
+
+      // Auto-sync updated guest to linked Google Sheet
+      if (updatedGuest?.wedding_id) {
+        GoogleSheetsService.pushGuestsToGoogleSheet(updatedGuest.wedding_id).catch((e) =>
+          console.warn("Auto Google Sheet sync note on update:", e.message)
+        );
+      }
+
       res.status(200).json({
         success: true,
         message: "Guest updated successfully",
@@ -168,16 +193,35 @@ export const guestController = {
   async deleteGuest(req, res) {
     try {
       const { id } = req.params;
-      const success = await GuestModel.delete(id);
-      if (!success) {
+      const guest = await GuestModel.getById(id);
+      if (!guest) {
         return res.status(404).json({
           success: false,
           message: `Guest with ID ${id} not found`,
         });
       }
+
+      const weddingId = guest.wedding_id;
+      const success = await GuestModel.delete(id);
+      if (!success) {
+        return res.status(500).json({
+          success: false,
+          message: `Failed to delete guest with ID ${id}`,
+        });
+      }
+
+      // Automatically delete that exact row from the linked Google Sheet via deleteDimension
+      if (weddingId) {
+        try {
+          await GoogleSheetsService.deleteGuestRowFromSheet(weddingId, guest);
+        } catch (sheetErr) {
+          console.warn("Auto Google Sheet deleteDimension sync note on delete:", sheetErr.message);
+        }
+      }
+
       res.status(200).json({
         success: true,
-        message: "Guest deleted successfully",
+        message: "Guest deleted successfully and row removed from Google Sheet",
       });
     } catch (error) {
       console.error("Error deleting guest:", error);

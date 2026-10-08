@@ -1,5 +1,6 @@
 import pool from "../Db_connection/dbconnection.js";
 import crypto from "crypto";
+import { GoogleSheetsService } from "../services/googleSheetsService.js";
 
 export const WeddingModel = {
   // 1. Get all weddings with guest counts and stats
@@ -38,7 +39,7 @@ export const WeddingModel = {
     return rows[0] || null;
   },
 
-  // 3. Create wedding / marriage card (with auto-generated client credentials)
+  // 3. Create wedding / marriage card (with auto-generated client credentials & Google Sheet)
   async create(data) {
     const id = data.id || `wedding_${crypto.randomUUID().slice(0, 8)}`;
     
@@ -53,9 +54,30 @@ export const WeddingModel = {
     const defaultPassword = `${groomFirst.charAt(0).toUpperCase() + groomFirst.slice(1)}@${year}`;
     const client_password = (data.client_password && data.client_password.trim()) || defaultPassword;
 
+    // Generate or real create Google Sheet via Google Sheets API
+    let google_sheet_id = data.google_sheet_id;
+    let google_sheet_url = data.google_sheet_url;
+    let google_sheet_sync_status = data.google_sheet_sync_status || "connected";
+
+    if (!google_sheet_id || !google_sheet_url) {
+      try {
+        const sheetMeta = await GoogleSheetsService.generateOrRealCreateSheet({
+          ...data,
+          id,
+        });
+        google_sheet_id = sheetMeta.google_sheet_id;
+        google_sheet_url = sheetMeta.google_sheet_url;
+        google_sheet_sync_status = sheetMeta.google_sheet_sync_status;
+      } catch (err) {
+        console.warn("⚠️ Google Sheet auto-creation note:", err.message);
+      }
+    }
+
     const query = `
-      INSERT INTO weddings (id, groom_name, bride_name, wedding_date, venue, city, cover_theme, notes, client_username, client_password)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO weddings (
+        id, groom_name, bride_name, wedding_date, venue, city, cover_theme, notes, 
+        client_username, client_password, google_sheet_id, google_sheet_url, google_sheet_sync_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const values = [
       id,
@@ -68,6 +90,9 @@ export const WeddingModel = {
       data.notes || null,
       client_username,
       client_password,
+      google_sheet_id,
+      google_sheet_url,
+      google_sheet_sync_status,
     ];
     await pool.query(query, values);
     return this.getById(id);
@@ -88,7 +113,11 @@ export const WeddingModel = {
         cover_theme = COALESCE(?, cover_theme),
         notes = ?,
         client_username = COALESCE(?, client_username),
-        client_password = COALESCE(?, client_password)
+        client_password = COALESCE(?, client_password),
+        google_sheet_id = COALESCE(?, google_sheet_id),
+        google_sheet_url = COALESCE(?, google_sheet_url),
+        google_sheet_sync_status = COALESCE(?, google_sheet_sync_status),
+        google_sheet_last_synced = COALESCE(?, google_sheet_last_synced)
       WHERE id = ?
     `;
     const values = [
@@ -101,6 +130,10 @@ export const WeddingModel = {
       data.notes !== undefined ? data.notes : existing.notes,
       data.client_username !== undefined ? data.client_username : existing.client_username,
       data.client_password !== undefined ? data.client_password : existing.client_password,
+      data.google_sheet_id !== undefined ? data.google_sheet_id : existing.google_sheet_id,
+      data.google_sheet_url !== undefined ? data.google_sheet_url : existing.google_sheet_url,
+      data.google_sheet_sync_status !== undefined ? data.google_sheet_sync_status : existing.google_sheet_sync_status,
+      data.google_sheet_last_synced !== undefined ? data.google_sheet_last_synced : existing.google_sheet_last_synced,
       id,
     ];
     await pool.query(query, values);
@@ -130,9 +163,15 @@ export const WeddingModel = {
     return null;
   },
 
-  // 6. Delete wedding and its associated guests
+  // 6. Delete wedding and all its associated guests and call logs
   async delete(id) {
+    // 1. Delete associated call logs
+    await pool.query("DELETE FROM guest_call_logs WHERE wedding_id = ?", [id]).catch(() => {});
+    
+    // 2. Delete associated guests
     await pool.query("DELETE FROM guests WHERE wedding_id = ?", [id]);
+    
+    // 3. Delete the wedding record
     const [result] = await pool.query("DELETE FROM weddings WHERE id = ?", [id]);
     return result.affectedRows > 0;
   },

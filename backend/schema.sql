@@ -39,11 +39,16 @@ CREATE TABLE IF NOT EXISTS weddings (
   notes TEXT DEFAULT NULL,
   client_username VARCHAR(100) UNIQUE DEFAULT NULL,
   client_password VARCHAR(255) DEFAULT NULL,
+  google_sheet_id VARCHAR(255) DEFAULT NULL,
+  google_sheet_url VARCHAR(500) DEFAULT NULL,
+  google_sheet_sync_status VARCHAR(50) DEFAULT 'connected',
+  google_sheet_last_synced TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
   INDEX idx_wedding_date (wedding_date),
-  INDEX idx_client_username (client_username)
+  INDEX idx_client_username (client_username),
+  INDEX idx_google_sheet_id (google_sheet_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Guests & Logistics Table

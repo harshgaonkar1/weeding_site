@@ -37,6 +37,9 @@ export default function WeddingCredentialsModal({
   };
 
   const handleCopyAll = () => {
+    const sheetLink =
+      wedding.google_sheet_url ||
+      `https://docs.google.com/spreadsheets/d/${wedding.google_sheet_id || "wed_" + wedding.id}/edit`;
     const text = `Wedding Client Portal Access\n` +
       `Wedding: ${wedding.groom_name} & ${wedding.bride_name}\n` +
       `Date: ${wedding.wedding_date || "Upcoming"}\n` +
@@ -44,6 +47,7 @@ export default function WeddingCredentialsModal({
       `Login Credentials (View-Only Dashboard)\n` +
       `User ID / Username: ${username}\n` +
       `Password: ${password}\n\n` +
+      `Live Google Sheet: ${sheetLink}\n\n` +
       `Use this User ID and Password to view your guest arrivals, departures, RSVP confirmations, and travel details in real-time.`;
     navigator.clipboard.writeText(text);
     setCopiedField("all");
@@ -85,7 +89,7 @@ export default function WeddingCredentialsModal({
             {wedding.groom_name} & {wedding.bride_name}
           </h3>
           <p className="text-xs text-emerald-100/80 mt-0.5 font-normal">
-            Client View-Only Dashboard Credentials
+            Client View-Only Dashboard Credentials & Google Sheet
           </p>
         </div>
 
@@ -151,6 +155,27 @@ export default function WeddingCredentialsModal({
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+
+            {/* Google Sheet Link */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Generated Google Sheet (Two-Way Sync)
+              </span>
+              <div className="flex items-center justify-between bg-white border border-slate-200/90 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900">
+                <span className="truncate select-all text-emerald-800 text-[11px]">
+                  {wedding.google_sheet_url || `https://docs.google.com/spreadsheets/d/${wedding.google_sheet_id || "wed_" + wedding.id}/edit`}
+                </span>
+                <a
+                  href={wedding.google_sheet_url || `https://docs.google.com/spreadsheets/d/${wedding.google_sheet_id || "wed_" + wedding.id}/edit`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-700 hover:text-emerald-900 font-sans text-xs font-bold flex items-center gap-1 cursor-pointer ml-2 shrink-0"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Open</span>
+                </a>
               </div>
             </div>
           </div>

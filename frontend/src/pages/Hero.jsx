@@ -28,8 +28,8 @@ import WeddingModal from "../components/WeddingModal";
 import WeddingCredentialsModal from "../components/WeddingCredentialsModal";
 import LoginModal from "../components/LoginModal";
 import CallLogModal from "../components/CallLogModal";
-import ExcelImportModal from "../components/ExcelImportModal";
 import AdminPasswordModal from "../components/AdminPasswordModal";
+import GoogleSheetModal from "../components/GoogleSheetModal";
 import LoginPage from "./LoginPage";
 import { api, calculateStatsFromList } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -69,7 +69,6 @@ export default function Hero() {
 
   // Guest Modals State
   const [isAddGuestModalOpen, setIsAddGuestModalOpen] = useState(false);
-  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [editingGuest, setEditingGuest] = useState(null);
   const [viewingGuest, setViewingGuest] = useState(null);
   const [deletingGuest, setDeletingGuest] = useState(null);
@@ -82,10 +81,14 @@ export default function Hero() {
   const [editingWedding, setEditingWedding] = useState(null);
   const [deletingWedding, setDeletingWedding] = useState(null);
   const [isSubmittingWedding, setIsSubmittingWedding] = useState(false);
+  const [isDeletingWedding, setIsDeletingWedding] = useState(false);
 
   // Wedding Credentials Modal State (For sharing generated login info)
   const [credentialsModalWedding, setCredentialsModalWedding] = useState(null);
   const [isNewlyCreatedWedding, setIsNewlyCreatedWedding] = useState(false);
+
+  // Google Sheet Sync Modal State
+  const [googleSheetModalWedding, setGoogleSheetModalWedding] = useState(null);
 
   // Toast Notification
   const [toast, setToast] = useState(null);
@@ -230,6 +233,7 @@ export default function Hero() {
       return;
     }
     try {
+      setIsDeletingWedding(true);
       await api.deleteWedding(deletingWedding.id);
       showToast("Marriage card removed");
       if (selectedWedding?.id === deletingWedding.id) {
@@ -241,6 +245,8 @@ export default function Hero() {
       await loadGuests();
     } catch (err) {
       showToast("Failed to delete marriage card", "error");
+    } finally {
+      setIsDeletingWedding(false);
     }
   };
 
@@ -401,7 +407,6 @@ export default function Hero() {
           setActiveTab={setActiveTab}
           onOpenAddModal={handleOpenAddGuestModal}
           onOpenAddWeddingModal={handleOpenAddWeddingModal}
-          onOpenExcelModal={() => setIsExcelModalOpen(true)}
           selectedWedding={selectedWedding}
           weddings={weddings}
           onSelectWedding={handleSelectWedding}
@@ -497,6 +502,9 @@ export default function Hero() {
                       setCredentialsModalWedding(w);
                       setIsNewlyCreatedWedding(false);
                     }}
+                    onOpenGoogleSheet={(w) => {
+                      setGoogleSheetModalWedding(w);
+                    }}
                   />
                 ))}
               </div>
@@ -543,16 +551,18 @@ export default function Hero() {
 
                 {/* Top Actions */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  {!isViewOnly && (
-                    <button
-                      onClick={() => setIsExcelModalOpen(true)}
-                      className="bg-[#edf9df] hover:bg-[#dff5cb] border border-[#c3eeb0] text-[#1c4d25] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
-                      title="Upload Excel or CSV spreadsheet"
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#16a34a]" />
-                      <span>Upload Excel</span>
-                    </button>
-                  )}
+                  <button
+                    onClick={() =>
+                      setGoogleSheetModalWedding(
+                        selectedWedding || (weddings && weddings[0])
+                      )
+                    }
+                    className="bg-[#edf9df] hover:bg-[#dff5cb] border border-[#c3eeb0] text-[#1c4d25] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                    title="Live Google Sheet Two-Way Sync"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-[#16a34a]" />
+                    <span>Google Sheet Sync</span>
+                  </button>
 
                   <button
                     onClick={handleExportCsv}
@@ -663,7 +673,6 @@ export default function Hero() {
           setEditingGuest(null);
         }}
         onSubmit={handleGuestSubmit}
-        onOpenExcelModal={() => setIsExcelModalOpen(true)}
         initialData={editingGuest}
         isSubmitting={isSubmittingGuest}
         nextSrNo={nextSrNo}
@@ -692,6 +701,8 @@ export default function Hero() {
       {/* 7. Delete Confirmation Modal */}
       <DeleteModal
         isOpen={Boolean(deletingGuest || deletingWedding)}
+        wedding={deletingWedding}
+        guest={deletingGuest}
         onClose={() => {
           setDeletingGuest(null);
           setDeletingWedding(null);
@@ -705,32 +716,27 @@ export default function Hero() {
             ? `Are you sure you want to delete ${deletingWedding?.groom_name} & ${deletingWedding?.bride_name}'s wedding card? All guest registrations and call records will be permanently removed.`
             : `Are you sure you want to delete ${deletingGuest?.guest_name}? This action cannot be undone.`
         }
-        isDeleting={isDeletingGuest}
+        isDeleting={isDeletingGuest || isDeletingWedding}
       />
 
-      {/* 8. Excel / CSV Import Modal */}
-      <ExcelImportModal
-        isOpen={isExcelModalOpen}
-        weddingId={selectedWedding?.id || "wedding_01"}
-        weddingName={
-          selectedWedding
-            ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
-            : "Wedding Directory"
-        }
-        onClose={() => setIsExcelModalOpen(false)}
-        onImportSuccess={async (count) => {
-          showToast(`✓ Imported ${count} guests from spreadsheet!`);
-          await loadGuests();
-          await loadWeddings();
-        }}
-      />
-
-      {/* 9. Super Admin Password Verification Modal */}
+      {/* 8. Super Admin Password Verification Modal */}
       <AdminPasswordModal
         isOpen={isAdminPasswordModalOpen}
         onClose={() => setIsAdminPasswordModalOpen(false)}
         onSuccess={() => {
           showToast("Super Admin authenticated successfully!");
+        }}
+      />
+
+      {/* 10. Google Sheet Real-Time Sync Modal */}
+      <GoogleSheetModal
+        isOpen={Boolean(googleSheetModalWedding)}
+        wedding={googleSheetModalWedding}
+        onClose={() => setGoogleSheetModalWedding(null)}
+        onSyncSuccess={async () => {
+          showToast("✓ Google Sheet synchronized with database!");
+          await loadGuests();
+          await loadWeddings();
         }}
       />
     </div>

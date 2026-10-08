@@ -66,10 +66,15 @@ export const initDatabase = async () => {
         notes TEXT DEFAULT NULL,
         client_username VARCHAR(100) UNIQUE DEFAULT NULL,
         client_password VARCHAR(255) DEFAULT NULL,
+        google_sheet_id VARCHAR(255) DEFAULT NULL,
+        google_sheet_url VARCHAR(500) DEFAULT NULL,
+        google_sheet_sync_status VARCHAR(50) DEFAULT 'connected',
+        google_sheet_last_synced TIMESTAMP NULL DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_wedding_date (wedding_date),
-        INDEX idx_client_username (client_username)
+        INDEX idx_client_username (client_username),
+        INDEX idx_google_sheet_id (google_sheet_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
@@ -160,21 +165,48 @@ export const initDatabase = async () => {
         await pool.query("ALTER TABLE weddings ADD COLUMN client_password VARCHAR(255) DEFAULT NULL AFTER client_username;");
       }
 
-      // Backfill default credentials for sample weddings if empty
+      if (!wedColNames.includes("google_sheet_id")) {
+        console.log("🛠️ Migrating: Adding missing 'google_sheet_id' column to weddings...");
+        await pool.query("ALTER TABLE weddings ADD COLUMN google_sheet_id VARCHAR(255) DEFAULT NULL AFTER client_password;");
+        await pool.query("ALTER TABLE weddings ADD INDEX idx_google_sheet_id (google_sheet_id);");
+      }
+
+      if (!wedColNames.includes("google_sheet_url")) {
+        console.log("🛠️ Migrating: Adding missing 'google_sheet_url' column to weddings...");
+        await pool.query("ALTER TABLE weddings ADD COLUMN google_sheet_url VARCHAR(500) DEFAULT NULL AFTER google_sheet_id;");
+      }
+
+      if (!wedColNames.includes("google_sheet_sync_status")) {
+        console.log("🛠️ Migrating: Adding missing 'google_sheet_sync_status' column to weddings...");
+        await pool.query("ALTER TABLE weddings ADD COLUMN google_sheet_sync_status VARCHAR(50) DEFAULT 'connected' AFTER google_sheet_url;");
+      }
+
+      if (!wedColNames.includes("google_sheet_last_synced")) {
+        console.log("🛠️ Migrating: Adding missing 'google_sheet_last_synced' column to weddings...");
+        await pool.query("ALTER TABLE weddings ADD COLUMN google_sheet_last_synced TIMESTAMP NULL DEFAULT NULL AFTER google_sheet_sync_status;");
+      }
+
+      // Backfill default credentials and Google Sheet URLs for sample weddings if empty
       await pool.query(`
         UPDATE weddings 
-        SET client_username = 'aaditya_ananya', client_password = 'Aaditya@2026' 
-        WHERE id = 'wedding_01' AND (client_username IS NULL OR client_username = '');
+        SET client_username = 'aaditya_ananya', client_password = 'Aaditya@2026',
+            google_sheet_id = 'wed_aaditya_ananya_01',
+            google_sheet_url = 'https://docs.google.com/spreadsheets/d/wed_aaditya_ananya_01/edit'
+        WHERE id = 'wedding_01' AND (google_sheet_url IS NULL OR google_sheet_url = '');
       `);
       await pool.query(`
         UPDATE weddings 
-        SET client_username = 'rohan_priya', client_password = 'Rohan@2026' 
-        WHERE id = 'wedding_02' AND (client_username IS NULL OR client_username = '');
+        SET client_username = 'rohan_priya', client_password = 'Rohan@2026',
+            google_sheet_id = 'wed_rohan_priya_02',
+            google_sheet_url = 'https://docs.google.com/spreadsheets/d/wed_rohan_priya_02/edit'
+        WHERE id = 'wedding_02' AND (google_sheet_url IS NULL OR google_sheet_url = '');
       `);
       await pool.query(`
         UPDATE weddings 
-        SET client_username = 'aarav_meera', client_password = 'Aarav@2027' 
-        WHERE id = 'wedding_03' AND (client_username IS NULL OR client_username = '');
+        SET client_username = 'aarav_meera', client_password = 'Aarav@2027',
+            google_sheet_id = 'wed_aarav_meera_03',
+            google_sheet_url = 'https://docs.google.com/spreadsheets/d/wed_aarav_meera_03/edit'
+        WHERE id = 'wedding_03' AND (google_sheet_url IS NULL OR google_sheet_url = '');
       `);
 
       // Guest migration

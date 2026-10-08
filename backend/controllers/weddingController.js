@@ -1,4 +1,8 @@
 import { WeddingModel } from "../models/weddingModel.js";
+import { GuestModel } from "../models/guestModel.js";
+import { ExcelService } from "../services/excelService.js";
+import { GoogleSheetsService } from "../services/googleSheetsService.js";
+import fs from "fs";
 
 export const weddingController = {
   // GET /api/weddings
@@ -46,6 +50,7 @@ export const weddingController = {
   },
 
   // POST /api/weddings
+  // Creates a new Wedding Card & automatically generates its Marriage Excel Sheet (.xlsx)
   async createWedding(req, res) {
     try {
       const { groom_name, bride_name } = req.body;
@@ -56,11 +61,30 @@ export const weddingController = {
         });
       }
 
+      // 1. Save wedding card to MySQL database
       const newWedding = await WeddingModel.create(req.body);
+
+      // 2. Automatically generate formatted Marriage Excel Sheet using ExcelJS
+      let excelResult = null;
+      try {
+        excelResult = await ExcelService.createMarriageExcelSheet(newWedding, []);
+      } catch (excelErr) {
+        console.warn("⚠️ Marriage Excel sheet auto-generation note:", excelErr.message);
+      }
+
+      // 3. Respond to client with created wedding and Excel sheet path
       res.status(201).json({
         success: true,
-        message: "Wedding created successfully",
+        message: "Wedding created and Marriage Excel sheet generated successfully!",
         data: newWedding,
+        excel: excelResult
+          ? {
+              fileName: excelResult.fileName,
+              filePath: excelResult.filePath,
+              relativePath: excelResult.relativePath,
+              downloadUrl: excelResult.downloadUrl,
+            }
+          : null,
       });
     } catch (error) {
       console.error("Error creating wedding:", error);
@@ -102,22 +126,115 @@ export const weddingController = {
   async deleteWedding(req, res) {
     try {
       const { id } = req.params;
-      const success = await WeddingModel.delete(id);
-      if (!success) {
+      const wedding = await WeddingModel.getById(id);
+      if (!wedding) {
         return res.status(404).json({
           success: false,
           message: "Wedding not found",
         });
       }
+
+      // Automatically delete or clean up the associated Google Sheet / Tab
+      try {
+        await GoogleSheetsService.deleteWeddingSheet(wedding);
+      } catch (sheetErr) {
+        console.warn("⚠️ Note on Google Sheet deletion:", sheetErr.message);
+      }
+
+      const success = await WeddingModel.delete(id);
+      if (!success) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to delete wedding from database",
+        });
+      }
       res.status(200).json({
         success: true,
-        message: "Wedding and associated guest directory deleted successfully",
+        message: "Wedding, associated guests, and Google Sheet/tab deleted successfully",
       });
     } catch (error) {
       console.error("Error deleting wedding:", error);
       res.status(500).json({
         success: false,
         message: "Failed to delete wedding",
+        error: error.message,
+      });
+    }
+  },
+
+  // GET /api/weddings/:id/export-excel
+  // Generates or refreshes the Marriage Excel Sheet with all current guest records and returns file metadata
+  async exportWeddingExcel(req, res) {
+    try {
+      const { id } = req.params;
+      const wedding = await WeddingModel.getById(id);
+      if (!wedding) {
+        return res.status(404).json({
+          success: false,
+          message: "Wedding not found",
+        });
+      }
+
+      const guests = await GuestModel.getAll({ weddingId: id });
+      const excelResult = await ExcelService.createMarriageExcelSheet(wedding, guests);
+
+      res.status(200).json({
+        success: true,
+        message: "Marriage Excel Sheet (.xlsx) generated successfully!",
+        data: {
+          wedding,
+          totalGuests: guests.length,
+          excel: excelResult,
+        },
+      });
+    } catch (error) {
+      console.error("Error generating Marriage Excel sheet:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate Marriage Excel sheet",
+        error: error.message,
+      });
+    }
+  },
+
+  // GET /api/weddings/:id/download-excel
+  // Directly streams/downloads the Marriage Excel Sheet (.xlsx) binary file to the user
+  async downloadWeddingExcel(req, res) {
+    try {
+      const { id } = req.params;
+      const wedding = await WeddingModel.getById(id);
+      if (!wedding) {
+        return res.status(404).json({
+          success: false,
+          message: "Wedding not found",
+        });
+      }
+
+      const guests = await GuestModel.getAll({ weddingId: id });
+      const excelResult = await ExcelService.createMarriageExcelSheet(wedding, guests);
+
+      if (!fs.existsSync(excelResult.filePath)) {
+        return res.status(404).json({
+          success: false,
+          message: "Generated Excel file not found on disk",
+        });
+      }
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${excelResult.fileName}"`
+      );
+
+      return res.download(excelResult.filePath, excelResult.fileName);
+    } catch (error) {
+      console.error("Error downloading Marriage Excel sheet:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to download Marriage Excel sheet",
         error: error.message,
       });
     }
