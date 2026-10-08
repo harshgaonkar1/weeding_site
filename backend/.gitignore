@@ -1,0 +1,15 @@
+# Environment variables
+.env
+.env.local
+.env
+.env.*
+!.env.example
+
+# Google Credentials & Secrets
+**/google_cred/
+**/google_cred/*
+**/*service-account*.json
+**/*credentials*.json
+**/marriage-data-*.json
+google-credentials.json
+credentials.json
