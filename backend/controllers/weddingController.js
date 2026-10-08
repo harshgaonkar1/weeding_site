@@ -79,11 +79,11 @@ export const weddingController = {
         data: newWedding,
         excel: excelResult
           ? {
-              fileName: excelResult.fileName,
-              filePath: excelResult.filePath,
-              relativePath: excelResult.relativePath,
-              downloadUrl: excelResult.downloadUrl,
-            }
+            fileName: excelResult.fileName,
+            filePath: excelResult.filePath,
+            relativePath: excelResult.relativePath,
+            downloadUrl: excelResult.downloadUrl,
+          }
           : null,
       });
     } catch (error) {
