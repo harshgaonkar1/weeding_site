@@ -601,16 +601,16 @@ export const GoogleSheetsService = {
     let existing = null;
 
     if (guestData.sr_no) {
-      const [bySr] = await pool.query(
-        "SELECT * FROM guests WHERE wedding_id = ? AND sr_no = ?",
+      const { rows: bySr } = await pool.query(
+        "SELECT * FROM guests WHERE wedding_id = $1 AND sr_no = $2",
         [weddingId, guestData.sr_no]
       );
       if (bySr.length > 0) existing = bySr[0];
     }
 
     if (!existing && guestData.guest_name) {
-      const [byName] = await pool.query(
-        "SELECT * FROM guests WHERE wedding_id = ? AND LOWER(TRIM(guest_name)) = LOWER(TRIM(?))",
+      const { rows: byName } = await pool.query(
+        "SELECT * FROM guests WHERE wedding_id = $1 AND LOWER(TRIM(guest_name)) = LOWER(TRIM($2))",
         [weddingId, guestData.guest_name]
       );
       if (byName.length > 0) existing = byName[0];
@@ -770,13 +770,13 @@ export const GoogleSheetsService = {
 
     // Update wedding last_synced timestamp in DB
     await pool.query(
-      "UPDATE weddings SET google_sheet_last_synced = NOW(), google_sheet_sync_status = 'synced' WHERE id = ?",
+      "UPDATE weddings SET google_sheet_last_synced = NOW(), google_sheet_sync_status = 'synced' WHERE id = $1",
       [weddingId]
     );
 
     return {
       success: true,
-      message: `Successfully synchronized Google Sheet with MySQL database!`,
+      message: `Successfully synchronized Google Sheet with PostgreSQL / Supabase database!`,
       createdCount,
       updatedCount,
       totalRows: rows.length,
@@ -1177,7 +1177,7 @@ export const GoogleSheetsService = {
         else updated++;
       }
       await pool.query(
-        "UPDATE weddings SET google_sheet_last_synced = NOW(), google_sheet_sync_status = 'synced' WHERE id = ?",
+        "UPDATE weddings SET google_sheet_last_synced = NOW(), google_sheet_sync_status = 'synced' WHERE id = $1",
         [weddingId]
       );
       return {
@@ -1195,7 +1195,7 @@ export const GoogleSheetsService = {
       const res = await this.upsertGuest(weddingId, normalized);
 
       await pool.query(
-        "UPDATE weddings SET google_sheet_last_synced = NOW(), google_sheet_sync_status = 'synced' WHERE id = ?",
+        "UPDATE weddings SET google_sheet_last_synced = NOW(), google_sheet_sync_status = 'synced' WHERE id = $1",
         [weddingId]
       );
 

@@ -4,8 +4,8 @@ import crypto from "crypto";
 export const CallLogModel = {
   // 1. Get all call logs for a specific guest
   async getByGuestId(guestId) {
-    const [rows] = await pool.query(
-      `SELECT * FROM guest_call_logs WHERE guest_id = ? ORDER BY call_number ASC, called_at ASC`,
+    const { rows } = await pool.query(
+      `SELECT * FROM guest_call_logs WHERE guest_id = $1 ORDER BY call_number ASC, called_at ASC`,
       [guestId]
     );
     return rows;
@@ -13,7 +13,7 @@ export const CallLogModel = {
 
   // 2. Get call log by ID
   async getById(id) {
-    const [rows] = await pool.query("SELECT * FROM guest_call_logs WHERE id = ?", [id]);
+    const { rows } = await pool.query("SELECT * FROM guest_call_logs WHERE id = $1", [id]);
     return rows[0] || null;
   },
 
@@ -32,8 +32,8 @@ export const CallLogModel = {
     const id = `call_log_${crypto.randomUUID().slice(0, 8)}`;
 
     // Calculate next call number for this guest
-    const [countRes] = await pool.query(
-      "SELECT COUNT(*) AS totalCalls FROM guest_call_logs WHERE guest_id = ?",
+    const { rows: countRes } = await pool.query(
+      "SELECT COUNT(*)::int AS \"totalCalls\" FROM guest_call_logs WHERE guest_id = $1",
       [guest_id]
     );
     const nextCallNumber = (countRes[0]?.totalCalls || 0) + 1;
@@ -43,7 +43,7 @@ export const CallLogModel = {
       `INSERT INTO guest_call_logs (
         id, guest_id, wedding_id, call_number, agent_id, agent_name,
         call_outcome, call_summary, callback_date, called_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`,
       [
         id,
         guest_id,
@@ -60,25 +60,25 @@ export const CallLogModel = {
     // 2. Update the parent guest record with new checkpoint count, status and last summary
     let guestUpdateQuery = `
       UPDATE guests SET
-        call_count = ?,
-        call_status = ?,
+        call_count = $1,
+        call_status = $2,
         last_called_at = NOW(),
-        last_call_summary = ?
+        last_call_summary = $3
     `;
     const guestUpdateParams = [nextCallNumber, call_outcome, call_summary];
 
     if (update_rsvp) {
-      guestUpdateQuery += ", rsvp_status = ?";
       guestUpdateParams.push(update_rsvp);
+      guestUpdateQuery += `, rsvp_status = $${guestUpdateParams.length}`;
     }
 
     if (special_request && special_request.trim() !== "") {
-      guestUpdateQuery += ", special_request = ?";
       guestUpdateParams.push(special_request);
+      guestUpdateQuery += `, special_request = $${guestUpdateParams.length}`;
     }
 
-    guestUpdateQuery += " WHERE id = ?";
     guestUpdateParams.push(guest_id);
+    guestUpdateQuery += ` WHERE id = $${guestUpdateParams.length}`;
 
     await pool.query(guestUpdateQuery, guestUpdateParams);
 
@@ -92,10 +92,10 @@ export const CallLogModel = {
 
     await pool.query(
       `UPDATE guest_call_logs SET
-        call_outcome = COALESCE(?, call_outcome),
-        call_summary = COALESCE(?, call_summary),
-        callback_date = ?
-      WHERE id = ?`,
+        call_outcome = COALESCE($1, call_outcome),
+        call_summary = COALESCE($2, call_summary),
+        callback_date = $3
+      WHERE id = $4`,
       [
         call_outcome !== undefined ? call_outcome : existing.call_outcome,
         call_summary !== undefined ? call_summary : existing.call_summary,
@@ -105,13 +105,13 @@ export const CallLogModel = {
     );
 
     // Update guest's latest call summary if this was the latest call
-    const [latest] = await pool.query(
-      "SELECT * FROM guest_call_logs WHERE guest_id = ? ORDER BY called_at DESC LIMIT 1",
+    const { rows: latest } = await pool.query(
+      "SELECT * FROM guest_call_logs WHERE guest_id = $1 ORDER BY called_at DESC LIMIT 1",
       [existing.guest_id]
     );
     if (latest[0] && latest[0].id === id) {
       await pool.query(
-        "UPDATE guests SET call_status = ?, last_call_summary = ? WHERE id = ?",
+        "UPDATE guests SET call_status = $1, last_call_summary = $2 WHERE id = $3",
         [latest[0].call_outcome, latest[0].call_summary, existing.guest_id]
       );
     }
@@ -124,12 +124,18 @@ export const CallLogModel = {
     const log = await this.getById(id);
     if (!log) return false;
 
-    const [result] = await pool.query("DELETE FROM guest_call_logs WHERE id = ?", [id]);
+    const result = await pool.query("DELETE FROM guest_call_logs WHERE id = $1", [id]);
 
     // Recalculate remaining calls count for the guest
-    const [countRes] = await pool.query(
-      "SELECT COUNT(*) AS totalCalls, MAX(called_at) as lastCalled, (SELECT call_summary FROM guest_call_logs WHERE guest_id = ? ORDER BY called_at DESC LIMIT 1) as lastSummary, (SELECT call_outcome FROM guest_call_logs WHERE guest_id = ? ORDER BY called_at DESC LIMIT 1) as lastOutcome FROM guest_call_logs WHERE guest_id = ?",
-      [log.guest_id, log.guest_id, log.guest_id]
+    const { rows: countRes } = await pool.query(
+      `SELECT 
+        COUNT(*)::int AS "totalCalls", 
+        MAX(called_at) as "lastCalled", 
+        (SELECT call_summary FROM guest_call_logs WHERE guest_id = $1 ORDER BY called_at DESC LIMIT 1) as "lastSummary", 
+        (SELECT call_outcome FROM guest_call_logs WHERE guest_id = $1 ORDER BY called_at DESC LIMIT 1) as "lastOutcome" 
+       FROM guest_call_logs 
+       WHERE guest_id = $1`,
+      [log.guest_id]
     );
 
     const total = countRes[0]?.totalCalls || 0;
@@ -138,11 +144,11 @@ export const CallLogModel = {
     const lastOutcome = countRes[0]?.lastOutcome || (total === 0 ? "Not Called" : "In Progress");
 
     await pool.query(
-      `UPDATE guests SET call_count = ?, call_status = ?, last_called_at = ?, last_call_summary = ? WHERE id = ?`,
+      `UPDATE guests SET call_count = $1, call_status = $2, last_called_at = $3, last_call_summary = $4 WHERE id = $5`,
       [total, lastOutcome, lastCalled, lastSummary, log.guest_id]
     );
 
-    return result.affectedRows > 0;
+    return (result.rowCount || result.affectedRows) > 0;
   },
 
   // 6. Get calling statistics across a wedding
@@ -150,25 +156,25 @@ export const CallLogModel = {
     let whereClause = "";
     const params = [];
     if (weddingId && weddingId !== "all" && weddingId !== "All") {
-      whereClause = " WHERE wedding_id = ?";
+      whereClause = " WHERE wedding_id = $1";
       params.push(weddingId);
     }
 
-    const [guestStats] = await pool.query(
+    const { rows: guestStats } = await pool.query(
       `SELECT 
-        COUNT(*) AS totalGuests,
-        SUM(CASE WHEN call_count = 0 THEN 1 ELSE 0 END) AS notCalledCount,
-        SUM(CASE WHEN call_count = 1 THEN 1 ELSE 0 END) AS call1Count,
-        SUM(CASE WHEN call_count = 2 THEN 1 ELSE 0 END) AS call2Count,
-        SUM(CASE WHEN call_count >= 3 THEN 1 ELSE 0 END) AS call3CompletedCount,
-        SUM(CASE WHEN LOWER(call_status) = 'connected' OR LOWER(call_status) = 'rsvp confirmed' THEN 1 ELSE 0 END) AS connectedCount,
-        SUM(CASE WHEN LOWER(call_status) = 'callback requested' THEN 1 ELSE 0 END) AS callbackCount
+        COUNT(*)::int AS "totalGuests",
+        COALESCE(SUM(CASE WHEN call_count = 0 THEN 1 ELSE 0 END), 0)::int AS "notCalledCount",
+        COALESCE(SUM(CASE WHEN call_count = 1 THEN 1 ELSE 0 END), 0)::int AS "call1Count",
+        COALESCE(SUM(CASE WHEN call_count = 2 THEN 1 ELSE 0 END), 0)::int AS "call2Count",
+        COALESCE(SUM(CASE WHEN call_count >= 3 THEN 1 ELSE 0 END), 0)::int AS "call3CompletedCount",
+        COALESCE(SUM(CASE WHEN LOWER(call_status) = 'connected' OR LOWER(call_status) = 'rsvp confirmed' THEN 1 ELSE 0 END), 0)::int AS "connectedCount",
+        COALESCE(SUM(CASE WHEN LOWER(call_status) = 'callback requested' THEN 1 ELSE 0 END), 0)::int AS "callbackCount"
       FROM guests ${whereClause}`,
       params
     );
 
-    const [totalCallsRes] = await pool.query(
-      `SELECT COUNT(*) AS totalLoggedAttempts FROM guest_call_logs ${whereClause}`,
+    const { rows: totalCallsRes } = await pool.query(
+      `SELECT COUNT(*)::int AS "totalLoggedAttempts" FROM guest_call_logs ${whereClause}`,
       params
     );
 

@@ -5,8 +5,8 @@ export const UserModel = {
   // Find user by email or username
   async findByIdentifier(identifier) {
     const clean = (identifier || "").trim().toLowerCase();
-    const [rows] = await pool.query(
-      "SELECT * FROM users WHERE LOWER(email) = ? OR LOWER(email) LIKE ? OR LOWER(name) = ?",
+    const { rows } = await pool.query(
+      "SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(email) LIKE $2 OR LOWER(name) = $3",
       [clean, `${clean}@%`, clean]
     );
     return rows[0] || null;
@@ -19,8 +19,8 @@ export const UserModel = {
 
   // Find user by ID (without password)
   async findById(id) {
-    const [rows] = await pool.query(
-      "SELECT id, name, email, role, phone, avatar, created_at, updated_at FROM users WHERE id = ?",
+    const { rows } = await pool.query(
+      "SELECT id, name, email, role, phone, avatar, created_at, updated_at FROM users WHERE id = $1",
       [id]
     );
     return rows[0] || null;
@@ -28,7 +28,7 @@ export const UserModel = {
 
   // Get all users (Admin only)
   async getAll() {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       "SELECT id, name, email, role, phone, avatar, created_at, updated_at FROM users ORDER BY created_at DESC"
     );
     return rows;
@@ -39,7 +39,7 @@ export const UserModel = {
     const id = `user_${crypto.randomUUID().slice(0, 8)}`;
     await pool.query(
       `INSERT INTO users (id, name, email, password, role, phone, avatar)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [id, name, email, password, role, phone, avatar]
     );
     return this.findById(id);

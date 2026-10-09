@@ -8,16 +8,16 @@ export const WeddingModel = {
     const query = `
       SELECT 
         w.*,
-        COUNT(g.id) AS total_guests,
-        SUM(CASE WHEN LOWER(g.rsvp_status) = 'confirmed' THEN 1 ELSE 0 END) AS confirmed_guests,
-        SUM(CASE WHEN LOWER(g.side) = 'bride' THEN 1 ELSE 0 END) AS bride_guests,
-        SUM(CASE WHEN LOWER(g.side) = 'groom' THEN 1 ELSE 0 END) AS groom_guests
+        COUNT(g.id)::int AS total_guests,
+        COALESCE(SUM(CASE WHEN LOWER(g.rsvp_status) = 'confirmed' THEN 1 ELSE 0 END), 0)::int AS confirmed_guests,
+        COALESCE(SUM(CASE WHEN LOWER(g.side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS bride_guests,
+        COALESCE(SUM(CASE WHEN LOWER(g.side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS groom_guests
       FROM weddings w
       LEFT JOIN guests g ON w.id = g.wedding_id
       GROUP BY w.id
       ORDER BY w.wedding_date ASC, w.created_at DESC
     `;
-    const [rows] = await pool.query(query);
+    const { rows } = await pool.query(query);
     return rows;
   },
 
@@ -26,16 +26,16 @@ export const WeddingModel = {
     const query = `
       SELECT 
         w.*,
-        COUNT(g.id) AS total_guests,
-        SUM(CASE WHEN LOWER(g.rsvp_status) = 'confirmed' THEN 1 ELSE 0 END) AS confirmed_guests,
-        SUM(CASE WHEN LOWER(g.side) = 'bride' THEN 1 ELSE 0 END) AS bride_guests,
-        SUM(CASE WHEN LOWER(g.side) = 'groom' THEN 1 ELSE 0 END) AS groom_guests
+        COUNT(g.id)::int AS total_guests,
+        COALESCE(SUM(CASE WHEN LOWER(g.rsvp_status) = 'confirmed' THEN 1 ELSE 0 END), 0)::int AS confirmed_guests,
+        COALESCE(SUM(CASE WHEN LOWER(g.side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS bride_guests,
+        COALESCE(SUM(CASE WHEN LOWER(g.side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS groom_guests
       FROM weddings w
       LEFT JOIN guests g ON w.id = g.wedding_id
-      WHERE w.id = ?
+      WHERE w.id = $1
       GROUP BY w.id
     `;
-    const [rows] = await pool.query(query, [id]);
+    const { rows } = await pool.query(query, [id]);
     return rows[0] || null;
   },
 
@@ -77,7 +77,7 @@ export const WeddingModel = {
       INSERT INTO weddings (
         id, groom_name, bride_name, wedding_date, venue, city, cover_theme, notes, 
         client_username, client_password, google_sheet_id, google_sheet_url, google_sheet_sync_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     `;
     const values = [
       id,
@@ -105,20 +105,21 @@ export const WeddingModel = {
 
     const query = `
       UPDATE weddings SET
-        groom_name = COALESCE(?, groom_name),
-        bride_name = COALESCE(?, bride_name),
-        wedding_date = ?,
-        venue = ?,
-        city = ?,
-        cover_theme = COALESCE(?, cover_theme),
-        notes = ?,
-        client_username = COALESCE(?, client_username),
-        client_password = COALESCE(?, client_password),
-        google_sheet_id = COALESCE(?, google_sheet_id),
-        google_sheet_url = COALESCE(?, google_sheet_url),
-        google_sheet_sync_status = COALESCE(?, google_sheet_sync_status),
-        google_sheet_last_synced = COALESCE(?, google_sheet_last_synced)
-      WHERE id = ?
+        groom_name = COALESCE($1, groom_name),
+        bride_name = COALESCE($2, bride_name),
+        wedding_date = $3,
+        venue = $4,
+        city = $5,
+        cover_theme = COALESCE($6, cover_theme),
+        notes = $7,
+        client_username = COALESCE($8, client_username),
+        client_password = COALESCE($9, client_password),
+        google_sheet_id = COALESCE($10, google_sheet_id),
+        google_sheet_url = COALESCE($11, google_sheet_url),
+        google_sheet_sync_status = COALESCE($12, google_sheet_sync_status),
+        google_sheet_last_synced = COALESCE($13, google_sheet_last_synced),
+        updated_at = NOW()
+      WHERE id = $14
     `;
     const values = [
       data.groom_name !== undefined ? data.groom_name : existing.groom_name,
@@ -145,9 +146,9 @@ export const WeddingModel = {
     const cleanIdentifier = (usernameOrEmail || "").trim().toLowerCase();
     const query = `
       SELECT * FROM weddings 
-      WHERE (LOWER(client_username) = ? OR id = ? OR LOWER(client_username) = ?)
+      WHERE (LOWER(client_username) = $1 OR id = $2 OR LOWER(client_username) = $3)
     `;
-    const [rows] = await pool.query(query, [
+    const { rows } = await pool.query(query, [
       cleanIdentifier,
       usernameOrEmail,
       cleanIdentifier.replace("@weddingportal.com", ""),
@@ -166,13 +167,13 @@ export const WeddingModel = {
   // 6. Delete wedding and all its associated guests and call logs
   async delete(id) {
     // 1. Delete associated call logs
-    await pool.query("DELETE FROM guest_call_logs WHERE wedding_id = ?", [id]).catch(() => {});
+    await pool.query("DELETE FROM guest_call_logs WHERE wedding_id = $1", [id]).catch(() => {});
     
     // 2. Delete associated guests
-    await pool.query("DELETE FROM guests WHERE wedding_id = ?", [id]);
+    await pool.query("DELETE FROM guests WHERE wedding_id = $1", [id]);
     
     // 3. Delete the wedding record
-    const [result] = await pool.query("DELETE FROM weddings WHERE id = ?", [id]);
-    return result.affectedRows > 0;
+    const result = await pool.query("DELETE FROM weddings WHERE id = $1", [id]);
+    return (result.rowCount || result.affectedRows) > 0;
   },
 };

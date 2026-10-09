@@ -19,45 +19,37 @@ export const GuestModel = {
 
     // Wedding isolation filter
     if (weddingId && weddingId !== "All" && weddingId !== "all") {
-      query += " AND wedding_id = ?";
       params.push(weddingId);
+      query += ` AND wedding_id = $${params.length}`;
     }
 
     // Side filter (Bride / Groom / Both)
     if (side && side !== "All") {
-      query += " AND LOWER(side) = LOWER(?)";
       params.push(side);
+      query += ` AND LOWER(side) = LOWER($${params.length})`;
     }
 
     // Search keyword
     if (search && search.trim() !== "") {
       const searchTerm = `%${search.trim()}%`;
+      params.push(searchTerm);
+      const pIdx = params.length;
       query += ` AND (
-        guest_name LIKE ? OR 
-        contact LIKE ? OR 
-        arrival_flight_train_no LIKE ? OR 
-        departure_flight_train_no LIKE ? OR 
-        arrival_location LIKE ? OR 
-        departure_location LIKE ? OR
-        special_request LIKE ? OR
-        last_call_summary LIKE ?
+        guest_name ILIKE $${pIdx} OR 
+        contact ILIKE $${pIdx} OR 
+        arrival_flight_train_no ILIKE $${pIdx} OR 
+        departure_flight_train_no ILIKE $${pIdx} OR 
+        arrival_location ILIKE $${pIdx} OR 
+        departure_location ILIKE $${pIdx} OR
+        special_request ILIKE $${pIdx} OR
+        last_call_summary ILIKE $${pIdx}
       )`;
-      params.push(
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm
-      );
     }
 
     // RSVP filter
     if (rsvp && rsvp !== "All") {
-      query += " AND LOWER(rsvp_status) = LOWER(?)";
       params.push(rsvp);
+      query += ` AND LOWER(rsvp_status) = LOWER($${params.length})`;
     }
 
     // ID Card filter
@@ -71,8 +63,8 @@ export const GuestModel = {
 
     // Call status filter (e.g., 'Connected', 'No Answer', 'Callback Requested', 'Not Called')
     if (callStatus && callStatus !== "All") {
-      query += " AND LOWER(call_status) = LOWER(?)";
       params.push(callStatus);
+      query += ` AND LOWER(call_status) = LOWER($${params.length})`;
     }
 
     // Call attempts filter (0, 1, 2, 3+)
@@ -104,13 +96,13 @@ export const GuestModel = {
 
     query += ` ORDER BY ${sortColumn} ${sortDirection}`;
 
-    const [rows] = await pool.query(query, params);
+    const { rows } = await pool.query(query, params);
     return rows;
   },
 
   // 2. Get guest by ID
   async getById(id) {
-    const [rows] = await pool.query("SELECT * FROM guests WHERE id = ?", [id]);
+    const { rows } = await pool.query("SELECT * FROM guests WHERE id = $1", [id]);
     return rows[0] || null;
   },
 
@@ -122,11 +114,11 @@ export const GuestModel = {
     // Auto-calculate next sr_no within this wedding if not provided
     let srNo = data.sr_no;
     if (!srNo) {
-      const [maxResult] = await pool.query(
-        "SELECT COALESCE(MAX(sr_no), 0) + 1 AS nextSr FROM guests WHERE wedding_id = ?",
+      const { rows: maxResult } = await pool.query(
+        "SELECT (COALESCE(MAX(sr_no), 0) + 1)::int AS \"nextSr\" FROM guests WHERE wedding_id = $1",
         [weddingId]
       );
-      srNo = maxResult[0].nextSr;
+      srNo = maxResult[0]?.nextSr || 1;
     }
 
     const query = `
@@ -135,7 +127,7 @@ export const GuestModel = {
         arrival_date, arrival_time, arrival_location, arrival_flight_train_no,
         departure_date, departure_time, departure_location, departure_flight_train_no,
         id_card_copy, special_request, call_count, call_status, last_called_at, last_call_summary
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
     `;
 
     const values = [
@@ -171,8 +163,8 @@ export const GuestModel = {
   async bulkCreate(weddingId = "wedding_01", guestList = []) {
     if (!guestList || guestList.length === 0) return [];
 
-    const [maxResult] = await pool.query(
-      "SELECT COALESCE(MAX(sr_no), 0) AS maxSr FROM guests WHERE wedding_id = ?",
+    const { rows: maxResult } = await pool.query(
+      "SELECT COALESCE(MAX(sr_no), 0)::int AS \"maxSr\" FROM guests WHERE wedding_id = $1",
       [weddingId]
     );
     let nextSr = (maxResult[0]?.maxSr || 0) + 1;
@@ -190,7 +182,7 @@ export const GuestModel = {
           arrival_date, arrival_time, arrival_location, arrival_flight_train_no,
           departure_date, departure_time, departure_location, departure_flight_train_no,
           id_card_copy, special_request, call_count, call_status, last_called_at, last_call_summary
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       `;
 
       const values = [
@@ -232,28 +224,29 @@ export const GuestModel = {
 
     const query = `
       UPDATE guests SET
-        wedding_id = COALESCE(?, wedding_id),
-        sr_no = COALESCE(?, sr_no),
-        guest_name = COALESCE(?, guest_name),
-        contact = ?,
-        side = COALESCE(?, side),
-        rsvp_status = COALESCE(?, rsvp_status),
-        id_card_received = COALESCE(?, id_card_received),
-        arrival_date = ?,
-        arrival_time = ?,
-        arrival_location = ?,
-        arrival_flight_train_no = ?,
-        departure_date = ?,
-        departure_time = ?,
-        departure_location = ?,
-        departure_flight_train_no = ?,
-        id_card_copy = ?,
-        special_request = ?,
-        call_count = COALESCE(?, call_count),
-        call_status = COALESCE(?, call_status),
-        last_called_at = COALESCE(?, last_called_at),
-        last_call_summary = COALESCE(?, last_call_summary)
-      WHERE id = ?
+        wedding_id = COALESCE($1, wedding_id),
+        sr_no = COALESCE($2, sr_no),
+        guest_name = COALESCE($3, guest_name),
+        contact = $4,
+        side = COALESCE($5, side),
+        rsvp_status = COALESCE($6, rsvp_status),
+        id_card_received = COALESCE($7, id_card_received),
+        arrival_date = $8,
+        arrival_time = $9,
+        arrival_location = $10,
+        arrival_flight_train_no = $11,
+        departure_date = $12,
+        departure_time = $13,
+        departure_location = $14,
+        departure_flight_train_no = $15,
+        id_card_copy = $16,
+        special_request = $17,
+        call_count = COALESCE($18, call_count),
+        call_status = COALESCE($19, call_status),
+        last_called_at = COALESCE($20, last_called_at),
+        last_call_summary = COALESCE($21, last_call_summary),
+        updated_at = NOW()
+      WHERE id = $22
     `;
 
     const values = [
@@ -287,94 +280,94 @@ export const GuestModel = {
 
   // 5. Delete a guest and their call logs
   async delete(id) {
-    await pool.query("DELETE FROM guest_call_logs WHERE guest_id = ?", [id]);
-    const [result] = await pool.query("DELETE FROM guests WHERE id = ?", [id]);
-    return result.affectedRows > 0;
+    await pool.query("DELETE FROM guest_call_logs WHERE guest_id = $1", [id]);
+    const result = await pool.query("DELETE FROM guests WHERE id = $1", [id]);
+    return (result.rowCount || result.affectedRows) > 0;
   },
 
   // 6. Get dashboard statistics (optionally scoped to a wedding)
   async getStatistics(weddingId = null) {
     let query = `
       SELECT 
-        COUNT(*) AS totalRegistered,
-        SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' THEN 1 ELSE 0 END) AS rsvpConfirmed,
-        SUM(CASE WHEN LOWER(rsvp_status) = 'pending' THEN 1 ELSE 0 END) AS rsvpPending,
-        SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') THEN 1 ELSE 0 END) AS rsvpDeclined,
-        SUM(CASE WHEN LOWER(id_card_received) = 'yes' THEN 1 ELSE 0 END) AS idCardReceived,
-        SUM(CASE WHEN LOWER(side) = 'bride' THEN 1 ELSE 0 END) AS brideSideCount,
-        SUM(CASE WHEN LOWER(side) = 'groom' THEN 1 ELSE 0 END) AS groomSideCount,
-        SUM(CASE WHEN LOWER(side) = 'both' THEN 1 ELSE 0 END) AS bothSideCount,
+        COUNT(*)::int AS "totalRegistered",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' THEN 1 ELSE 0 END), 0)::int AS "rsvpConfirmed",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'pending' THEN 1 ELSE 0 END), 0)::int AS "rsvpPending",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') THEN 1 ELSE 0 END), 0)::int AS "rsvpDeclined",
+        COALESCE(SUM(CASE WHEN LOWER(id_card_received) = 'yes' THEN 1 ELSE 0 END), 0)::int AS "idCardReceived",
+        COALESCE(SUM(CASE WHEN LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideSideCount",
+        COALESCE(SUM(CASE WHEN LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomSideCount",
+        COALESCE(SUM(CASE WHEN LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothSideCount",
 
         -- RSVP Confirmed Breakdown
-        SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END) AS groomRsvpConfirmed,
-        SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END) AS brideRsvpConfirmed,
-        SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'both' THEN 1 ELSE 0 END) AS bothRsvpConfirmed,
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomRsvpConfirmed",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideRsvpConfirmed",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothRsvpConfirmed",
 
         -- RSVP Pending Breakdown
-        SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END) AS groomRsvpPending,
-        SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END) AS brideRsvpPending,
-        SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'both' THEN 1 ELSE 0 END) AS bothRsvpPending,
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomRsvpPending",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideRsvpPending",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothRsvpPending",
 
         -- RSVP Declined / Regrets Breakdown
-        SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'groom' THEN 1 ELSE 0 END) AS groomRsvpDeclined,
-        SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'bride' THEN 1 ELSE 0 END) AS brideRsvpDeclined,
-        SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'both' THEN 1 ELSE 0 END) AS bothRsvpDeclined,
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomRsvpDeclined",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideRsvpDeclined",
+        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothRsvpDeclined",
 
         -- ID Card Breakdown
-        SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END) AS groomIdCardReceived,
-        SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END) AS brideIdCardReceived,
-        SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'both' THEN 1 ELSE 0 END) AS bothIdCardReceived,
+        COALESCE(SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomIdCardReceived",
+        COALESCE(SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideIdCardReceived",
+        COALESCE(SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothIdCardReceived",
 
         -- Confirmed Flight / Travel Details Breakdown
-        SUM(CASE WHEN (arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
+        COALESCE(SUM(CASE WHEN (arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
                    OR (arrival_date IS NOT NULL AND TRIM(arrival_date) != '')
                    OR (departure_flight_train_no IS NOT NULL AND TRIM(departure_flight_train_no) != '')
                    OR (departure_date IS NOT NULL AND TRIM(departure_date) != '') 
-            THEN 1 ELSE 0 END) AS flightDetailsReceived,
+            THEN 1 ELSE 0 END), 0)::int AS "flightDetailsReceived",
 
-        SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
+        COALESCE(SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
                    OR (arrival_date IS NOT NULL AND TRIM(arrival_date) != '')
                    OR (departure_flight_train_no IS NOT NULL AND TRIM(departure_flight_train_no) != '')
                    OR (departure_date IS NOT NULL AND TRIM(departure_date) != ''))
                    AND LOWER(side) = 'groom'
-            THEN 1 ELSE 0 END) AS groomFlightDetailsReceived,
+            THEN 1 ELSE 0 END), 0)::int AS "groomFlightDetailsReceived",
 
-        SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
+        COALESCE(SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
                    OR (arrival_date IS NOT NULL AND TRIM(arrival_date) != '')
                    OR (departure_flight_train_no IS NOT NULL AND TRIM(departure_flight_train_no) != '')
                    OR (departure_date IS NOT NULL AND TRIM(departure_date) != ''))
                    AND LOWER(side) = 'bride'
-            THEN 1 ELSE 0 END) AS brideFlightDetailsReceived,
+            THEN 1 ELSE 0 END), 0)::int AS "brideFlightDetailsReceived",
 
-        SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
+        COALESCE(SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
                    OR (arrival_date IS NOT NULL AND TRIM(arrival_date) != '')
                    OR (departure_flight_train_no IS NOT NULL AND TRIM(departure_flight_train_no) != '')
                    OR (departure_date IS NOT NULL AND TRIM(departure_date) != ''))
                    AND LOWER(side) = 'both'
-            THEN 1 ELSE 0 END) AS bothFlightDetailsReceived,
+            THEN 1 ELSE 0 END), 0)::int AS "bothFlightDetailsReceived",
 
         -- Call Checkpoints Breakdown
-        SUM(CASE WHEN call_count >= 3 AND LOWER(side) = 'groom' THEN 1 ELSE 0 END) AS groomCall3CompletedCount,
-        SUM(CASE WHEN call_count >= 3 AND LOWER(side) = 'bride' THEN 1 ELSE 0 END) AS brideCall3CompletedCount,
-        SUM(CASE WHEN (call_count < 3 OR call_count IS NULL) AND LOWER(side) = 'groom' THEN 1 ELSE 0 END) AS groomCallsInProgress,
-        SUM(CASE WHEN (call_count < 3 OR call_count IS NULL) AND LOWER(side) = 'bride' THEN 1 ELSE 0 END) AS brideCallsInProgress,
+        COALESCE(SUM(CASE WHEN call_count >= 3 AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomCall3CompletedCount",
+        COALESCE(SUM(CASE WHEN call_count >= 3 AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideCall3CompletedCount",
+        COALESCE(SUM(CASE WHEN (call_count < 3 OR call_count IS NULL) AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomCallsInProgress",
+        COALESCE(SUM(CASE WHEN (call_count < 3 OR call_count IS NULL) AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideCallsInProgress",
 
-        SUM(CASE WHEN special_request IS NOT NULL AND TRIM(special_request) != '' THEN 1 ELSE 0 END) AS specialRequests,
-        SUM(CASE WHEN call_count = 0 OR call_count IS NULL THEN 1 ELSE 0 END) AS notCalledCount,
-        SUM(CASE WHEN call_count = 1 THEN 1 ELSE 0 END) AS call1Count,
-        SUM(CASE WHEN call_count = 2 THEN 1 ELSE 0 END) AS call2Count,
-        SUM(CASE WHEN call_count >= 3 THEN 1 ELSE 0 END) AS call3CompletedCount,
-        SUM(CASE WHEN LOWER(call_status) = 'connected' OR LOWER(call_status) = 'rsvp confirmed' THEN 1 ELSE 0 END) AS callConnectedCount,
-        SUM(CASE WHEN LOWER(call_status) = 'callback requested' THEN 1 ELSE 0 END) AS callbackCount
+        COALESCE(SUM(CASE WHEN special_request IS NOT NULL AND TRIM(special_request) != '' THEN 1 ELSE 0 END), 0)::int AS "specialRequests",
+        COALESCE(SUM(CASE WHEN call_count = 0 OR call_count IS NULL THEN 1 ELSE 0 END), 0)::int AS "notCalledCount",
+        COALESCE(SUM(CASE WHEN call_count = 1 THEN 1 ELSE 0 END), 0)::int AS "call1Count",
+        COALESCE(SUM(CASE WHEN call_count = 2 THEN 1 ELSE 0 END), 0)::int AS "call2Count",
+        COALESCE(SUM(CASE WHEN call_count >= 3 THEN 1 ELSE 0 END), 0)::int AS "call3CompletedCount",
+        COALESCE(SUM(CASE WHEN LOWER(call_status) = 'connected' OR LOWER(call_status) = 'rsvp confirmed' THEN 1 ELSE 0 END), 0)::int AS "callConnectedCount",
+        COALESCE(SUM(CASE WHEN LOWER(call_status) = 'callback requested' THEN 1 ELSE 0 END), 0)::int AS "callbackCount"
       FROM guests
     `;
     const params = [];
     if (weddingId && weddingId !== "All" && weddingId !== "all") {
-      query += " WHERE wedding_id = ?";
       params.push(weddingId);
+      query += " WHERE wedding_id = $1";
     }
 
-    const [rows] = await pool.query(query, params);
+    const { rows } = await pool.query(query, params);
     const stats = rows[0] || {};
     const total = Number(stats.totalRegistered) || 0;
     const confirmed = Number(stats.rsvpConfirmed) || 0;

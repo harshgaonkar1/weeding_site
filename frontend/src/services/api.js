@@ -632,15 +632,18 @@ export const api = {
   },
 
   async deleteWedding(id) {
+    let serverSuccess = false;
     try {
       const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return true;
+        if (json.success) serverSuccess = true;
       }
-    } catch (e) { }
+    } catch (e) {
+      console.warn("deleteWedding server notice:", e);
+    }
 
     const list = getCachedWeddings().filter((w) => w.id !== id);
     setCachedWeddings(list);
