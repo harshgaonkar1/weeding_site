@@ -25,6 +25,7 @@ export default function GuestDetailsDrawer({
   onClose,
   onEdit,
   onOpenCallLogs,
+  onOpenQuickWhatsApp,
 }) {
   const { isViewOnly } = useAuth();
   if (!isOpen || !guest) return null;
@@ -49,12 +50,26 @@ export default function GuestDetailsDrawer({
                 <h3 className="text-base font-bold text-slate-900">{guest.guest_name}</h3>
                 <span className="text-xs font-semibold text-slate-500">#{guest.sr_no}</span>
               </div>
-              <p className="text-xs text-slate-500 flex items-center gap-1">
-                <Phone className="w-3 h-3 text-emerald-600" />
-                <a href={`tel:${guest.contact}`} className="hover:underline font-bold text-slate-700">
-                  {guest.contact || "No contact provided"}
-                </a>
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <Phone className="w-3 h-3 text-emerald-600" />
+                  <a href={`tel:${guest.contact}`} className="hover:underline font-bold text-slate-700 font-mono">
+                    {guest.contact || "No contact provided"}
+                  </a>
+                </p>
+                {!isViewOnly && guest.contact && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenQuickWhatsApp) onOpenQuickWhatsApp(guest);
+                    }}
+                    title="Send WhatsApp"
+                    className="text-[#25d366] hover:text-[#128c7e] transition-transform hover:scale-115 cursor-pointer"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <button
@@ -304,13 +319,25 @@ export default function GuestDetailsDrawer({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/70">
+        <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-end gap-2.5 bg-slate-50/70 flex-wrap">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-full border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             Close
           </button>
+          {!isViewOnly && guest.contact && (
+            <button
+              onClick={() => {
+                onClose();
+                if (onOpenQuickWhatsApp) onOpenQuickWhatsApp(guest);
+              }}
+              className="bg-[#25d366] hover:bg-[#20bd5a] text-slate-950 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer btn-interactive"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>WhatsApp Message</span>
+            </button>
+          )}
           {!isViewOnly && (
             <button
               onClick={() => {

@@ -14,6 +14,7 @@ import {
   FileSpreadsheet,
   KeyRound,
   ShieldCheck,
+  MessageSquare,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -30,6 +31,7 @@ import LoginModal from "../components/LoginModal";
 import CallLogModal from "../components/CallLogModal";
 import AdminPasswordModal from "../components/AdminPasswordModal";
 import GoogleSheetModal from "../components/GoogleSheetModal";
+import WhatsAppMessageModal from "../components/WhatsAppMessageModal";
 import LoginPage from "./LoginPage";
 import { api, calculateStatsFromList } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -73,6 +75,8 @@ export default function Hero() {
   const [viewingGuest, setViewingGuest] = useState(null);
   const [deletingGuest, setDeletingGuest] = useState(null);
   const [callingGuest, setCallingGuest] = useState(null);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [whatsAppModalInitialGuest, setWhatsAppModalInitialGuest] = useState(null);
   const [isSubmittingGuest, setIsSubmittingGuest] = useState(false);
   const [isDeletingGuest, setIsDeletingGuest] = useState(false);
 
@@ -293,7 +297,7 @@ export default function Hero() {
       }
       setIsAddGuestModalOpen(false);
       setEditingGuest(null);
-      await loadGuests();
+      await Promise.all([loadGuests(), loadWeddings()]);
     } catch (err) {
       showToast("Error saving guest", "error");
     } finally {
@@ -311,7 +315,7 @@ export default function Hero() {
       await api.deleteGuest(id);
       showToast("Guest entry removed");
       setDeletingGuest(null);
-      await loadGuests();
+      await Promise.all([loadGuests(), loadWeddings()]);
     } catch (err) {
       showToast("Failed to delete guest", "error");
     } finally {
@@ -531,11 +535,14 @@ export default function Hero() {
                     </button>
                   )}
 
-                  <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                  <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2 flex-wrap">
                     <span>
                       {selectedWedding
                         ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
                         : "Guest Directory"}
+                    </span>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs">
+                      {stats?.totalRegistered ?? guests.length} Guests
                     </span>
                     {isMarriageClient && (
                       <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
@@ -563,6 +570,20 @@ export default function Hero() {
                     <FileSpreadsheet className="w-3.5 h-3.5 text-[#16a34a]" />
                     <span>Google Sheet Sync</span>
                   </button>
+
+                  {!isViewOnly && (
+                    <button
+                      onClick={() => {
+                        setWhatsAppModalInitialGuest(null);
+                        setIsWhatsAppModalOpen(true);
+                      }}
+                      className="bg-[#25d366]/15 hover:bg-[#25d366]/25 border border-[#25d366]/40 text-[#0f532a] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                      title="Open WhatsApp Message Desk for this Marriage"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-[#16a34a]" />
+                      <span>WhatsApp Messages</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={handleExportCsv}
@@ -618,6 +639,10 @@ export default function Hero() {
                 onDeleteGuest={(guest) => setDeletingGuest(guest)}
                 onViewGuest={(guest) => setViewingGuest(guest)}
                 onOpenCallLogs={handleOpenCallLogs}
+                onOpenQuickWhatsApp={(guest) => {
+                  setWhatsAppModalInitialGuest(guest);
+                  setIsWhatsAppModalOpen(true);
+                }}
               />
             </div>
           )}
@@ -696,6 +721,11 @@ export default function Hero() {
           setViewingGuest(null);
           handleOpenCallLogs(guest);
         }}
+        onOpenQuickWhatsApp={(guest) => {
+          setViewingGuest(null);
+          setWhatsAppModalInitialGuest(guest);
+          setIsWhatsAppModalOpen(true);
+        }}
       />
 
       {/* 7. Delete Confirmation Modal */}
@@ -726,6 +756,18 @@ export default function Hero() {
         onSuccess={() => {
           showToast("Super Admin authenticated successfully!");
         }}
+      />
+
+      {/* 9. Marriage Guest Directory WhatsApp Message Desk Modal */}
+      <WhatsAppMessageModal
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => {
+          setIsWhatsAppModalOpen(false);
+          setWhatsAppModalInitialGuest(null);
+        }}
+        guests={guests}
+        wedding={selectedWedding}
+        initialGuest={whatsAppModalInitialGuest}
       />
 
       {/* 10. Google Sheet Real-Time Sync Modal */}

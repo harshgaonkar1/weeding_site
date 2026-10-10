@@ -7,7 +7,7 @@ export const DEFAULT_USERS = {
   admin: {
     id: "user_admin_01",
     name: "Manish",
-    email: "admin@weddingsite.com",
+    email: "admin@emitly.com",
     role: "admin",
     phone: "+91 98765 00001",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
@@ -15,7 +15,7 @@ export const DEFAULT_USERS = {
   callCenter: {
     id: "user_agent_01",
     name: "Sarah (Call Desk)",
-    email: "callcenter@weddingsite.com",
+    email: "callcenter@emitly.com",
     role: "call_center",
     phone: "+91 98765 00002",
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
@@ -453,6 +453,10 @@ export const api = {
     const cleanId = (identifier || "").trim();
     const cleanPass = (password || "").trim();
 
+    if (!cleanId || !cleanPass) {
+      throw new Error("Please enter both username/email and password.");
+    }
+
     try {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
@@ -461,55 +465,95 @@ export const api = {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return json;
+        if (json.success && json.user) {
+          return json;
+        }
       } else {
         const errorJson = await res.json().catch(() => ({}));
-        throw new Error(errorJson.message || "Invalid credentials");
+        if (res.status !== 401 && errorJson.message) {
+          throw new Error(errorJson.message);
+        }
       }
     } catch (e) {
-      if (e.message && e.message !== "Failed to fetch") {
-        throw e;
+      if (e.message && !e.message.includes("Failed to fetch") && !e.message.includes("NetworkError")) {
+        // If it's an explicit custom backend error, check fallback
       }
     }
 
     // Client fallback login
     const idLower = cleanId.toLowerCase();
+    const idBase = idLower
+      .replace("@weddingportal.com", "")
+      .replace("@weddingsite.com", "")
+      .replace("@emitly.com", "")
+      .trim();
 
     // 1. Admin Fallback
-    if (idLower === "admin" || idLower.includes("admin")) {
-      if (cleanPass !== "manish1122" && cleanPass !== "admin123") {
-        throw new Error("Invalid Admin password. Default is manish1122 or admin123.");
+    if (
+      idLower === "admin" ||
+      idLower === "admin@emitly.com" ||
+      idLower === "admin@weddingsite.com" ||
+      idLower === "manish" ||
+      idLower.includes("admin")
+    ) {
+      if (cleanPass === "manish1122" || cleanPass === "admin123") {
+        return {
+          success: true,
+          message: "Welcome back, Manish (Admin)!",
+          user: DEFAULT_USERS.admin,
+          token: `mock_admin_${Date.now()}`,
+        };
       }
-      return {
-        success: true,
-        message: "Welcome back, Manish (Admin)!",
-        user: DEFAULT_USERS.admin,
-        token: `mock_admin_${Date.now()}`,
-      };
+      throw new Error("Invalid Admin password. Default is manish1122.");
     }
 
     // 2. Call Center Fallback
-    if (idLower === "callcenter" || idLower.includes("call") || idLower.includes("agent") || idLower === "telecaller") {
-      if (cleanPass !== "call123" && cleanPass !== "callcenter123") {
-        throw new Error("Invalid Call Center password. Default is call123.");
+    if (
+      idLower === "callcenter" ||
+      idLower === "callcenter@emitly.com" ||
+      idLower === "callcenter@weddingsite.com" ||
+      idLower === "sarah" ||
+      idLower.includes("call") ||
+      idLower.includes("agent") ||
+      idLower === "telecaller"
+    ) {
+      if (cleanPass === "call123" || cleanPass === "callcenter123") {
+        return {
+          success: true,
+          message: "Welcome back, Sarah (Call Center Desk)!",
+          user: DEFAULT_USERS.callCenter,
+          token: `mock_call_center_${Date.now()}`,
+        };
       }
-      return {
-        success: true,
-        message: "Welcome back, Sarah (Call Center Desk)!",
-        user: DEFAULT_USERS.callCenter,
-        token: `mock_call_center_${Date.now()}`,
-      };
+      throw new Error("Invalid Call Center password. Default is call123.");
     }
 
     // 3. Marriage / Client Portal Fallback
     const weddings = getCachedWeddings();
     const matchingWedding = weddings.find((w) => {
-      const userMatch =
-        (w.client_username && w.client_username.toLowerCase() === idLower) ||
-        (w.id && w.id.toLowerCase() === idLower) ||
-        `${w.groom_name?.toLowerCase()}_${w.bride_name?.toLowerCase()}`.replace(/\s+/g, "") === idLower;
+      const wUser = (w.client_username || "").toLowerCase().trim();
+      const wId = (w.id || "").toLowerCase().trim();
+      const wGroom = (w.groom_name || "").toLowerCase().trim();
+      const wBride = (w.bride_name || "").toLowerCase().trim();
+      const combined = `${wGroom}_${wBride}`.replace(/[^a-z0-9_]/g, "");
 
-      const passMatch = w.client_password && w.client_password.trim() === cleanPass;
+      const userMatch =
+        wUser === idLower ||
+        wUser === idBase ||
+        wId === idLower ||
+        wId === idBase ||
+        `${wUser}@weddingportal.com` === idLower ||
+        `${wUser}@weddingsite.com` === idLower ||
+        `${wUser}@emitly.com` === idLower ||
+        combined === idBase ||
+        `${wGroom} & ${wBride}` === idLower ||
+        wGroom.includes(idBase) ||
+        wBride.includes(idBase);
+
+      const passMatch =
+        (w.client_password && w.client_password.trim() === cleanPass) ||
+        (cleanPass.toLowerCase() === (w.client_password || "").toLowerCase().trim());
+
       return userMatch && passMatch;
     });
 
@@ -538,7 +582,7 @@ export const api = {
       };
     }
 
-    throw new Error("Invalid username, User ID, or password. Please check your credentials.");
+    throw new Error("Invalid username, email, or password. Please check your credentials.");
   },
 
   async getMe(userId) {
@@ -765,6 +809,7 @@ export const api = {
   },
 
   async createGuest(guestData) {
+    let created = null;
     try {
       const res = await fetch(`${API_BASE_URL}/guests`, {
         method: "POST",
@@ -773,11 +818,19 @@ export const api = {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return json.data;
+        if (json.success && json.data) {
+          created = json.data;
+        }
       }
     } catch (e) { }
 
     const list = getCachedGuests();
+    if (created) {
+      const updatedList = [created, ...list.filter((g) => g.id !== created.id)];
+      setCachedGuests(updatedList);
+      return created;
+    }
+
     const nextSr = list.length > 0 ? Math.max(...list.map((g) => Number(g.sr_no) || 0)) + 1 : 1;
     const newGuest = {
       ...guestData,
@@ -789,7 +842,7 @@ export const api = {
       call_status: guestData.call_status || "Not Called",
       created_at: new Date().toISOString(),
     };
-    const updatedList = [...list, newGuest];
+    const updatedList = [newGuest, ...list];
     setCachedGuests(updatedList);
     return newGuest;
   },
@@ -803,7 +856,12 @@ export const api = {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return json;
+        if (json.success) {
+          const list = getCachedGuests();
+          const merged = [...(json.data || []), ...list.filter((g) => !json.data?.some((d) => d.id === g.id))];
+          setCachedGuests(merged);
+          return json;
+        }
       }
     } catch (e) { }
 
@@ -825,6 +883,7 @@ export const api = {
   },
 
   async updateGuest(id, guestData) {
+    let updated = null;
     try {
       const res = await fetch(`${API_BASE_URL}/guests/${id}`, {
         method: "PUT",
@@ -833,29 +892,27 @@ export const api = {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return json.data;
+        if (json.success && json.data) {
+          updated = json.data;
+        }
       }
     } catch (e) { }
 
     const list = getCachedGuests();
     const idx = list.findIndex((g) => g.id === id);
     if (idx !== -1) {
-      list[idx] = { ...list[idx], ...guestData };
+      list[idx] = { ...list[idx], ...(updated || guestData) };
       setCachedGuests(list);
       return list[idx];
     }
-    return null;
+    return updated || null;
   },
 
   async deleteGuest(id) {
     try {
-      const res = await fetch(`${API_BASE_URL}/guests/${id}`, {
+      await fetch(`${API_BASE_URL}/guests/${id}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) return true;
-      }
     } catch (e) { }
 
     const list = getCachedGuests().filter((g) => g.id !== id);

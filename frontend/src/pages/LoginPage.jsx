@@ -115,12 +115,42 @@ export default function LoginPage({ initialTab = "admin" }) {
               </div>
             )}
 
+            {/* Quick Demo Credentials Autofill */}
+            <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-emerald-950">
+              <span className="font-semibold text-emerald-950">
+                {activeRole === "admin"
+                  ? "Admin Creds: admin / manish1122"
+                  : activeRole === "call_center"
+                  ? "Call Desk: callcenter / call123"
+                  : "Client: aaditya_ananya / Aaditya@2026"}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeRole === "admin") {
+                    setIdentifier("admin@emitly.com");
+                    setPassword("manish1122");
+                  } else if (activeRole === "call_center") {
+                    setIdentifier("callcenter@emitly.com");
+                    setPassword("call123");
+                  } else {
+                    setIdentifier("aaditya_ananya");
+                    setPassword("Aaditya@2026");
+                  }
+                  setErrorMessage("");
+                }}
+                className="text-[10px] font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1 rounded-md cursor-pointer transition-colors shadow-2xs"
+              >
+                Auto Fill
+              </button>
+            </div>
+
             {/* Form */}
             <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
               {/* Username / Email */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 block">
-                  {activeRole === "marriage_client" ? "Marriage User ID" : "Username or Email"}
+                  {activeRole === "marriage_client" ? "Marriage User ID / Username" : "Username or Email"}
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -139,8 +169,10 @@ export default function LoginPage({ initialTab = "admin" }) {
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder={
                       activeRole === "marriage_client"
-                        ? "e.g. aaditya_ananya"
-                        : "e.g. admin@weddingsite.com"
+                        ? "e.g. aaditya_ananya or rohan_priya"
+                        : activeRole === "call_center"
+                        ? "e.g. callcenter@emitly.com or callcenter"
+                        : "e.g. admin@emitly.com or admin"
                     }
                     className="w-full bg-[#f8fafc] border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-medium"
                   />
@@ -167,7 +199,13 @@ export default function LoginPage({ initialTab = "admin" }) {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
+                    placeholder={
+                      activeRole === "marriage_client"
+                        ? "e.g. Aaditya@2026"
+                        : activeRole === "call_center"
+                        ? "e.g. call123"
+                        : "e.g. manish1122"
+                    }
                     className="w-full bg-[#f8fafc] border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-medium"
                   />
                   <button

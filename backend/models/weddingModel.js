@@ -1,10 +1,35 @@
 import pool from "../Db_connection/dbconnection.js";
+import { supabase } from "../Db_connection/supabaseClient.js";
 import crypto from "crypto";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
 
 export const WeddingModel = {
   // 1. Get all weddings with guest counts and stats
   async getAll() {
+    // Check Supabase first
+    if (supabase) {
+      try {
+        const { data: weddingsData } = await supabase.from("weddings").select("*").order("created_at", { ascending: false });
+        const { data: guestsData } = await supabase.from("guests").select("wedding_id, rsvp_status, side");
+        
+        if (weddingsData && weddingsData.length > 0) {
+          const guestsList = guestsData || [];
+          return weddingsData.map((w) => {
+            const wGuests = guestsList.filter((g) => g.wedding_id === w.id);
+            return {
+              ...w,
+              total_guests: wGuests.length,
+              confirmed_guests: wGuests.filter((g) => (g.rsvp_status || "").toLowerCase() === "confirmed").length,
+              bride_guests: wGuests.filter((g) => (g.side || "").toLowerCase() === "bride").length,
+              groom_guests: wGuests.filter((g) => (g.side || "").toLowerCase() === "groom").length,
+            };
+          });
+        }
+      } catch (err) {
+        console.warn("Supabase wedding getAll notice:", err.message);
+      }
+    }
+
     const query = `
       SELECT 
         w.*,
@@ -23,6 +48,23 @@ export const WeddingModel = {
 
   // 2. Get single wedding by ID
   async getById(id) {
+    if (supabase) {
+      try {
+        const { data: wedding } = await supabase.from("weddings").select("*").eq("id", id).single();
+        if (wedding) {
+          const { data: guestsData } = await supabase.from("guests").select("rsvp_status, side").eq("wedding_id", id);
+          const wGuests = guestsData || [];
+          return {
+            ...wedding,
+            total_guests: wGuests.length,
+            confirmed_guests: wGuests.filter((g) => (g.rsvp_status || "").toLowerCase() === "confirmed").length,
+            bride_guests: wGuests.filter((g) => (g.side || "").toLowerCase() === "bride").length,
+            groom_guests: wGuests.filter((g) => (g.side || "").toLowerCase() === "groom").length,
+          };
+        }
+      } catch (err) {}
+    }
+
     const query = `
       SELECT 
         w.*,
@@ -39,7 +81,7 @@ export const WeddingModel = {
     return rows[0] || null;
   },
 
-  // 3. Create wedding / marriage card (with auto-generated client credentials & Google Sheet)
+  // 3. Create wedding / marriage card
   async create(data) {
     const id = data.id || `wedding_${crypto.randomUUID().slice(0, 8)}`;
     
@@ -54,7 +96,6 @@ export const WeddingModel = {
     const defaultPassword = `${groomFirst.charAt(0).toUpperCase() + groomFirst.slice(1)}@${year}`;
     const client_password = (data.client_password && data.client_password.trim()) || defaultPassword;
 
-    // Generate or real create Google Sheet via Google Sheets API
     let google_sheet_id = data.google_sheet_id;
     let google_sheet_url = data.google_sheet_url;
     let google_sheet_sync_status = data.google_sheet_sync_status || "connected";
@@ -70,6 +111,31 @@ export const WeddingModel = {
         google_sheet_sync_status = sheetMeta.google_sheet_sync_status;
       } catch (err) {
         console.warn("⚠️ Google Sheet auto-creation note:", err.message);
+      }
+    }
+
+    const newRecord = {
+      id,
+      groom_name: data.groom_name,
+      bride_name: data.bride_name,
+      wedding_date: data.wedding_date || null,
+      venue: data.venue || null,
+      city: data.city || null,
+      cover_theme: data.cover_theme || "emerald",
+      notes: data.notes || null,
+      client_username,
+      client_password,
+      google_sheet_id,
+      google_sheet_url,
+      google_sheet_sync_status,
+      google_sheet_last_synced: new Date().toISOString(),
+    };
+
+    if (supabase) {
+      try {
+        await supabase.from("weddings").upsert(newRecord);
+      } catch (err) {
+        console.warn("Supabase wedding insert note:", err.message);
       }
     }
 
@@ -102,6 +168,12 @@ export const WeddingModel = {
   async update(id, data) {
     const existing = await this.getById(id);
     if (!existing) return null;
+
+    if (supabase) {
+      try {
+        await supabase.from("weddings").update(data).eq("id", id);
+      } catch (err) {}
+    }
 
     const query = `
       UPDATE weddings SET
@@ -141,38 +213,95 @@ export const WeddingModel = {
     return this.getById(id);
   },
 
-  // 5. Authenticate wedding client credentials
+  // 5. Authenticate wedding client credentials directly from Database
   async findByClientCredentials(usernameOrEmail, password) {
-    const cleanIdentifier = (usernameOrEmail || "").trim().toLowerCase();
+    const cleanId = (usernameOrEmail || "").trim().toLowerCase();
+    const cleanPass = (password || "").trim();
+    if (!cleanId || !cleanPass) return null;
+
+    const baseCleanId = cleanId
+      .replace("@weddingportal.com", "")
+      .replace("@weddingsite.com", "")
+      .replace("@emitly.com", "")
+      .trim();
+
+    // 1. Check live Supabase DB
+    if (supabase) {
+      try {
+        const { data } = await supabase.from("weddings").select("*");
+        if (data && data.length > 0) {
+          const wedding = data.find((w) => {
+            const wUser = (w.client_username || "").toLowerCase().trim();
+            const wId = (w.id || "").toLowerCase().trim();
+            const wGroom = (w.groom_name || "").toLowerCase().trim();
+            const wBride = (w.bride_name || "").toLowerCase().trim();
+            const combined = `${wGroom}_${wBride}`.replace(/[^a-z0-9_]/g, "");
+
+            const userMatch =
+              wUser === cleanId ||
+              wUser === baseCleanId ||
+              wId === cleanId ||
+              wId === baseCleanId ||
+              `${wUser}@weddingportal.com` === cleanId ||
+              `${wUser}@weddingsite.com` === cleanId ||
+              `${wUser}@emitly.com` === cleanId ||
+              combined === baseCleanId ||
+              `${wGroom} & ${wBride}` === cleanId ||
+              wGroom.includes(baseCleanId) ||
+              wBride.includes(baseCleanId);
+
+            const passMatch =
+              (w.client_password && w.client_password.trim() === cleanPass) ||
+              (cleanPass.toLowerCase() === (w.client_password || "").toLowerCase().trim());
+
+            return userMatch && passMatch;
+          });
+          if (wedding) return wedding;
+        }
+      } catch (err) {
+        console.warn("Supabase wedding find notice:", err.message);
+      }
+    }
+
+    // 2. Query pool / in-memory store
     const query = `
       SELECT * FROM weddings 
       WHERE (LOWER(client_username) = $1 OR id = $2 OR LOWER(client_username) = $3)
     `;
-    const { rows } = await pool.query(query, [
-      cleanIdentifier,
-      usernameOrEmail,
-      cleanIdentifier.replace("@weddingportal.com", ""),
-    ]);
+    try {
+      const { rows } = await pool.query(query, [
+        cleanId,
+        usernameOrEmail,
+        baseCleanId,
+      ]);
 
-    if (!rows || rows.length === 0) return null;
-    const wedding = rows[0];
+      if (rows && rows.length > 0) {
+        const wedding = rows[0];
+        if (
+          wedding.client_password &&
+          (wedding.client_password.trim() === cleanPass ||
+            wedding.client_password.trim().toLowerCase() === cleanPass.toLowerCase())
+        ) {
+          return wedding;
+        }
+      }
+    } catch (e) {}
 
-    // Password comparison
-    if (wedding.client_password && wedding.client_password.trim() === (password || "").trim()) {
-      return wedding;
-    }
     return null;
   },
 
-  // 6. Delete wedding and all its associated guests and call logs
+  // 6. Delete wedding and all associated guests and call logs
   async delete(id) {
-    // 1. Delete associated call logs
+    if (supabase) {
+      try {
+        await supabase.from("guest_call_logs").delete().eq("wedding_id", id);
+        await supabase.from("guests").delete().eq("wedding_id", id);
+        await supabase.from("weddings").delete().eq("id", id);
+      } catch (err) {}
+    }
+
     await pool.query("DELETE FROM guest_call_logs WHERE wedding_id = $1", [id]).catch(() => {});
-    
-    // 2. Delete associated guests
     await pool.query("DELETE FROM guests WHERE wedding_id = $1", [id]);
-    
-    // 3. Delete the wedding record
     const result = await pool.query("DELETE FROM weddings WHERE id = $1", [id]);
     return (result.rowCount || result.affectedRows) > 0;
   },

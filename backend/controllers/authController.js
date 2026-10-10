@@ -42,6 +42,7 @@ export const authController = {
           cover_theme: wedding.cover_theme,
           avatar: null,
           is_view_only: true,
+          wedding,
         };
 
         return res.status(200).json({

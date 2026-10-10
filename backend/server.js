@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { testConnection } from "./Db_connection/dbconnection.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -11,10 +12,23 @@ import callLogRoutes from "./routes/callLogRoutes.js";
 import googleSheetsRoutes from "./routes/googleSheetsRoutes.js";
 import { getExportDir } from "./services/excelService.js";
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Candidate paths for .env file
+const envCandidates = [
+  path.resolve(__dirname, ".env"),
+  path.resolve(__dirname, "../.env"),
+  path.resolve(process.cwd(), "backend/.env"),
+  path.resolve(process.cwd(), ".env"),
+];
+
+for (const envPath of envCandidates) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  }
+}
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

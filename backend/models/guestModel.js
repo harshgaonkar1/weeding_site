@@ -1,5 +1,131 @@
 import pool from "../Db_connection/dbconnection.js";
+import { supabase } from "../Db_connection/supabaseClient.js";
+import { store } from "../Db_connection/queries.js";
 import crypto from "crypto";
+
+// Helper function to calculate complete statistics from any list of guest objects
+export const calculateGuestStats = (guests = []) => {
+  const total = guests.length;
+
+  const groomGuests = guests.filter((g) => (g.side || "").toLowerCase() === "groom");
+  const brideGuests = guests.filter((g) => (g.side || "").toLowerCase() === "bride");
+  const bothGuests = guests.filter((g) => (g.side || "").toLowerCase() === "both");
+
+  const groomCount = groomGuests.length;
+  const brideCount = brideGuests.length;
+  const bothCount = bothGuests.length;
+
+  // RSVP Check helpers
+  const isConfirmedRsvp = (status = "") => (status || "").toLowerCase() === "confirmed";
+  const isPendingRsvp = (status = "") => (status || "").toLowerCase() === "pending";
+  const isDeclinedRsvp = (status = "") => {
+    const s = (status || "").toLowerCase();
+    return s === "declined" || s.includes("regret") || s.includes("not attending") || s.includes("not coming") || s === "no";
+  };
+
+  // RSVP Confirmed
+  const confirmed = guests.filter((g) => isConfirmedRsvp(g.rsvp_status)).length;
+  const groomConfirmed = groomGuests.filter((g) => isConfirmedRsvp(g.rsvp_status)).length;
+  const brideConfirmed = brideGuests.filter((g) => isConfirmedRsvp(g.rsvp_status)).length;
+
+  // RSVP Pending
+  const pending = guests.filter((g) => isPendingRsvp(g.rsvp_status)).length;
+  const groomPending = groomGuests.filter((g) => isPendingRsvp(g.rsvp_status)).length;
+  const bridePending = brideGuests.filter((g) => isPendingRsvp(g.rsvp_status)).length;
+
+  // RSVP Regrets / Declined (Not Coming)
+  const declined = guests.filter((g) => isDeclinedRsvp(g.rsvp_status)).length;
+  const groomDeclined = groomGuests.filter((g) => isDeclinedRsvp(g.rsvp_status)).length;
+  const brideDeclined = brideGuests.filter((g) => isDeclinedRsvp(g.rsvp_status)).length;
+
+  // ID Cards
+  const isIdYes = (val = "") => (val || "").toLowerCase() === "yes" || (val || "").toLowerCase() === "received";
+  const idReceived = guests.filter((g) => isIdYes(g.id_card_received)).length;
+  const groomIdReceived = groomGuests.filter((g) => isIdYes(g.id_card_received)).length;
+  const brideIdReceived = brideGuests.filter((g) => isIdYes(g.id_card_received)).length;
+
+  // Flight / Travel Details
+  const hasFlight = (g) =>
+    Boolean(
+      (g.arrival_flight_train_no && g.arrival_flight_train_no.trim() !== "") ||
+      (g.arrival_date && g.arrival_date.trim() !== "") ||
+      (g.departure_flight_train_no && g.departure_flight_train_no.trim() !== "") ||
+      (g.departure_date && g.departure_date.trim() !== "")
+    );
+
+  const flightReceived = guests.filter(hasFlight).length;
+  const groomFlightReceived = groomGuests.filter(hasFlight).length;
+  const brideFlightReceived = brideGuests.filter(hasFlight).length;
+
+  const specialRequests = guests.filter((g) => g.special_request && g.special_request.trim() !== "").length;
+
+  const notCalled = guests.filter((g) => !g.call_count || Number(g.call_count) === 0).length;
+  const call1 = guests.filter((g) => Number(g.call_count) === 1).length;
+  const call2 = guests.filter((g) => Number(g.call_count) === 2).length;
+  const call3Done = guests.filter((g) => Number(g.call_count || 0) >= 3).length;
+  const groomCall3Done = groomGuests.filter((g) => Number(g.call_count || 0) >= 3).length;
+  const brideCall3Done = brideGuests.filter((g) => Number(g.call_count || 0) >= 3).length;
+
+  const groomCallsInProgress = Math.max(0, groomCount - groomCall3Done);
+  const brideCallsInProgress = Math.max(0, brideCount - brideCall3Done);
+
+  const callConnected = guests.filter(
+    (g) =>
+      (g.call_status || "").toLowerCase().includes("connected") ||
+      (g.call_status || "").toLowerCase().includes("confirmed")
+  ).length;
+  const callback = guests.filter((g) => (g.call_status || "").toLowerCase().includes("callback")).length;
+
+  return {
+    totalRegistered: total,
+    groomSideCount: groomCount,
+    brideSideCount: brideCount,
+    bothSideCount: bothCount,
+
+    rsvpConfirmed: confirmed,
+    rsvpConfirmedPercentage: total > 0 ? Math.round((confirmed / total) * 100) : 0,
+    groomRsvpConfirmed: groomConfirmed,
+    brideRsvpConfirmed: brideConfirmed,
+    bothRsvpConfirmed: 0,
+
+    rsvpPending: pending,
+    rsvpPendingPercentage: total > 0 ? Math.round((pending / total) * 100) : 0,
+    groomRsvpPending: groomPending,
+    brideRsvpPending: bridePending,
+    bothRsvpPending: 0,
+
+    rsvpDeclined: declined,
+    rsvpDeclinedPercentage: total > 0 ? Math.round((declined / total) * 100) : 0,
+    groomRsvpDeclined: groomDeclined,
+    brideRsvpDeclined: brideDeclined,
+    bothRsvpDeclined: 0,
+
+    idCardReceived: idReceived,
+    idCardReceivedPercentage: total > 0 ? Math.round((idReceived / total) * 100) : 0,
+    groomIdCardReceived: groomIdReceived,
+    brideIdCardReceived: brideIdReceived,
+    bothIdCardReceived: 0,
+
+    flightDetailsReceived: flightReceived,
+    flightDetailsPercentage: total > 0 ? Math.round((flightReceived / total) * 100) : 0,
+    groomFlightDetailsReceived: groomFlightReceived,
+    brideFlightDetailsReceived: brideFlightReceived,
+    bothFlightDetailsReceived: 0,
+
+    specialRequests,
+    notCalledCount: notCalled,
+    call1Count: call1,
+    call2Count: call2,
+    call3CompletedCount: call3Done,
+    call3Percentage: total > 0 ? Math.round((call3Done / total) * 100) : 0,
+    groomCall3CompletedCount: groomCall3Done,
+    brideCall3CompletedCount: brideCall3Done,
+    groomCallsInProgress,
+    brideCallsInProgress,
+    callConnectedCount: callConnected,
+    callbackCount: callback,
+  };
+};
 
 export const GuestModel = {
   // 1. Get all guests with optional wedding_id, side, search, rsvp, idCard, callStatus, callAttempts filtering
@@ -14,22 +140,107 @@ export const GuestModel = {
     sortBy = "sr_no",
     order = "ASC",
   } = {}) {
+    // 1. Check live Supabase DB
+    if (supabase) {
+      try {
+        let query = supabase.from("guests").select("*");
+
+        if (weddingId && weddingId !== "All" && weddingId !== "all") {
+          query = query.eq("wedding_id", weddingId);
+        }
+
+        const { data, error } = await query;
+        if (data && !error) {
+          // Keep in-memory store in sync
+          store.guests = data;
+
+          let list = [...data];
+
+          // Side filter
+          if (side && side !== "All") {
+            list = list.filter((g) => (g.side || "").toLowerCase() === side.toLowerCase());
+          }
+
+          // Search keyword
+          if (search && search.trim() !== "") {
+            const q = search.trim().toLowerCase();
+            list = list.filter(
+              (g) =>
+                (g.guest_name && g.guest_name.toLowerCase().includes(q)) ||
+                (g.contact && g.contact.toLowerCase().includes(q)) ||
+                (g.arrival_flight_train_no && g.arrival_flight_train_no.toLowerCase().includes(q)) ||
+                (g.departure_flight_train_no && g.departure_flight_train_no.toLowerCase().includes(q)) ||
+                (g.arrival_location && g.arrival_location.toLowerCase().includes(q)) ||
+                (g.departure_location && g.departure_location.toLowerCase().includes(q)) ||
+                (g.special_request && g.special_request.toLowerCase().includes(q)) ||
+                (g.last_call_summary && g.last_call_summary.toLowerCase().includes(q))
+            );
+          }
+
+          // RSVP filter
+          if (rsvp && rsvp !== "All") {
+            list = list.filter((g) => (g.rsvp_status || "").toLowerCase() === rsvp.toLowerCase());
+          }
+
+          // ID Card filter
+          if (idCard && idCard !== "All") {
+            const isYes = idCard.includes("Yes") || idCard.toLowerCase() === "yes";
+            list = list.filter((g) => ((g.id_card_received || "").toLowerCase() === "yes") === isYes);
+          }
+
+          // Call status filter
+          if (callStatus && callStatus !== "All") {
+            list = list.filter((g) => (g.call_status || "").toLowerCase() === callStatus.toLowerCase());
+          }
+
+          // Call attempts filter
+          if (callAttempts && callAttempts !== "All") {
+            if (callAttempts === "0" || callAttempts === "Not Called") {
+              list = list.filter((g) => !g.call_count || Number(g.call_count) === 0);
+            } else if (callAttempts === "1" || callAttempts === "1 Call") {
+              list = list.filter((g) => Number(g.call_count) === 1);
+            } else if (callAttempts === "2" || callAttempts === "2 Calls") {
+              list = list.filter((g) => Number(g.call_count) === 2);
+            } else if (callAttempts === "3+" || callAttempts === "3 Calls Completed" || callAttempts === "3") {
+              list = list.filter((g) => Number(g.call_count || 0) >= 3);
+            }
+          }
+
+          // Sorting
+          const isDesc = order.toUpperCase() === "DESC";
+          list.sort((a, b) => {
+            let valA = a[sortBy] ?? "";
+            let valB = b[sortBy] ?? "";
+            if (sortBy === "sr_no" || sortBy === "call_count") {
+              valA = Number(valA) || 0;
+              valB = Number(valB) || 0;
+            }
+            if (valA < valB) return isDesc ? 1 : -1;
+            if (valA > valB) return isDesc ? -1 : 1;
+            return 0;
+          });
+
+          return list;
+        }
+      } catch (err) {
+        console.warn("Supabase guest getAll notice:", err.message);
+      }
+    }
+
+    // 2. Query pool fallback
     let query = "SELECT * FROM guests WHERE 1=1";
     const params = [];
 
-    // Wedding isolation filter
     if (weddingId && weddingId !== "All" && weddingId !== "all") {
       params.push(weddingId);
       query += ` AND wedding_id = $${params.length}`;
     }
 
-    // Side filter (Bride / Groom / Both)
     if (side && side !== "All") {
       params.push(side);
       query += ` AND LOWER(side) = LOWER($${params.length})`;
     }
 
-    // Search keyword
     if (search && search.trim() !== "") {
       const searchTerm = `%${search.trim()}%`;
       params.push(searchTerm);
@@ -46,13 +257,11 @@ export const GuestModel = {
       )`;
     }
 
-    // RSVP filter
     if (rsvp && rsvp !== "All") {
       params.push(rsvp);
       query += ` AND LOWER(rsvp_status) = LOWER($${params.length})`;
     }
 
-    // ID Card filter
     if (idCard && idCard !== "All") {
       if (idCard === "Received (Yes)" || idCard === "Yes") {
         query += " AND LOWER(id_card_received) = 'yes'";
@@ -61,13 +270,11 @@ export const GuestModel = {
       }
     }
 
-    // Call status filter (e.g., 'Connected', 'No Answer', 'Callback Requested', 'Not Called')
     if (callStatus && callStatus !== "All") {
       params.push(callStatus);
       query += ` AND LOWER(call_status) = LOWER($${params.length})`;
     }
 
-    // Call attempts filter (0, 1, 2, 3+)
     if (callAttempts && callAttempts !== "All") {
       if (callAttempts === "0" || callAttempts === "Not Called") {
         query += " AND (call_count = 0 OR call_count IS NULL)";
@@ -80,7 +287,6 @@ export const GuestModel = {
       }
     }
 
-    // Sorting
     const allowedSortColumns = [
       "sr_no",
       "guest_name",
@@ -102,6 +308,13 @@ export const GuestModel = {
 
   // 2. Get guest by ID
   async getById(id) {
+    if (supabase) {
+      try {
+        const { data } = await supabase.from("guests").select("*").eq("id", id).single();
+        if (data) return data;
+      } catch (e) {}
+    }
+
     const { rows } = await pool.query("SELECT * FROM guests WHERE id = $1", [id]);
     return rows[0] || null;
   },
@@ -111,14 +324,65 @@ export const GuestModel = {
     const id = data.id || `guest_${crypto.randomUUID().slice(0, 8)}`;
     const weddingId = data.wedding_id || "wedding_01";
 
-    // Auto-calculate next sr_no within this wedding if not provided
+    // Auto-calculate next sr_no within this wedding
     let srNo = data.sr_no;
     if (!srNo) {
-      const { rows: maxResult } = await pool.query(
-        "SELECT (COALESCE(MAX(sr_no), 0) + 1)::int AS \"nextSr\" FROM guests WHERE wedding_id = $1",
-        [weddingId]
-      );
-      srNo = maxResult[0]?.nextSr || 1;
+      if (supabase) {
+        try {
+          const { data: existingGuests } = await supabase
+            .from("guests")
+            .select("sr_no")
+            .eq("wedding_id", weddingId);
+          if (existingGuests && existingGuests.length > 0) {
+            srNo = Math.max(...existingGuests.map((g) => Number(g.sr_no) || 0)) + 1;
+          } else {
+            srNo = 1;
+          }
+        } catch (e) {
+          srNo = 1;
+        }
+      } else {
+        const { rows: maxResult } = await pool.query(
+          "SELECT (COALESCE(MAX(sr_no), 0) + 1)::int AS \"nextSr\" FROM guests WHERE wedding_id = $1",
+          [weddingId]
+        );
+        srNo = maxResult[0]?.nextSr || 1;
+      }
+    }
+
+    const newGuestRecord = {
+      id,
+      wedding_id: weddingId,
+      sr_no: Number(srNo) || 1,
+      guest_name: (data.guest_name || "").trim(),
+      contact: data.contact || null,
+      side: data.side || "Groom",
+      rsvp_status: data.rsvp_status || "Confirmed",
+      id_card_received: data.id_card_received || "No",
+      arrival_date: data.arrival_date || null,
+      arrival_time: data.arrival_time || null,
+      arrival_location: data.arrival_location || null,
+      arrival_flight_train_no: data.arrival_flight_train_no || null,
+      departure_date: data.departure_date || null,
+      departure_time: data.departure_time || null,
+      departure_location: data.departure_location || null,
+      departure_flight_train_no: data.departure_flight_train_no || null,
+      id_card_copy: data.id_card_copy || null,
+      special_request: data.special_request || null,
+      call_count: data.call_count !== undefined ? Number(data.call_count) : 0,
+      call_status: data.call_status || "Not Called",
+      last_called_at: data.last_called_at || null,
+      last_call_summary: data.last_call_summary || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (supabase) {
+      try {
+        await supabase.from("guests").upsert(newGuestRecord);
+      } catch (err) {
+        console.warn("Supabase guest create notice:", err.message);
+      }
     }
 
     const query = `
@@ -133,41 +397,51 @@ export const GuestModel = {
     const values = [
       id,
       weddingId,
-      srNo,
-      data.guest_name,
-      data.contact || null,
-      data.side || "Groom",
-      data.rsvp_status || "Confirmed",
-      data.id_card_received || "No",
-      data.arrival_date || null,
-      data.arrival_time || null,
-      data.arrival_location || null,
-      data.arrival_flight_train_no || null,
-      data.departure_date || null,
-      data.departure_time || null,
-      data.departure_location || null,
-      data.departure_flight_train_no || null,
-      data.id_card_copy || null,
-      data.special_request || null,
-      data.call_count !== undefined ? Number(data.call_count) : 0,
-      data.call_status || "Not Called",
-      data.last_called_at || null,
-      data.last_call_summary || null,
+      newGuestRecord.sr_no,
+      newGuestRecord.guest_name,
+      newGuestRecord.contact,
+      newGuestRecord.side,
+      newGuestRecord.rsvp_status,
+      newGuestRecord.id_card_received,
+      newGuestRecord.arrival_date,
+      newGuestRecord.arrival_time,
+      newGuestRecord.arrival_location,
+      newGuestRecord.arrival_flight_train_no,
+      newGuestRecord.departure_date,
+      newGuestRecord.departure_time,
+      newGuestRecord.departure_location,
+      newGuestRecord.departure_flight_train_no,
+      newGuestRecord.id_card_copy,
+      newGuestRecord.special_request,
+      newGuestRecord.call_count,
+      newGuestRecord.call_status,
+      newGuestRecord.last_called_at,
+      newGuestRecord.last_call_summary,
     ];
 
     await pool.query(query, values);
     return this.getById(id);
   },
 
-  // 3b. Bulk create multiple guests from Excel / CSV import
+  // 3b. Bulk create multiple guests
   async bulkCreate(weddingId = "wedding_01", guestList = []) {
     if (!guestList || guestList.length === 0) return [];
 
-    const { rows: maxResult } = await pool.query(
-      "SELECT COALESCE(MAX(sr_no), 0)::int AS \"maxSr\" FROM guests WHERE wedding_id = $1",
-      [weddingId]
-    );
-    let nextSr = (maxResult[0]?.maxSr || 0) + 1;
+    let nextSr = 1;
+    if (supabase) {
+      try {
+        const { data: existing } = await supabase.from("guests").select("sr_no").eq("wedding_id", weddingId);
+        if (existing && existing.length > 0) {
+          nextSr = Math.max(...existing.map((g) => Number(g.sr_no) || 0)) + 1;
+        }
+      } catch (e) {}
+    } else {
+      const { rows: maxResult } = await pool.query(
+        "SELECT COALESCE(MAX(sr_no), 0)::int AS \"maxSr\" FROM guests WHERE wedding_id = $1",
+        [weddingId]
+      );
+      nextSr = (maxResult[0]?.maxSr || 0) + 1;
+    }
 
     const createdGuests = [];
     for (const data of guestList) {
@@ -176,42 +450,70 @@ export const GuestModel = {
       const id = data.id || `guest_${crypto.randomUUID().slice(0, 8)}`;
       const srNo = data.sr_no || nextSr++;
 
-      const query = `
-        INSERT INTO guests (
+      const newGuest = {
+        id,
+        wedding_id: weddingId,
+        sr_no: srNo,
+        guest_name: data.guest_name.trim(),
+        contact: data.contact || null,
+        side: data.side || "Groom",
+        rsvp_status: data.rsvp_status || "Confirmed",
+        id_card_received: data.id_card_received || "No",
+        arrival_date: data.arrival_date || null,
+        arrival_time: data.arrival_time || null,
+        arrival_location: data.arrival_location || null,
+        arrival_flight_train_no: data.arrival_flight_train_no || null,
+        departure_date: data.departure_date || null,
+        departure_time: data.departure_time || null,
+        departure_location: data.departure_location || null,
+        departure_flight_train_no: data.departure_flight_train_no || null,
+        id_card_copy: data.id_card_copy || null,
+        special_request: data.special_request || null,
+        call_count: data.call_count !== undefined ? Number(data.call_count) : 0,
+        call_status: data.call_status || "Not Called",
+        last_called_at: data.last_called_at || null,
+        last_call_summary: data.last_call_summary || null,
+      };
+
+      if (supabase) {
+        try {
+          await supabase.from("guests").upsert(newGuest);
+        } catch (e) {}
+      }
+
+      await pool.query(
+        `INSERT INTO guests (
           id, wedding_id, sr_no, guest_name, contact, side, rsvp_status, id_card_received,
           arrival_date, arrival_time, arrival_location, arrival_flight_train_no,
           departure_date, departure_time, departure_location, departure_flight_train_no,
           id_card_copy, special_request, call_count, call_status, last_called_at, last_call_summary
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-      `;
-
-      const values = [
-        id,
-        weddingId,
-        srNo,
-        data.guest_name.trim(),
-        data.contact || null,
-        data.side || "Groom",
-        data.rsvp_status || "Confirmed",
-        data.id_card_received || "No",
-        data.arrival_date || null,
-        data.arrival_time || null,
-        data.arrival_location || null,
-        data.arrival_flight_train_no || null,
-        data.departure_date || null,
-        data.departure_time || null,
-        data.departure_location || null,
-        data.departure_flight_train_no || null,
-        data.id_card_copy || null,
-        data.special_request || null,
-        data.call_count !== undefined ? Number(data.call_count) : 0,
-        data.call_status || "Not Called",
-        data.last_called_at || null,
-        data.last_call_summary || null,
-      ];
-
-      await pool.query(query, values);
-      createdGuests.push({ id, sr_no: srNo, guest_name: data.guest_name, wedding_id: weddingId });
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+        [
+          id,
+          weddingId,
+          srNo,
+          newGuest.guest_name,
+          newGuest.contact,
+          newGuest.side,
+          newGuest.rsvp_status,
+          newGuest.id_card_received,
+          newGuest.arrival_date,
+          newGuest.arrival_time,
+          newGuest.arrival_location,
+          newGuest.arrival_flight_train_no,
+          newGuest.departure_date,
+          newGuest.departure_time,
+          newGuest.departure_location,
+          newGuest.departure_flight_train_no,
+          newGuest.id_card_copy,
+          newGuest.special_request,
+          newGuest.call_count,
+          newGuest.call_status,
+          newGuest.last_called_at,
+          newGuest.last_call_summary,
+        ]
+      );
+      createdGuests.push(newGuest);
     }
 
     return createdGuests;
@@ -221,6 +523,20 @@ export const GuestModel = {
   async update(id, data) {
     const existing = await this.getById(id);
     if (!existing) return null;
+
+    const updatedData = {
+      ...existing,
+      ...data,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (supabase) {
+      try {
+        await supabase.from("guests").update(updatedData).eq("id", id);
+      } catch (err) {
+        console.warn("Supabase guest update notice:", err.message);
+      }
+    }
 
     const query = `
       UPDATE guests SET
@@ -280,150 +596,44 @@ export const GuestModel = {
 
   // 5. Delete a guest and their call logs
   async delete(id) {
-    await pool.query("DELETE FROM guest_call_logs WHERE guest_id = $1", [id]);
+    if (supabase) {
+      try {
+        await supabase.from("guest_call_logs").delete().eq("guest_id", id);
+        await supabase.from("guests").delete().eq("id", id);
+      } catch (err) {
+        console.warn("Supabase guest delete notice:", err.message);
+      }
+    }
+
+    await pool.query("DELETE FROM guest_call_logs WHERE guest_id = $1", [id]).catch(() => {});
     const result = await pool.query("DELETE FROM guests WHERE id = $1", [id]);
     return (result.rowCount || result.affectedRows) > 0;
   },
 
   // 6. Get dashboard statistics (optionally scoped to a wedding)
   async getStatistics(weddingId = null) {
-    let query = `
-      SELECT 
-        COUNT(*)::int AS "totalRegistered",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' THEN 1 ELSE 0 END), 0)::int AS "rsvpConfirmed",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'pending' THEN 1 ELSE 0 END), 0)::int AS "rsvpPending",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') THEN 1 ELSE 0 END), 0)::int AS "rsvpDeclined",
-        COALESCE(SUM(CASE WHEN LOWER(id_card_received) = 'yes' THEN 1 ELSE 0 END), 0)::int AS "idCardReceived",
-        COALESCE(SUM(CASE WHEN LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideSideCount",
-        COALESCE(SUM(CASE WHEN LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomSideCount",
-        COALESCE(SUM(CASE WHEN LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothSideCount",
-
-        -- RSVP Confirmed Breakdown
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomRsvpConfirmed",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideRsvpConfirmed",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'confirmed' AND LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothRsvpConfirmed",
-
-        -- RSVP Pending Breakdown
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomRsvpPending",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideRsvpPending",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) = 'pending' AND LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothRsvpPending",
-
-        -- RSVP Declined / Regrets Breakdown
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomRsvpDeclined",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideRsvpDeclined",
-        COALESCE(SUM(CASE WHEN LOWER(rsvp_status) IN ('declined', 'regret', 'regrets', 'not attending', 'not coming') AND LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothRsvpDeclined",
-
-        -- ID Card Breakdown
-        COALESCE(SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomIdCardReceived",
-        COALESCE(SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideIdCardReceived",
-        COALESCE(SUM(CASE WHEN LOWER(id_card_received) = 'yes' AND LOWER(side) = 'both' THEN 1 ELSE 0 END), 0)::int AS "bothIdCardReceived",
-
-        -- Confirmed Flight / Travel Details Breakdown
-        COALESCE(SUM(CASE WHEN (arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
-                   OR (arrival_date IS NOT NULL AND TRIM(arrival_date) != '')
-                   OR (departure_flight_train_no IS NOT NULL AND TRIM(departure_flight_train_no) != '')
-                   OR (departure_date IS NOT NULL AND TRIM(departure_date) != '') 
-            THEN 1 ELSE 0 END), 0)::int AS "flightDetailsReceived",
-
-        COALESCE(SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
-                   OR (arrival_date IS NOT NULL AND TRIM(arrival_date) != '')
-                   OR (departure_flight_train_no IS NOT NULL AND TRIM(departure_flight_train_no) != '')
-                   OR (departure_date IS NOT NULL AND TRIM(departure_date) != ''))
-                   AND LOWER(side) = 'groom'
-            THEN 1 ELSE 0 END), 0)::int AS "groomFlightDetailsReceived",
-
-        COALESCE(SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
-                   OR (arrival_date IS NOT NULL AND TRIM(arrival_date) != '')
-                   OR (departure_flight_train_no IS NOT NULL AND TRIM(departure_flight_train_no) != '')
-                   OR (departure_date IS NOT NULL AND TRIM(departure_date) != ''))
-                   AND LOWER(side) = 'bride'
-            THEN 1 ELSE 0 END), 0)::int AS "brideFlightDetailsReceived",
-
-        COALESCE(SUM(CASE WHEN ((arrival_flight_train_no IS NOT NULL AND TRIM(arrival_flight_train_no) != '') 
-                   OR (arrival_date IS NOT NULL AND TRIM(arrival_date) != '')
-                   OR (departure_flight_train_no IS NOT NULL AND TRIM(departure_flight_train_no) != '')
-                   OR (departure_date IS NOT NULL AND TRIM(departure_date) != ''))
-                   AND LOWER(side) = 'both'
-            THEN 1 ELSE 0 END), 0)::int AS "bothFlightDetailsReceived",
-
-        -- Call Checkpoints Breakdown
-        COALESCE(SUM(CASE WHEN call_count >= 3 AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomCall3CompletedCount",
-        COALESCE(SUM(CASE WHEN call_count >= 3 AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideCall3CompletedCount",
-        COALESCE(SUM(CASE WHEN (call_count < 3 OR call_count IS NULL) AND LOWER(side) = 'groom' THEN 1 ELSE 0 END), 0)::int AS "groomCallsInProgress",
-        COALESCE(SUM(CASE WHEN (call_count < 3 OR call_count IS NULL) AND LOWER(side) = 'bride' THEN 1 ELSE 0 END), 0)::int AS "brideCallsInProgress",
-
-        COALESCE(SUM(CASE WHEN special_request IS NOT NULL AND TRIM(special_request) != '' THEN 1 ELSE 0 END), 0)::int AS "specialRequests",
-        COALESCE(SUM(CASE WHEN call_count = 0 OR call_count IS NULL THEN 1 ELSE 0 END), 0)::int AS "notCalledCount",
-        COALESCE(SUM(CASE WHEN call_count = 1 THEN 1 ELSE 0 END), 0)::int AS "call1Count",
-        COALESCE(SUM(CASE WHEN call_count = 2 THEN 1 ELSE 0 END), 0)::int AS "call2Count",
-        COALESCE(SUM(CASE WHEN call_count >= 3 THEN 1 ELSE 0 END), 0)::int AS "call3CompletedCount",
-        COALESCE(SUM(CASE WHEN LOWER(call_status) = 'connected' OR LOWER(call_status) = 'rsvp confirmed' THEN 1 ELSE 0 END), 0)::int AS "callConnectedCount",
-        COALESCE(SUM(CASE WHEN LOWER(call_status) = 'callback requested' THEN 1 ELSE 0 END), 0)::int AS "callbackCount"
-      FROM guests
-    `;
-    const params = [];
-    if (weddingId && weddingId !== "All" && weddingId !== "all") {
-      params.push(weddingId);
-      query += " WHERE wedding_id = $1";
+    // Check live Supabase DB
+    if (supabase) {
+      try {
+        let query = supabase.from("guests").select("*");
+        if (weddingId && weddingId !== "All" && weddingId !== "all") {
+          query = query.eq("wedding_id", weddingId);
+        }
+        const { data, error } = await query;
+        if (data && !error) {
+          return calculateGuestStats(data);
+        }
+      } catch (err) {
+        console.warn("Supabase getStatistics notice:", err.message);
+      }
     }
 
-    const { rows } = await pool.query(query, params);
-    const stats = rows[0] || {};
-    const total = Number(stats.totalRegistered) || 0;
-    const confirmed = Number(stats.rsvpConfirmed) || 0;
-    const idReceived = Number(stats.idCardReceived) || 0;
-    const flightReceived = Number(stats.flightDetailsReceived) || 0;
-    const specialReq = Number(stats.specialRequests) || 0;
-    const call3Done = Number(stats.call3CompletedCount) || 0;
-
-    return {
-      totalRegistered: total,
-      groomSideCount: Number(stats.groomSideCount) || 0,
-      brideSideCount: Number(stats.brideSideCount) || 0,
-      bothSideCount: Number(stats.bothSideCount) || 0,
-
-      rsvpConfirmed: confirmed,
-      rsvpConfirmedPercentage: total > 0 ? Math.round((confirmed / total) * 100) : 0,
-      groomRsvpConfirmed: Number(stats.groomRsvpConfirmed) || 0,
-      brideRsvpConfirmed: Number(stats.brideRsvpConfirmed) || 0,
-      bothRsvpConfirmed: Number(stats.bothRsvpConfirmed) || 0,
-
-      rsvpPending: Number(stats.rsvpPending) || 0,
-      rsvpPendingPercentage: total > 0 ? Math.round(((Number(stats.rsvpPending) || 0) / total) * 100) : 0,
-      groomRsvpPending: Number(stats.groomRsvpPending) || 0,
-      brideRsvpPending: Number(stats.brideRsvpPending) || 0,
-      bothRsvpPending: Number(stats.bothRsvpPending) || 0,
-
-      rsvpDeclined: Number(stats.rsvpDeclined) || 0,
-      rsvpDeclinedPercentage: total > 0 ? Math.round(((Number(stats.rsvpDeclined) || 0) / total) * 100) : 0,
-      groomRsvpDeclined: Number(stats.groomRsvpDeclined) || 0,
-      brideRsvpDeclined: Number(stats.brideRsvpDeclined) || 0,
-      bothRsvpDeclined: Number(stats.bothRsvpDeclined) || 0,
-
-      idCardReceived: idReceived,
-      idCardReceivedPercentage: total > 0 ? Math.round((idReceived / total) * 100) : 0,
-      groomIdCardReceived: Number(stats.groomIdCardReceived) || 0,
-      brideIdCardReceived: Number(stats.brideIdCardReceived) || 0,
-      bothIdCardReceived: Number(stats.bothIdCardReceived) || 0,
-
-      flightDetailsReceived: flightReceived,
-      flightDetailsPercentage: total > 0 ? Math.round((flightReceived / total) * 100) : 0,
-      groomFlightDetailsReceived: Number(stats.groomFlightDetailsReceived) || 0,
-      brideFlightDetailsReceived: Number(stats.brideFlightDetailsReceived) || 0,
-      bothFlightDetailsReceived: Number(stats.bothFlightDetailsReceived) || 0,
-
-      specialRequests: specialReq,
-      notCalledCount: Number(stats.notCalledCount) || 0,
-      call1Count: Number(stats.call1Count) || 0,
-      call2Count: Number(stats.call2Count) || 0,
-      call3CompletedCount: call3Done,
-      call3Percentage: total > 0 ? Math.round((call3Done / total) * 100) : 0,
-      groomCall3CompletedCount: Number(stats.groomCall3CompletedCount) || 0,
-      brideCall3CompletedCount: Number(stats.brideCall3CompletedCount) || 0,
-      groomCallsInProgress: Number(stats.groomCallsInProgress) || 0,
-      brideCallsInProgress: Number(stats.brideCallsInProgress) || 0,
-      callConnectedCount: Number(stats.callConnectedCount) || 0,
-      callbackCount: Number(stats.callbackCount) || 0,
-    };
+    // Pool fallback
+    let list = store.guests || [];
+    if (weddingId && weddingId !== "All" && weddingId !== "all") {
+      list = list.filter((g) => g.wedding_id === weddingId);
+    }
+    return calculateGuestStats(list);
   },
 };
+

@@ -38,6 +38,7 @@ export default function GuestTable({
   onDeleteGuest,
   onViewGuest,
   onOpenCallLogs,
+  onOpenQuickWhatsApp,
 }) {
   const { isAdmin, isViewOnly } = useAuth();
   const showCallDesk = !isViewOnly;
@@ -136,12 +137,24 @@ export default function GuestTable({
                           {guest.guest_name}
                         </p>
                         {guest.contact ? (
-                          <a
-                            href={`tel:${guest.contact}`}
-                            className="text-[11px] text-slate-500 hover:text-emerald-700 font-mono inline-flex items-center gap-1 mt-0.5 transition-colors"
-                          >
-                            <span>{guest.contact}</span>
-                          </a>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <a
+                              href={`tel:${guest.contact}`}
+                              className="text-[11px] text-slate-500 hover:text-emerald-700 font-mono inline-flex items-center gap-1 transition-colors"
+                            >
+                              <span>{guest.contact}</span>
+                            </a>
+                            {!isViewOnly && (
+                              <button
+                                type="button"
+                                onClick={() => onOpenQuickWhatsApp && onOpenQuickWhatsApp(guest)}
+                                title="Send WhatsApp Message"
+                                className="text-[#25d366] hover:text-[#128c7e] transition-transform hover:scale-115 cursor-pointer"
+                              >
+                                <MessageSquare className="w-3 h-3 stroke-[2.5]" />
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-[10px] text-slate-400">No phone</span>
                         )}
@@ -337,6 +350,17 @@ export default function GuestTable({
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
+
+                      {!isViewOnly && guest.contact && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenQuickWhatsApp && onOpenQuickWhatsApp(guest)}
+                          title="Draft & Send WhatsApp"
+                          className="p-1.5 rounded-xl text-[#128c7e] hover:text-[#0b6358] hover:bg-[#25d366]/15 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      )}
 
                       {!isViewOnly && (
                         <button

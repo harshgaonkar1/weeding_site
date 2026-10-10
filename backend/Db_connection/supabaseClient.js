@@ -1,23 +1,35 @@
-// ============================================================
-// Supabase JS Client Instance
-// ------------------------------------------------------------
-// Initializes official @supabase/supabase-js client using
-// SUPABASE_URL and SUPABASE_SECRET_KEY / SUPABASE_PUBLISHABLE_KEY / SUPABASE_ANON_KEY.
-// ============================================================
-
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Candidate paths for .env file
+const envCandidates = [
+  path.resolve(__dirname, "../.env"),
+  path.resolve(__dirname, "../../.env"),
+  path.resolve(process.cwd(), "backend/.env"),
+  path.resolve(process.cwd(), ".env"),
+];
+
+for (const envPath of envCandidates) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  }
+}
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseUrl = process.env.SUPABASE_URL || "https://xzhhxgvtmevjzsowzyvg.supabase.co";
 const supabaseKey =
   process.env.SUPABASE_SECRET_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_ANON_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_KEY ||
-  "";
+  "sb_secret_r5q8zQ_U_MZSXpNl9JSeKA_leatzfk-";
 
 let supabase = null;
 
@@ -29,7 +41,7 @@ if (supabaseUrl && supabaseKey) {
         autoRefreshToken: false,
       },
     });
-    console.log("✅ Supabase JS client initialized");
+    console.log("✅ Supabase JS client initialized successfully");
   } catch (err) {
     console.warn("⚠️ Supabase JS client initialization notice:", err.message);
     supabase = null;

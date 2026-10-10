@@ -11,6 +11,7 @@ import {
   PhoneCall,
   ShieldCheck,
   Headphones,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
