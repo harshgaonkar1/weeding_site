@@ -57,8 +57,8 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-      <div className="bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl border border-emerald-900/10 relative animate-scaleUp my-auto max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl border border-emerald-900/10 relative animate-scaleUp my-auto max-h-[94vh]">
         {/* Close Button if user is already logged in */}
         {user && (
           <button
@@ -70,7 +70,7 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
         )}
 
         {/* Top Header Banner */}
-        <div className="bg-gradient-to-br from-[#0f2922] via-[#163a30] to-[#1c4d25] p-6 text-white text-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-[#0f2922] via-[#163a30] to-[#1c4d25] p-4 sm:p-6 text-white text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-36 h-36 bg-[#84e030]/10 rounded-full blur-2xl pointer-events-none" />
           
           <div className="w-12 h-12 mx-auto rounded-2xl bg-[#84e030]/20 border border-[#84e030]/40 flex items-center justify-center text-[#84e030] mb-3 shadow-sm">

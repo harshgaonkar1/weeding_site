@@ -93,7 +93,7 @@ export default function StatsCards({ stats }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
         {/* 1. Total Registered */}
         <div className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs card-hover-lift animate-fadeInUp">
           <div className="flex items-start justify-between">

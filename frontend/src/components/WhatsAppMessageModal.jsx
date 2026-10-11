@@ -263,12 +263,12 @@ export default function WhatsAppMessageModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="bg-white rounded-[28px] w-full max-w-5xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh] my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 md:p-6 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-[28px] w-full max-w-5xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[94vh] my-auto">
         {/* Toast */}
         {toast && (
           <div
-            className={`fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold animate-fadeInUp ${
+            className={`fixed top-4 right-4 sm:top-6 sm:right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold animate-fadeInUp ${
               toast.isError
                 ? "bg-rose-900 text-white"
                 : "bg-[#0f2922] text-[#84e030] border border-[#84e030]/40"
@@ -280,9 +280,9 @@ export default function WhatsAppMessageModal({
         )}
 
         {/* ================= MODAL HEADER ================= */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#f7fbf8] to-[#f2faf4]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#25d366]/20 text-[#128c7e] flex items-center justify-center font-bold shadow-2xs">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#f7fbf8] to-[#f2faf4]">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#25d366]/20 text-[#128c7e] flex items-center justify-center font-bold shadow-2xs shrink-0">
               <MessageSquare className="w-5 h-5 text-[#16a34a]" />
             </div>
             <div>

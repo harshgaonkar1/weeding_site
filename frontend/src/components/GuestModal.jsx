@@ -294,29 +294,29 @@ export default function GuestModal({
   const currentSrNo = formData.sr_no || nextSrNo;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/45 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="bg-white rounded-[28px] w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/45 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-[28px] w-full max-w-2xl max-h-[94vh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden my-auto">
         {/* Modal Top Header */}
-        <div className="px-7 pt-6 pb-4 border-b border-slate-100 bg-white">
-          <div className="flex items-start justify-between gap-4">
-            <div>
+        <div className="px-4 sm:px-7 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 bg-white">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               {/* Badges */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-[#ebf9df] text-[#4d7f1d] px-3 py-1 rounded-full text-xs font-bold shadow-2xs">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 flex-wrap">
+                <span className="bg-[#ebf9df] text-[#4d7f1d] px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold shadow-2xs">
                   Guest Entry Form
                 </span>
-                <span className="bg-[#f1f5f9] text-[#475569] px-3 py-1 rounded-full text-xs font-semibold shadow-2xs">
+                <span className="bg-[#f1f5f9] text-[#475569] px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold shadow-2xs">
                   Auto Sr No #{currentSrNo}
                 </span>
               </div>
 
               {/* Title */}
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-lg sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
                 {initialData ? "Edit Guest & Travel Details" : "Add Guest & Travel Details"}
               </h2>
 
               {/* Subtitle */}
-              <p className="text-xs text-slate-500 mt-1 font-normal">
+              <p className="text-xs text-slate-500 mt-0.5 font-normal">
                 Fill in guest information, wedding side affiliation, and logistics.
               </p>
             </div>
@@ -324,47 +324,47 @@ export default function GuestModal({
             {/* Close button */}
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer shrink-0 mt-1"
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer shrink-0 mt-0.5"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Quick Presets Bar */}
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 flex-wrap bg-[#f8fafc] p-2.5 rounded-2xl">
-            <span className="text-xs font-semibold text-slate-500 mr-1">Quick Presets:</span>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 sm:gap-2 flex-wrap bg-[#f8fafc] p-2 sm:p-2.5 rounded-xl sm:rounded-2xl">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 mr-1">Quick Presets:</span>
             
             <button
               type="button"
               onClick={() => applyPreset("james")}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-xs font-medium text-slate-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-[11px] sm:text-xs font-medium text-slate-700 shadow-2xs cursor-pointer"
             >
               <span>👤</span>
-              <span>James (Flight)</span>
+              <span>James</span>
             </button>
 
             <button
               type="button"
               onClick={() => applyPreset("sophia")}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-xs font-medium text-slate-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-[11px] sm:text-xs font-medium text-slate-700 shadow-2xs cursor-pointer"
             >
               <span>🚆</span>
-              <span>Sophia (Train)</span>
+              <span>Sophia</span>
             </button>
 
             <button
               type="button"
               onClick={() => applyPreset("alex")}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-xs font-medium text-slate-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-[11px] sm:text-xs font-medium text-slate-700 shadow-2xs cursor-pointer"
             >
               <span>♿</span>
-              <span>Alex (Assistance)</span>
+              <span>Alex</span>
             </button>
           </div>
         </div>
 
         {/* Modal Scrollable Body */}
-        <form onSubmit={handleSubmit} autoComplete="off" className="flex-1 overflow-y-auto px-7 py-5 space-y-5">
+        <form onSubmit={handleSubmit} autoComplete="off" className="flex-1 overflow-y-auto px-4 sm:px-7 py-4 sm:py-5 space-y-4 sm:space-y-5">
           {/* ================= 1. GUEST INFORMATION ================= */}
           <div className="bg-[#fafcfb] border border-slate-200/90 rounded-2xl p-5 space-y-4 shadow-2xs">
             <div className="flex items-center gap-2">

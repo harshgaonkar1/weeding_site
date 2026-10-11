@@ -11,6 +11,7 @@ import {
   PhoneCall,
   ShieldCheck,
   MessageSquare,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -24,6 +25,8 @@ export default function Sidebar({
   selectedWedding = null,
   weddings = [],
   onSelectWedding,
+  isMobileNavOpen = false,
+  setIsMobileNavOpen,
 }) {
   const {
     user,
@@ -36,26 +39,56 @@ export default function Sidebar({
   } = useAuth();
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
 
+  const closeMobile = () => {
+    if (setIsMobileNavOpen) setIsMobileNavOpen(false);
+  };
+
   return (
-    <aside className="w-full md:w-64 lg:w-72 bg-white md:min-h-[860px] p-5 flex flex-col justify-between border-r border-slate-100 shrink-0">
-      <div className="space-y-5">
-        {/* Brand Logo & Current Role Badge */}
-        <div className="flex items-center justify-between px-2 pt-1">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-8 h-8 rounded-2xl bg-[#1c4d25] flex items-center justify-center p-1.5 shadow-sm ring-4 ring-[#d8f5df] transition-all group-hover:scale-105">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#84e030] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#84e030]"></span>
-              </span>
+    <>
+      {/* Mobile Drawer Backdrop */}
+      {isMobileNavOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden animate-fadeIn"
+          onClick={closeMobile}
+        />
+      )}
+
+      {/* Sidebar (Desktop Static + Mobile Drawer) */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white p-5 flex flex-col justify-between border-r border-slate-100 shrink-0 transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:w-64 lg:w-72 md:min-h-[860px] overflow-y-auto ${
+          isMobileNavOpen
+            ? "translate-x-0 shadow-2xl"
+            : "-translate-x-full md:translate-x-0 shadow-none"
+        }`}
+      >
+        <div className="space-y-5">
+          {/* Brand Logo & Current Role Badge */}
+          <div className="flex items-center justify-between px-2 pt-1">
+            <div className="flex items-center gap-3 group cursor-pointer" onClick={closeMobile}>
+              <div className="w-8 h-8 rounded-2xl bg-[#1c4d25] flex items-center justify-center p-1.5 shadow-sm ring-4 ring-[#d8f5df] transition-all group-hover:scale-105">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#84e030] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#84e030]"></span>
+                </span>
+              </div>
+              <div>
+                <span className="text-lg font-extrabold tracking-tight text-slate-900 font-sans block leading-none">
+                  Wedding Site
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">Guest & Travel Directory</span>
+              </div>
             </div>
-            <div>
-              <span className="text-lg font-extrabold tracking-tight text-slate-900 font-sans block leading-none">
-                Wedding Site
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium">Guest & Travel Directory</span>
-            </div>
+
+            {/* Mobile Close Button */}
+            <button
+              type="button"
+              onClick={closeMobile}
+              aria-label="Close navigation menu"
+              className="md:hidden w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-        </div>
 
         {/* Role Pill Banner */}
         <div className="px-2">
@@ -335,5 +368,6 @@ export default function Sidebar({
         </div>
       </div>
     </aside>
+    </>
   );
 }

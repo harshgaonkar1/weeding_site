@@ -64,10 +64,10 @@ export default function WeddingCredentialsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white rounded-[28px] w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden relative animate-scaleUp">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-[28px] w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden relative animate-scaleUp my-auto max-h-[94vh] flex flex-col">
         {/* Top Banner */}
-        <div className="bg-[#0f2922] p-6 text-white text-center relative overflow-hidden">
+        <div className="bg-[#0f2922] p-4 sm:p-6 text-white text-center relative overflow-hidden shrink-0">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#84e030]/15 rounded-full blur-2xl pointer-events-none" />
 
           <button
@@ -94,7 +94,7 @@ export default function WeddingCredentialsModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto">
           <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-amber-900">
             <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-[11px] leading-relaxed">

@@ -44,8 +44,8 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 relative animate-bounceIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 relative animate-bounceIn my-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -55,7 +55,7 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
         </button>
 
         {/* Modal Header */}
-        <div className="bg-gradient-to-br from-[#0f2922] via-[#1a382d] to-[#0f2922] p-6 text-white text-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-[#0f2922] via-[#1a382d] to-[#0f2922] p-4 sm:p-6 text-white text-center relative overflow-hidden">
           {/* Ambient Gold/Green Glow */}
           <div className="absolute top-0 right-0 w-36 h-36 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#84e030]/15 rounded-full blur-xl pointer-events-none" />

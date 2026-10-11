@@ -148,34 +148,34 @@ export default function WeddingModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="bg-white rounded-[28px] w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-[28px] w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[94vh]">
         {/* Modal Header */}
-        <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-xs">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-xs shrink-0">
               <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
                 {initialData ? "Edit Marriage Card" : "Create New Marriage Card"}
               </h3>
-              <p className="text-xs text-slate-500">
-                Set up wedding event, auto-create Excel (.xlsx) sheet & client portal access
+              <p className="text-[11px] sm:text-xs text-slate-500 truncate">
+                Set up wedding event & client portal access
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white hover:bg-slate-200/70 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer border border-slate-200"
+            className="w-8 h-8 rounded-full bg-white hover:bg-slate-200/70 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer border border-slate-200 shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} autoComplete="off" className="p-6 space-y-4 overflow-y-auto text-xs">
+        <form onSubmit={handleSubmit} autoComplete="off" className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto text-xs">
           {/* Bride & Groom Names */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>

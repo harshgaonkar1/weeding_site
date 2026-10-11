@@ -40,24 +40,24 @@ export default function GuestDetailsDrawer({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
+      <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#dcfce7] text-[#15803d] flex items-center justify-center font-bold text-sm shadow-xs">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#dcfce7] text-[#15803d] flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs shrink-0">
               {(guest.guest_name || "G").charAt(0).toUpperCase()}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">{guest.guest_name}</h3>
-                <span className="text-xs font-semibold text-slate-500">#{guest.sr_no}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">{guest.guest_name}</h3>
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-500 shrink-0">#{guest.sr_no}</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-xs text-slate-500 flex items-center gap-1">
-                  <Phone className="w-3 h-3 text-emerald-600" />
-                  <a href={`tel:${guest.contact}`} className="hover:underline font-bold text-slate-700 font-mono">
-                    {guest.contact || "No contact provided"}
+                <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                  <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <a href={`tel:${guest.contact}`} className="hover:underline font-bold text-slate-700 font-mono truncate">
+                    {guest.contact || "No contact"}
                   </a>
                 </p>
                 {!isViewOnly && guest.contact && (
@@ -67,7 +67,7 @@ export default function GuestDetailsDrawer({
                       if (onOpenQuickWhatsApp) onOpenQuickWhatsApp(guest);
                     }}
                     title="Send WhatsApp"
-                    className="text-[#25d366] hover:text-[#128c7e] transition-transform hover:scale-115 cursor-pointer"
+                    className="text-[#25d366] hover:text-[#128c7e] transition-transform hover:scale-115 cursor-pointer shrink-0"
                   >
                     <MessageSquare className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
@@ -77,14 +77,14 @@ export default function GuestDetailsDrawer({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white hover:bg-slate-200/70 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer border border-slate-200"
+            className="w-8 h-8 rounded-full bg-white hover:bg-slate-200/70 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer border border-slate-200 shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4 overflow-y-auto text-xs">
+        <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto text-xs">
           {/* Status Badges Row */}
           <div className="flex items-center gap-3 flex-wrap">
             {/* Side Badge */}

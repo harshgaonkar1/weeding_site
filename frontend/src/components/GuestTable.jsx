@@ -58,8 +58,204 @@ export default function GuestTable({
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs my-4 animate-fadeIn">
-      <div className="overflow-x-auto">
+    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs my-3 sm:my-4 animate-fadeIn">
+      {/* 1. Mobile Cards View (< md) */}
+      <div className="block md:hidden divide-y divide-slate-100">
+        {guests.map((guest) => {
+          const avatarTheme = getAvatarTheme(guest.guest_name);
+          const rsvp = (guest.rsvp_status || "Pending").toLowerCase();
+          const side = (guest.side || "Groom").toLowerCase();
+          const callCount = Math.max(
+            Number(guest.call_count) || 0,
+            guest.last_call_summary ? 1 : 0
+          );
+          const hasArrival = Boolean(
+            guest.arrival_date || guest.arrival_time || guest.arrival_flight_train_no || guest.arrival_location
+          );
+          const hasDeparture = Boolean(
+            guest.departure_date || guest.departure_time || guest.departure_flight_train_no || guest.departure_location
+          );
+
+          return (
+            <div key={guest.id} className="p-3.5 space-y-2.5 hover:bg-[#fcfdfc] transition-colors">
+              {/* Header: Avatar, Name, Sr No, and RSVP badge */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className={`w-9 h-9 rounded-xl ${avatarTheme.bg} ${avatarTheme.text} flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs`}
+                  >
+                    {(guest.guest_name || "G").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-extrabold text-slate-900 text-xs sm:text-sm leading-tight truncate">
+                        {guest.guest_name}
+                      </p>
+                      <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
+                        #{guest.sr_no}
+                      </span>
+                    </div>
+
+                    {/* Side & Phone */}
+                    <div className="flex items-center gap-2 mt-0.5 text-xs">
+                      {side === "bride" ? (
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-200/60">
+                          👰 Bride
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-200/60">
+                          🤵 Groom
+                        </span>
+                      )}
+
+                      {guest.contact ? (
+                        <a
+                          href={`tel:${guest.contact}`}
+                          className="text-[11px] text-slate-600 hover:text-emerald-700 font-mono font-medium truncate flex items-center gap-1"
+                        >
+                          <PhoneCall className="w-2.5 h-2.5 text-emerald-600" />
+                          <span>{guest.contact}</span>
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 italic">No phone</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* RSVP Status Pill */}
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 shadow-2xs ${
+                    rsvp === "confirmed"
+                      ? "bg-[#dcfce7] text-[#166534] border border-[#86efac]"
+                      : rsvp === "declined"
+                      ? "bg-rose-50 text-rose-700 border border-rose-200"
+                      : "bg-[#fef9c3] text-[#854d0e] border border-[#fde047]"
+                  }`}
+                >
+                  {rsvp === "confirmed" ? (
+                    <CheckCircle2 className="w-3 h-3 text-[#16a34a]" />
+                  ) : (
+                    <Clock className="w-3 h-3" />
+                  )}
+                  <span className="capitalize">{guest.rsvp_status || "Pending"}</span>
+                </span>
+              </div>
+
+              {/* Logistics Row (Arrival & Departure) */}
+              {(hasArrival || hasDeparture) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                  {hasArrival && (
+                    <div className="flex items-center gap-1.5 text-emerald-900 min-w-0">
+                      <PlaneLanding className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span className="truncate">
+                        <strong>Arr:</strong> {guest.arrival_date || "TBD"} {guest.arrival_time ? `(${guest.arrival_time})` : ""} {guest.arrival_flight_train_no ? `• ${guest.arrival_flight_train_no}` : ""}
+                      </span>
+                    </div>
+                  )}
+                  {hasDeparture && (
+                    <div className="flex items-center gap-1.5 text-purple-900 min-w-0">
+                      <PlaneTakeoff className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <span className="truncate">
+                        <strong>Dep:</strong> {guest.departure_date || "TBD"} {guest.departure_time ? `(${guest.departure_time})` : ""} {guest.departure_flight_train_no ? `• ${guest.departure_flight_train_no}` : ""}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Call Desk & Quick Actions Row */}
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100/80">
+                {/* Left: Call Desk Checkpoints */}
+                {showCallDesk ? (
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className="flex items-center gap-1 cursor-pointer"
+                      onClick={() => onOpenCallLogs && onOpenCallLogs(guest)}
+                      title={`${callCount} calls completed`}
+                    >
+                      {callCount > 0 ? (
+                        Array.from({ length: callCount }, (_, idx) => (
+                          <div
+                            key={idx}
+                            className="min-w-5 h-5 px-1 rounded-full flex items-center justify-center text-[9px] font-bold bg-[#16a34a] text-white shadow-2xs gap-0.5"
+                          >
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            <span>{idx + 1}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold bg-slate-200/80 text-slate-500">
+                          0
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenCallLogs && onOpenCallLogs(guest)}
+                      className="bg-[#0f2922] hover:bg-[#163a30] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs"
+                    >
+                      <PhoneCall className="w-2.5 h-2.5 text-[#84e030]" />
+                      <span>{callCount > 0 ? "Notes" : "Log Call"}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div />
+                )}
+
+                {/* Right: Quick Action Buttons */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onViewGuest(guest)}
+                    title="View full details"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+
+                  {!isViewOnly && guest.contact && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenQuickWhatsApp && onOpenQuickWhatsApp(guest)}
+                      title="Send WhatsApp"
+                      className="p-1.5 rounded-lg text-[#128c7e] hover:bg-[#25d366]/15 cursor-pointer"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {!isViewOnly && (
+                    <button
+                      type="button"
+                      onClick={() => onEditGuest(guest)}
+                      title="Edit guest"
+                      className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 cursor-pointer"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {!isViewOnly && isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteGuest(guest)}
+                      title="Delete guest"
+                      className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 2. Desktop Table View (>= md) */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[1100px]">
           {/* Table Header */}
           <thead>

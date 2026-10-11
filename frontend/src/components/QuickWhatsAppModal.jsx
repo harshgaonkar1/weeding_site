@@ -70,23 +70,23 @@ export default function QuickWhatsAppModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[94vh]">
         {/* Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#25d366]/15 text-[#128c7e] flex items-center justify-center font-bold text-base shadow-2xs">
+        <div className="p-3.5 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#25d366]/15 text-[#128c7e] flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
               <MessageSquare className="w-5 h-5 text-[#25d366]" />
             </div>
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <span>Send WhatsApp to {guest.guest_name}</span>
-                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">
+            <div className="min-w-0">
+              <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                <span className="truncate">WhatsApp to {guest.guest_name}</span>
+                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold shrink-0">
                   {guest.side || "Groom"}
                 </span>
               </h3>
-              <p className="text-xs font-mono font-semibold text-slate-500">
-                {isValidPhone ? formatPhoneNumber(normalizedPhone) : `⚠️ Invalid: ${guest.contact || "No number"}`}
+              <p className="text-[11px] sm:text-xs font-mono font-semibold text-slate-500 truncate">
+                {isValidPhone ? formatPhoneNumber(normalizedPhone) : `⚠️ ${guest.contact || "No number"}`}
               </p>
             </div>
           </div>
@@ -94,14 +94,14 @@ export default function QuickWhatsAppModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white hover:bg-slate-200 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 cursor-pointer transition-colors"
+            className="w-8 h-8 rounded-full bg-white hover:bg-slate-200 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 cursor-pointer transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-4 text-xs">
+        <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto">
           {/* Quick Template Picker */}
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1.5">

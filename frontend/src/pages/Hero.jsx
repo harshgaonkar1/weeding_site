@@ -54,6 +54,7 @@ export default function Hero() {
   const [activeTab, setActiveTab] = useState(isMarriageClient ? "directory" : "weddings"); // 'weddings' or 'directory'
   const [weddings, setWeddings] = useState([]);
   const [selectedWedding, setSelectedWedding] = useState(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Guests & Statistics State
   const [guests, setGuests] = useState([]);
@@ -383,11 +384,11 @@ export default function Hero() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f3f6f4] p-3 md:p-6 text-slate-800 flex justify-center font-sans antialiased selection:bg-[#84e030]/30 selection:text-slate-900">
+    <div className="min-h-screen bg-[#f3f6f4] p-0 sm:p-2 md:p-6 text-slate-800 flex justify-center font-sans antialiased selection:bg-[#84e030]/30 selection:text-slate-900">
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold animate-slideIn ${
+          className={`fixed top-4 right-4 sm:top-5 sm:right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold animate-slideIn ${
             toast.type === "error"
               ? "bg-rose-900 text-white"
               : "bg-[#0f2922] text-[#84e030] border border-[#84e030]/40"
@@ -398,8 +399,8 @@ export default function Hero() {
       )}
 
       {/* Main App Container */}
-      <div className="w-full max-w-[1440px] bg-white rounded-[28px] shadow-sm border border-slate-200/80 flex flex-col md:flex-row overflow-hidden min-h-[92vh]">
-        {/* Left Sidebar */}
+      <div className="w-full max-w-[1440px] bg-white rounded-none sm:rounded-[28px] shadow-sm border-0 sm:border border-slate-200/80 flex flex-col md:flex-row overflow-hidden min-h-screen md:min-h-[92vh]">
+        {/* Left Sidebar (Desktop Static + Mobile Slide-Out Drawer) */}
         <Sidebar
           totalCount={
             selectedWedding
@@ -408,16 +409,30 @@ export default function Hero() {
           }
           totalWeddingsCount={weddings.length}
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onOpenAddModal={handleOpenAddGuestModal}
-          onOpenAddWeddingModal={handleOpenAddWeddingModal}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setIsMobileNavOpen(false);
+          }}
+          onOpenAddModal={() => {
+            setIsMobileNavOpen(false);
+            handleOpenAddGuestModal();
+          }}
+          onOpenAddWeddingModal={() => {
+            setIsMobileNavOpen(false);
+            handleOpenAddWeddingModal();
+          }}
           selectedWedding={selectedWedding}
           weddings={weddings}
-          onSelectWedding={handleSelectWedding}
+          onSelectWedding={(w) => {
+            setIsMobileNavOpen(false);
+            handleSelectWedding(w);
+          }}
+          isMobileNavOpen={isMobileNavOpen}
+          setIsMobileNavOpen={setIsMobileNavOpen}
         />
 
         {/* Right Main Content */}
-        <main className="flex-1 flex flex-col bg-[#fcfdfc] overflow-y-auto">
+        <main className="flex-1 flex flex-col bg-[#fcfdfc] overflow-y-auto min-w-0">
           {/* Top Header Bar */}
           <Header
             searchQuery={searchQuery}
@@ -425,6 +440,7 @@ export default function Hero() {
             onOpenAddModal={handleOpenAddGuestModal}
             selectedWedding={selectedWedding}
             weddings={weddings}
+            onOpenMobileNav={() => setIsMobileNavOpen(true)}
           />
 
           {/* Banner 1: Call Center Active Notice */}
@@ -521,10 +537,10 @@ export default function Hero() {
 
           {/* ================= VIEW 2: GUEST DIRECTORY & CALL DESK ================= */}
           {activeTab === "directory" && (
-            <div className="p-5 md:p-7 space-y-4 flex-1 animate-fadeIn">
+            <div className="p-3 sm:p-5 md:p-7 space-y-3.5 sm:space-y-4 flex-1 animate-fadeIn min-w-0">
               {/* Back to All Weddings Bar & Wedding Info */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   {!isMarriageClient && (
                     <button
                       type="button"
@@ -539,29 +555,29 @@ export default function Hero() {
                     </button>
                   )}
 
-                  <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2 flex-wrap">
-                    <span>
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <span className="truncate">
                       {selectedWedding
                         ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
                         : "Guest Directory"}
                     </span>
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs shrink-0">
                       {stats?.totalRegistered ?? guests.length} Guests
                     </span>
                     {isMarriageClient && (
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 shrink-0">
                         View Only
                       </span>
                     )}
                   </h1>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">
                     {selectedWedding?.wedding_date && `${selectedWedding.wedding_date} • `}
                     {selectedWedding?.venue || selectedWedding?.city || "Venue"}
                   </p>
                 </div>
 
                 {/* Top Actions */}
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   {!isMarriageClient && !isViewOnly && (
                     <button
                       onClick={() =>
@@ -569,7 +585,7 @@ export default function Hero() {
                           selectedWedding || (weddings && weddings[0])
                         )
                       }
-                      className="bg-[#edf9df] hover:bg-[#dff5cb] border border-[#c3eeb0] text-[#1c4d25] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                      className="bg-[#edf9df] hover:bg-[#dff5cb] border border-[#c3eeb0] text-[#1c4d25] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
                       title="Live Google Sheet Two-Way Sync"
                     >
                       <FileSpreadsheet className="w-3.5 h-3.5 text-[#16a34a]" />
@@ -583,7 +599,7 @@ export default function Hero() {
                         setWhatsAppModalInitialGuest(null);
                         setIsWhatsAppModalOpen(true);
                       }}
-                      className="bg-[#25d366]/15 hover:bg-[#25d366]/25 border border-[#25d366]/40 text-[#0f532a] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                      className="bg-[#25d366]/15 hover:bg-[#25d366]/25 border border-[#25d366]/40 text-[#0f532a] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
                       title="Open WhatsApp Message Desk for this Marriage"
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-[#16a34a]" />
@@ -594,7 +610,7 @@ export default function Hero() {
                   <button
                     onClick={handleExportCsv}
                     disabled={isExporting}
-                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
                   >
                     <Download className="w-3.5 h-3.5 text-slate-500" />
                     <span>Export CSV</span>
@@ -603,7 +619,7 @@ export default function Hero() {
                   <button
                     onClick={handleSyncData}
                     disabled={isSyncing}
-                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold px-3 py-2 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs btn-interactive"
+                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs btn-interactive"
                     title="Refresh data"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isSyncing ? "animate-spin" : ""}`} />
@@ -612,7 +628,7 @@ export default function Hero() {
                   {!isViewOnly && (
                     <button
                       onClick={handleOpenAddGuestModal}
-                      className="bg-[#0f2922] hover:bg-[#163a30] text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-xs btn-interactive"
+                      className="bg-[#0f2922] hover:bg-[#163a30] text-white text-[11px] sm:text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-xs btn-interactive"
                     >
                       <Plus className="w-3.5 h-3.5 text-[#84e030]" />
                       <span>Add Guest</span>
