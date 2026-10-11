@@ -34,7 +34,10 @@ export default function GuestDetailsDrawer({
   const isIdReceived = (guest.id_card_received || "").toLowerCase() === "yes";
   const isImage = guest.id_card_copy && guest.id_card_copy.startsWith("data:image");
   const guestSide = (guest.side || "Groom").toLowerCase();
-  const callCount = Number(guest.call_count) || 0;
+  const callCount = Math.max(
+    Number(guest.call_count) || 0,
+    guest.last_call_summary ? 1 : 0
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
@@ -146,24 +149,29 @@ export default function GuestDetailsDrawer({
                   <span>Call Center Checkpoints</span>
                 </div>
                 <span className="text-[10px] font-bold bg-[#0f2922] text-[#84e030] px-2.5 py-0.5 rounded-full">
-                  {callCount >= 3 ? "✓ 3/3 Calls Completed" : `${callCount}/3 Calls Done`}
+                  {callCount > 0 ? `✓ ${callCount} Call${callCount === 1 ? "" : "s"} Completed` : "0 Calls Done"}
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className={`p-2 rounded-xl border ${callCount >= 1 ? "bg-emerald-100/70 border-emerald-300 font-bold text-emerald-900" : "bg-white border-slate-200 text-slate-400"}`}>
-                  <div className="text-[10px]">1st Call</div>
-                  <div>{callCount >= 1 ? "✓ Done" : "Pending"}</div>
+              {callCount > 0 ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {Array.from({ length: callCount }, (_, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 bg-emerald-100/80 border border-emerald-300 text-emerald-900 px-2.5 py-1 rounded-xl text-xs font-bold"
+                    >
+                      <div className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-[9px] shadow-2xs">
+                        ✓
+                      </div>
+                      <span>Call #{idx + 1} Done</span>
+                    </div>
+                  ))}
                 </div>
-                <div className={`p-2 rounded-xl border ${callCount >= 2 ? "bg-emerald-100/70 border-emerald-300 font-bold text-emerald-900" : "bg-white border-slate-200 text-slate-400"}`}>
-                  <div className="text-[10px]">2nd Call</div>
-                  <div>{callCount >= 2 ? "✓ Done" : "Pending"}</div>
+              ) : (
+                <div className="p-2.5 rounded-xl border bg-white border-slate-200 text-slate-400 text-xs text-center italic">
+                  No calls logged yet
                 </div>
-                <div className={`p-2 rounded-xl border ${callCount >= 3 ? "bg-emerald-100/70 border-emerald-300 font-bold text-emerald-900" : "bg-white border-slate-200 text-slate-400"}`}>
-                  <div className="text-[10px]">3rd Call</div>
-                  <div>{callCount >= 3 ? "✓ Done" : "Pending"}</div>
-                </div>
-              </div>
+              )}
 
               {guest.last_call_summary && (
                 <div className="bg-white border border-emerald-200 p-2.5 rounded-xl text-slate-800">

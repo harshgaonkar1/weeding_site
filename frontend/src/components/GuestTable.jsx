@@ -84,7 +84,7 @@ export default function GuestTable({
                 <th className="py-3.5 px-4 bg-[#f4faf4]/80 text-[#1c4d25] min-w-[190px]">
                   <div className="flex items-center gap-1.5">
                     <PhoneCall className="w-3.5 h-3.5 text-[#16a34a]" />
-                    <span>Call Desk (3 Calls)</span>
+                    <span>Call Desk</span>
                   </div>
                 </th>
               )}
@@ -98,7 +98,10 @@ export default function GuestTable({
               const avatarTheme = getAvatarTheme(guest.guest_name);
               const rsvp = (guest.rsvp_status || "Pending").toLowerCase();
               const side = (guest.side || "Groom").toLowerCase();
-              const callCount = Number(guest.call_count) || 0;
+              const callCount = Math.max(
+                Number(guest.call_count) || 0,
+                guest.last_call_summary ? 1 : 0
+              );
 
               const hasArrival = Boolean(
                 guest.arrival_date ||
@@ -298,24 +301,31 @@ export default function GuestTable({
                   {showCallDesk && (
                     <td className="py-3.5 px-4 bg-[#fafdfa]/70 group-hover:bg-[#f2faf4] transition-colors">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {/* Visual 3-Checkpoint Indicator */}
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3].map((step) => {
-                            const isDone = callCount >= step;
-                            return (
+                        {/* Visual Call Checkpoint Indicator */}
+                        <div
+                          className="flex items-center gap-1 flex-wrap cursor-pointer"
+                          onClick={() => onOpenCallLogs && onOpenCallLogs(guest)}
+                          title={`${callCount} call${callCount === 1 ? "" : "s"} logged - click to view/add`}
+                        >
+                          {callCount > 0 ? (
+                            Array.from({ length: callCount }, (_, idx) => (
                               <div
-                                key={step}
-                                title={isDone ? `Call ${step} completed` : `Call ${step} pending`}
-                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all duration-300 ${
-                                  isDone
-                                    ? "bg-[#16a34a] text-white shadow-2xs scale-105"
-                                    : "bg-slate-200/80 text-slate-400"
-                                }`}
+                                key={idx}
+                                title={`Call ${idx + 1} completed`}
+                                className="min-w-5 h-5 px-1 rounded-full flex items-center justify-center text-[9px] font-bold bg-[#16a34a] text-white shadow-2xs scale-105 transition-all duration-300 gap-0.5"
                               >
-                                {isDone ? <Check className="w-3 h-3 stroke-[3]" /> : step}
+                                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                <span>{idx + 1}</span>
                               </div>
-                            );
-                          })}
+                            ))
+                          ) : (
+                            <div
+                              title="No calls completed yet (0)"
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold bg-slate-200/80 text-slate-500 hover:bg-slate-300 transition-colors"
+                            >
+                              0
+                            </div>
+                          )}
                         </div>
 
                         <button

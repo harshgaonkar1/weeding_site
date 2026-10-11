@@ -439,7 +439,7 @@ export default function Hero() {
                 <span>Call Center Telecaller Desk Active</span>
               </div>
               <span className="text-[10px] font-extrabold bg-[#84e030] text-[#0f2922] px-2.5 py-0.5 rounded-full shadow-2xs">
-                3 Calls / Guest
+                Call Desk Active
               </span>
             </div>
           )}
@@ -506,9 +506,13 @@ export default function Hero() {
                       setCredentialsModalWedding(w);
                       setIsNewlyCreatedWedding(false);
                     }}
-                    onOpenGoogleSheet={(w) => {
-                      setGoogleSheetModalWedding(w);
-                    }}
+                    onOpenGoogleSheet={
+                      !isMarriageClient && !isViewOnly
+                        ? (w) => {
+                            setGoogleSheetModalWedding(w);
+                          }
+                        : null
+                    }
                   />
                 ))}
               </div>
@@ -558,18 +562,20 @@ export default function Hero() {
 
                 {/* Top Actions */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() =>
-                      setGoogleSheetModalWedding(
-                        selectedWedding || (weddings && weddings[0])
-                      )
-                    }
-                    className="bg-[#edf9df] hover:bg-[#dff5cb] border border-[#c3eeb0] text-[#1c4d25] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
-                    title="Live Google Sheet Two-Way Sync"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-[#16a34a]" />
-                    <span>Google Sheet Sync</span>
-                  </button>
+                  {!isMarriageClient && !isViewOnly && (
+                    <button
+                      onClick={() =>
+                        setGoogleSheetModalWedding(
+                          selectedWedding || (weddings && weddings[0])
+                        )
+                      }
+                      className="bg-[#edf9df] hover:bg-[#dff5cb] border border-[#c3eeb0] text-[#1c4d25] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                      title="Live Google Sheet Two-Way Sync"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#16a34a]" />
+                      <span>Google Sheet Sync</span>
+                    </button>
+                  )}
 
                   {!isViewOnly && (
                     <button
@@ -663,7 +669,10 @@ export default function Hero() {
         isOpen={Boolean(callingGuest)}
         guest={callingGuest}
         wedding={selectedWedding}
-        onClose={() => setCallingGuest(null)}
+        onClose={() => {
+          setCallingGuest(null);
+          loadGuests();
+        }}
         onCallLogged={handleCallLogged}
       />
 

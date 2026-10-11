@@ -229,21 +229,30 @@ export default function CallLogModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-slate-200 my-4 relative flex flex-col max-h-[90vh] animate-bounceIn">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-slate-200 my-4 relative flex flex-col max-h-[90vh] animate-bounceIn"
+      >
         {/* Simple Header */}
         <div className="bg-gradient-to-r from-[#0f2922] via-[#163a30] to-[#0f2922] p-5 text-white relative shrink-0 overflow-hidden">
           {/* Ambient light */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#84e030]/10 rounded-full blur-2xl pointer-events-none" />
 
+          {/* Close Button - High z-index, generous clickable area */}
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95"
+            aria-label="Close dialog"
+            className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95 border border-white/20 shadow-xs"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 stroke-[2.5]" />
           </button>
 
-          <div className="flex items-center gap-3 pr-8 relative z-10">
+          <div className="flex items-center gap-3 pr-12 relative z-10">
             <div className="w-11 h-11 rounded-2xl bg-[#84e030]/20 border border-[#84e030]/40 flex items-center justify-center text-[#84e030] font-black text-lg shrink-0 shadow-xs">
               {(guestFormData.guest_name || guest.guest_name || "G").charAt(0).toUpperCase()}
             </div>
@@ -256,7 +265,7 @@ export default function CallLogModal({
                   {guestFormData.side || guest.side || "Groom"} Side
                 </span>
                 <span className="text-[10px] font-extrabold bg-[#84e030] text-[#0f2922] px-2.5 py-0.5 rounded-full shadow-2xs">
-                  {currentCallCount >= 3 ? "✓ 3/3 Calls Done" : `${currentCallCount}/3 Calls`}
+                  {currentCallCount > 0 ? `✓ ${currentCallCount} Call${currentCallCount === 1 ? "" : "s"} Done` : "0 Calls"}
                 </span>
               </div>
 

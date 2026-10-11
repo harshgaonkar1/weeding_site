@@ -10,7 +10,6 @@ import {
   Sparkles,
   PhoneCall,
   ShieldCheck,
-  Headphones,
   MessageSquare,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -271,27 +270,6 @@ export default function Sidebar({
               {totalCount}
             </span>
           </button>
-
-          {/* 3. Call Center Desk Quick View (Admin & Call Center only) */}
-          {!isViewOnly && (
-            <button
-              onClick={() => {
-                if (!selectedWedding && weddings.length > 0) {
-                  onSelectWedding(weddings[0]);
-                }
-                setActiveTab("directory");
-              }}
-              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-emerald-50/70 transition-colors cursor-pointer`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Headphones className="w-4 h-4 text-emerald-600 stroke-[2.2]" />
-                <span>Telecalling Desk</span>
-              </div>
-              <span className="text-[10px] font-bold bg-[#84e030]/25 text-[#1c4d25] px-2 py-0.5 rounded-full">
-                3 Calls
-              </span>
-            </button>
-          )}
 
           {/* Action: Add Marriage Card (Admin Only) */}
           {!isViewOnly && isAdmin && (

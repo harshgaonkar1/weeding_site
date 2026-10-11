@@ -42,7 +42,7 @@ export default function FilterBar({
             <option value="0">⚪ 0 Calls (Not Started)</option>
             <option value="1">📞 1st Call Done</option>
             <option value="2">📞 2nd Call Done</option>
-            <option value="3+">✓ 3 Calls Completed</option>
+            <option value="3+">✓ 3+ Calls Completed</option>
           </select>
         )}
 

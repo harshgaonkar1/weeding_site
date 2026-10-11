@@ -143,36 +143,6 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} autoComplete="off" className="space-y-3.5">
-            {/* Quick Demo Credentials Autofill */}
-            <div className="bg-emerald-50/70 border border-emerald-200/70 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-emerald-900">
-              <span className="font-semibold text-emerald-950">
-                {activeTab === "admin"
-                  ? "Admin Creds: admin / manish1122"
-                  : activeTab === "call_center"
-                  ? "Call Desk: callcenter / call123"
-                  : "Client: aaditya_ananya / Aaditya@2026"}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (activeTab === "admin") {
-                    setIdentifier("admin@emitly.com");
-                    setPassword("manish1122");
-                  } else if (activeTab === "call_center") {
-                    setIdentifier("callcenter@emitly.com");
-                    setPassword("call123");
-                  } else {
-                    setIdentifier("aaditya_ananya");
-                    setPassword("Aaditya@2026");
-                  }
-                  setErrorMessage("");
-                }}
-                className="text-[10px] font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-2 py-0.5 rounded-md cursor-pointer transition-colors shadow-2xs"
-              >
-                Auto Fill
-              </button>
-            </div>
-
             {/* Identifier Field */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">
@@ -250,7 +220,7 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
                 {activeTab === "admin"
                   ? "Super Admin: Full database management access across all weddings"
                   : activeTab === "call_center"
-                  ? "Call Desk: Telecaller verification & 3-call checkpoint logging"
+                  ? "Call Desk: Telecaller verification & call notes logging"
                   : "Marriage View: Private read-only dashboard for this wedding only"}
               </span>
             </div>

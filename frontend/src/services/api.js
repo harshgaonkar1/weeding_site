@@ -1,6 +1,7 @@
 // API Service for Multi-Wedding, Guest Logistics & Call Center Management
+import { API_BASE_URL, BACKEND_SERVER_URL } from "../config/apiConfig";
 
-const API_BASE_URL = "http://localhost:5000/api";
+export { API_BASE_URL, BACKEND_SERVER_URL };
 
 // Initial fallback users
 export const DEFAULT_USERS = {
@@ -938,6 +939,8 @@ export const api = {
   },
 
   async createCallLog(logData) {
+    let createdCallLog = null;
+    let callNumber = 1;
     try {
       const res = await fetch(`${API_BASE_URL}/call-logs`, {
         method: "POST",
@@ -946,33 +949,42 @@ export const api = {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return json;
+        if (json.success) {
+          createdCallLog = json.data;
+          callNumber = json.data?.call_number || 1;
+        }
       }
     } catch (e) { }
 
-    // Fallback local call logging
-    const guestLogs = getCachedCallLogs(logData.guest_id);
-    const newCallNumber = guestLogs.length + 1;
-    const newLog = {
-      id: `call_log_${Date.now().toString(36)}`,
-      guest_id: logData.guest_id,
-      wedding_id: logData.wedding_id || "wedding_01",
-      call_number: newCallNumber,
-      agent_name: logData.agent_name || "Call Desk Agent",
-      call_outcome: logData.call_outcome || "Connected",
-      call_summary: logData.call_summary,
-      callback_date: logData.callback_date || null,
-      called_at: new Date().toISOString(),
-    };
+    if (!createdCallLog) {
+      // Fallback local call logging
+      const guestLogs = getCachedCallLogs(logData.guest_id);
+      callNumber = guestLogs.length + 1;
+      createdCallLog = {
+        id: `call_log_${Date.now().toString(36)}`,
+        guest_id: logData.guest_id,
+        wedding_id: logData.wedding_id || "wedding_01",
+        call_number: callNumber,
+        agent_name: logData.agent_name || "Call Desk Agent",
+        call_outcome: logData.call_outcome || "Connected",
+        call_summary: logData.call_summary,
+        callback_date: logData.callback_date || null,
+        called_at: new Date().toISOString(),
+      };
 
-    const updatedLogs = [...guestLogs, newLog];
-    setCachedCallLogs(logData.guest_id, updatedLogs);
+      const updatedLogs = [...guestLogs, createdCallLog];
+      setCachedCallLogs(logData.guest_id, updatedLogs);
+    } else {
+      const guestLogs = getCachedCallLogs(logData.guest_id);
+      setCachedCallLogs(logData.guest_id, [...guestLogs.filter((l) => l.id !== createdCallLog.id), createdCallLog]);
+    }
 
-    // Update guest in cache
+    // Always keep guest in cache updated with call_count & summary
     const guests = getCachedGuests();
     const guestIdx = guests.findIndex((g) => g.id === logData.guest_id);
     if (guestIdx !== -1) {
-      guests[guestIdx].call_count = newCallNumber;
+      const currentCount = Number(guests[guestIdx].call_count) || 0;
+      guests[guestIdx].call_count = Math.max(currentCount + 1, Number(callNumber) || 1);
       guests[guestIdx].call_status = logData.call_outcome || "Connected";
       guests[guestIdx].last_called_at = new Date().toISOString();
       guests[guestIdx].last_call_summary = logData.call_summary;
@@ -982,7 +994,7 @@ export const api = {
       setCachedGuests(guests);
     }
 
-    return { success: true, data: newLog };
+    return { success: true, data: createdCallLog };
   },
 
   async updateCallLog(id, logData, guestId) {
@@ -994,7 +1006,6 @@ export const api = {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return json.data;
       }
     } catch (e) { }
 
@@ -1004,8 +1015,22 @@ export const api = {
       if (idx !== -1) {
         logs[idx] = { ...logs[idx], ...logData };
         setCachedCallLogs(guestId, logs);
-        return logs[idx];
       }
+      const guests = getCachedGuests();
+      const guestIdx = guests.findIndex((g) => g.id === guestId);
+      if (guestIdx !== -1) {
+        if (!guests[guestIdx].call_count || Number(guests[guestIdx].call_count) === 0) {
+          guests[guestIdx].call_count = 1;
+        }
+        if (logData.call_summary) {
+          guests[guestIdx].last_call_summary = logData.call_summary;
+        }
+        if (logData.call_outcome) {
+          guests[guestIdx].call_status = logData.call_outcome;
+        }
+        setCachedGuests(guests);
+      }
+      return (logs && logs[idx]) || null;
     }
     return null;
   },
@@ -1197,7 +1222,7 @@ export const api = {
       }
     } catch (e) { }
 
-    const serverUrl = "http://localhost:5000";
+    const serverUrl = BACKEND_SERVER_URL;
     return {
       success: true,
       wedding_id: weddingId,
