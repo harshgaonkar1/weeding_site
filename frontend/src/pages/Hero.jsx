@@ -304,11 +304,12 @@ export default function Hero() {
         wedding_id: targetWeddingId,
       };
 
-      // Ensure last_call_summary is NEVER the guest's name
+      // Safely ensure last_call_summary is NEVER the guest's name
       if (
-        payload.last_call_summary &&
+        payload.last_call_summary !== null &&
+        payload.last_call_summary !== undefined &&
         payload.guest_name &&
-        payload.last_call_summary.trim().toLowerCase() === payload.guest_name.trim().toLowerCase()
+        String(payload.last_call_summary).trim().toLowerCase() === String(payload.guest_name).trim().toLowerCase()
       ) {
         payload.last_call_summary = null;
       }
@@ -320,7 +321,8 @@ export default function Hero() {
         payload.last_called_at = null;
         payload.last_call_summary = null;
       } else {
-        if (payload.call_status === "1" || payload.call_status === "2" || (!isNaN(Number(payload.call_status)) && payload.call_status !== "Not Called")) {
+        const sStr = String(payload.call_status || "");
+        if (sStr === "1" || sStr === "2" || (!isNaN(Number(sStr)) && sStr !== "" && sStr !== "Not Called")) {
           payload.call_status = Number(payload.call_count) > 0 ? "Connected" : "Not Called";
         }
         if (!payload.last_call_summary && Number(payload.call_count) === 1 && !payload.last_called_at) {
@@ -347,9 +349,14 @@ export default function Hero() {
       }
       setIsAddGuestModalOpen(false);
       setEditingGuest(null);
-      await Promise.all([loadGuests(), loadWeddings()]);
+      try {
+        await Promise.all([loadGuests(), loadWeddings()]);
+      } catch (refreshErr) {
+        console.warn("Background refresh notice after guest save:", refreshErr);
+      }
     } catch (err) {
-      showToast("Error saving guest", "error");
+      console.error("Error saving guest:", err);
+      showToast(err?.message ? `Error: ${err.message}` : "Error saving guest", "error");
     } finally {
       setIsSubmittingGuest(false);
     }

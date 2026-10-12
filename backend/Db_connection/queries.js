@@ -548,9 +548,10 @@ export const query = async (text, params = []) => {
 
     // Safety guard: ensure last_call_summary is NEVER accidentally set to guest_name
     if (
-      updatedObj.last_call_summary &&
+      updatedObj.last_call_summary !== null &&
+      updatedObj.last_call_summary !== undefined &&
       updatedObj.guest_name &&
-      updatedObj.last_call_summary.trim().toLowerCase() === updatedObj.guest_name.trim().toLowerCase()
+      String(updatedObj.last_call_summary).trim().toLowerCase() === String(updatedObj.guest_name).trim().toLowerCase()
     ) {
       updatedObj.last_call_summary = null;
     }

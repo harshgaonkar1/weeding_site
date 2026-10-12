@@ -574,7 +574,12 @@ export const GoogleSheetsService = {
     let callSummary = getVal("last_call_notes", "last_call_summary", "call_summary", "remarks", "notes") || null;
 
     // Safety guard: last_call_summary is NEVER the guest's name
-    if (callSummary && guestName && callSummary.trim().toLowerCase() === guestName.trim().toLowerCase()) {
+    if (
+      callSummary !== null &&
+      callSummary !== undefined &&
+      guestName &&
+      String(callSummary).trim().toLowerCase() === String(guestName).trim().toLowerCase()
+    ) {
       callSummary = null;
     }
     if (callStatus === "1" || callStatus === "2" || (!isNaN(Number(callStatus)) && callStatus !== "Not Called")) {

@@ -249,12 +249,19 @@ const sanitizeGuestRecord = (g) => {
   let status = g.call_status;
   let count = Number(g.call_count) || 0;
 
-  if (summary && g.guest_name && summary.trim().toLowerCase() === g.guest_name.trim().toLowerCase()) {
-    summary = null;
+  if (summary !== null && summary !== undefined && g.guest_name) {
+    const sStr = String(summary).trim().toLowerCase();
+    const nStr = String(g.guest_name).trim().toLowerCase();
+    if (sStr.length > 0 && sStr === nStr) {
+      summary = null;
+    }
   }
-  if (status === "1" || status === "2" || (!isNaN(Number(status)) && status !== "Not Called")) {
+
+  const statusStr = String(status || "");
+  if (statusStr === "1" || statusStr === "2" || (!isNaN(Number(statusStr)) && statusStr !== "" && statusStr !== "Not Called")) {
     status = count > 0 ? "Connected" : "Not Called";
   }
+
   if (!summary && count === 1 && !g.last_called_at) {
     count = 0;
   }
@@ -262,7 +269,7 @@ const sanitizeGuestRecord = (g) => {
   return {
     ...g,
     last_call_summary: summary,
-    call_status: status,
+    call_status: status || "Not Called",
     call_count: count,
   };
 };
@@ -938,15 +945,20 @@ export const api = {
   },
 
   async updateGuest(id, guestData) {
-    let updated = null;
+    let cleanSummary = guestData.last_call_summary;
+    if (cleanSummary !== null && cleanSummary !== undefined && guestData.guest_name) {
+      const sStr = String(cleanSummary).trim().toLowerCase();
+      const nStr = String(guestData.guest_name).trim().toLowerCase();
+      if (sStr.length > 0 && sStr === nStr) {
+        cleanSummary = null;
+      }
+    }
     const cleanGuestData = {
       ...guestData,
-      last_call_summary:
-        guestData.last_call_summary &&
-        guestData.last_call_summary.trim().toLowerCase() !== (guestData.guest_name || "").trim().toLowerCase()
-          ? guestData.last_call_summary
-          : (guestData.last_call_summary === undefined ? undefined : null),
+      last_call_summary: cleanSummary !== undefined ? cleanSummary : null,
     };
+
+    let updated = null;
     try {
       const res = await fetch(`${API_BASE_URL}/guests/${id}`, {
         method: "PUT",
@@ -959,18 +971,26 @@ export const api = {
           updated = sanitizeGuestRecord(json.data);
         }
       }
-    } catch (e) { }
-
-    const list = getCachedGuests();
-    const idx = list.findIndex((g) => g.id === id);
-    const finalGuest = sanitizeGuestRecord(updated || { ...cleanGuestData, id });
-    if (idx !== -1) {
-      list[idx] = { ...list[idx], ...finalGuest };
-    } else {
-      list.push(finalGuest);
+    } catch (e) {
+      console.warn("API updateGuest fetch notice:", e);
     }
-    setCachedGuests(list);
-    return finalGuest;
+
+    try {
+      const list = getCachedGuests();
+      const idx = list.findIndex((g) => g.id === id);
+      const fallbackGuest = sanitizeGuestRecord({ ...cleanGuestData, id });
+      const finalGuest = updated || fallbackGuest;
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...finalGuest };
+      } else {
+        list.push(finalGuest);
+      }
+      setCachedGuests(list);
+      return finalGuest;
+    } catch (cacheErr) {
+      console.warn("API updateGuest cache update notice:", cacheErr);
+      return updated || { ...cleanGuestData, id };
+    }
   },
 
   async deleteGuest(id) {

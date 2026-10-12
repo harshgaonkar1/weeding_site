@@ -159,9 +159,10 @@ export const GuestModel = {
             let callCount = Number(g.call_count) || 0;
 
             if (
-              callSummary &&
+              callSummary !== null &&
+              callSummary !== undefined &&
               g.guest_name &&
-              callSummary.trim().toLowerCase() === g.guest_name.trim().toLowerCase()
+              String(callSummary).trim().toLowerCase() === String(g.guest_name).trim().toLowerCase()
             ) {
               callSummary = null;
               fixed = true;
@@ -605,9 +606,10 @@ export const GuestModel = {
 
     // Safety guard: ensure last_call_summary is NEVER accidentally set to guest_name
     if (
-      cleanRecord.last_call_summary &&
+      cleanRecord.last_call_summary !== null &&
+      cleanRecord.last_call_summary !== undefined &&
       cleanRecord.guest_name &&
-      cleanRecord.last_call_summary.trim().toLowerCase() === cleanRecord.guest_name.trim().toLowerCase()
+      String(cleanRecord.last_call_summary).trim().toLowerCase() === String(cleanRecord.guest_name).trim().toLowerCase()
     ) {
       cleanRecord.last_call_summary = null;
     }
