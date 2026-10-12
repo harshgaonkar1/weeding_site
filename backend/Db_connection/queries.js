@@ -495,25 +495,8 @@ export const query = async (text, params = []) => {
       updated_at: new Date().toISOString(),
     };
 
-    if (lowerSql.includes("call_count = $1") || lowerSql.includes("call_count =")) {
-      if (params[0] !== undefined) updatedObj.call_count = Number(params[0]) || 1;
-      if (params[1] !== undefined) updatedObj.call_status = params[1] || "Connected";
-      updatedObj.last_called_at = new Date().toISOString();
-      if (params[2] !== undefined) updatedObj.last_call_summary = params[2] || "";
-      let pIdx = 3;
-      if (lowerSql.includes("rsvp_status = $")) {
-        updatedObj.rsvp_status = params[pIdx++];
-      }
-      if (lowerSql.includes("special_request = $")) {
-        updatedObj.special_request = params[pIdx++];
-      }
-    } else if (lowerSql.includes("call_status = $1, last_call_summary = $2")) {
-      updatedObj.call_status = params[0] || "Connected";
-      updatedObj.last_call_summary = params[1] || "";
-      if (!updatedObj.call_count || Number(updatedObj.call_count) === 0) {
-        updatedObj.call_count = 1;
-      }
-    } else if (params.length >= 22) {
+    // 1. FULL GUEST RECORD UPDATE (from GuestModel.update: wedding_id = $1, sr_no = $2, guest_name = $3 ... WHERE id = $22)
+    if (lowerSql.includes("wedding_id = $1") || params.length >= 22) {
       if (params[0] !== undefined) updatedObj.wedding_id = params[0];
       if (params[1] !== undefined && params[1] !== "") updatedObj.sr_no = Number(params[1]) || 1;
       if (params[2] !== undefined) updatedObj.guest_name = params[2];
@@ -535,6 +518,44 @@ export const query = async (text, params = []) => {
       if (params[18] !== undefined) updatedObj.call_status = params[18];
       if (params[19] !== undefined) updatedObj.last_called_at = params[19] || null;
       if (params[20] !== undefined) updatedObj.last_call_summary = params[20];
+    } else if (lowerSql.includes("last_called_at = $3, last_call_summary = $4")) {
+      // 2. Call log delete / sync (CallLogModel.delete: call_count = $1, call_status = $2, last_called_at = $3, last_call_summary = $4 WHERE id = $5)
+      if (params[0] !== undefined) updatedObj.call_count = Number(params[0]) || 0;
+      if (params[1] !== undefined) updatedObj.call_status = params[1] || "Not Called";
+      if (params[2] !== undefined) updatedObj.last_called_at = params[2] || null;
+      if (params[3] !== undefined) updatedObj.last_call_summary = params[3] || null;
+    } else if (lowerSql.includes("call_count = $1, call_status = $2")) {
+      // 3. Call log create (CallLogModel.create: call_count = $1, call_status = $2, last_called_at = NOW(), last_call_summary = $3)
+      if (params[0] !== undefined) updatedObj.call_count = Number(params[0]) || 1;
+      if (params[1] !== undefined) updatedObj.call_status = params[1] || "Connected";
+      updatedObj.last_called_at = new Date().toISOString();
+      if (params[2] !== undefined) updatedObj.last_call_summary = params[2] || "";
+      let pIdx = 3;
+      if (lowerSql.includes("rsvp_status = $")) {
+        updatedObj.rsvp_status = params[pIdx++];
+      }
+      if (lowerSql.includes("special_request = $")) {
+        updatedObj.special_request = params[pIdx++];
+      }
+    } else if (lowerSql.includes("call_status = $1, last_call_summary = $2")) {
+      // 4. Call log update (CallLogModel.update: call_status = $1, last_call_summary = $2 WHERE id = $3)
+      updatedObj.call_status = params[0] || "Connected";
+      updatedObj.last_call_summary = params[1] || "";
+      if (!updatedObj.call_count || Number(updatedObj.call_count) === 0) {
+        updatedObj.call_count = 1;
+      }
+    }
+
+    // Safety guard: ensure last_call_summary is NEVER accidentally set to guest_name
+    if (
+      updatedObj.last_call_summary &&
+      updatedObj.guest_name &&
+      updatedObj.last_call_summary.trim().toLowerCase() === updatedObj.guest_name.trim().toLowerCase()
+    ) {
+      updatedObj.last_call_summary = null;
+    }
+    if (updatedObj.call_status === "1" || updatedObj.call_status === "2" || (!isNaN(Number(updatedObj.call_status)) && updatedObj.call_status !== "Not Called")) {
+      updatedObj.call_status = Number(updatedObj.call_count) > 0 ? "Connected" : "Not Called";
     }
 
     store.guests[idx] = updatedObj;

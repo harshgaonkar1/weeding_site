@@ -568,10 +568,18 @@ export const GoogleSheetsService = {
     }
 
     // Call status & count
-    const callStatus = getVal("call_status", "calling_status", "call") || "Not Called";
+    let callStatus = getVal("call_status", "calling_status", "call") || "Not Called";
     const callCountRaw = getVal("call_count", "call_attempts", "attempts");
     const callCount = callCountRaw && !isNaN(Number(callCountRaw)) ? Number(callCountRaw) : 0;
-    const callSummary = getVal("last_call_notes", "last_call_summary", "call_summary", "remarks", "notes") || null;
+    let callSummary = getVal("last_call_notes", "last_call_summary", "call_summary", "remarks", "notes") || null;
+
+    // Safety guard: last_call_summary is NEVER the guest's name
+    if (callSummary && guestName && callSummary.trim().toLowerCase() === guestName.trim().toLowerCase()) {
+      callSummary = null;
+    }
+    if (callStatus === "1" || callStatus === "2" || (!isNaN(Number(callStatus)) && callStatus !== "Not Called")) {
+      callStatus = callCount > 0 ? "Connected" : "Not Called";
+    }
 
     return {
       wedding_id: weddingId,

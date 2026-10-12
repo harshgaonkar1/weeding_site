@@ -243,17 +243,45 @@ const setCachedWeddings = (weddings) => {
   } catch (e) { }
 };
 
+const sanitizeGuestRecord = (g) => {
+  if (!g) return g;
+  let summary = g.last_call_summary;
+  let status = g.call_status;
+  let count = Number(g.call_count) || 0;
+
+  if (summary && g.guest_name && summary.trim().toLowerCase() === g.guest_name.trim().toLowerCase()) {
+    summary = null;
+  }
+  if (status === "1" || status === "2" || (!isNaN(Number(status)) && status !== "Not Called")) {
+    status = count > 0 ? "Connected" : "Not Called";
+  }
+  if (!summary && count === 1 && !g.last_called_at) {
+    count = 0;
+  }
+
+  return {
+    ...g,
+    last_call_summary: summary,
+    call_status: status,
+    call_count: count,
+  };
+};
+
 const getCachedGuests = () => {
   try {
     const cached = localStorage.getItem("manish_guest_data_v3");
-    if (cached) return JSON.parse(cached);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) return parsed.map(sanitizeGuestRecord);
+    }
   } catch (e) { }
-  return INITIAL_FALLBACK_GUESTS;
+  return INITIAL_FALLBACK_GUESTS.map(sanitizeGuestRecord);
 };
 
 const setCachedGuests = (guests) => {
   try {
-    localStorage.setItem("manish_guest_data_v3", JSON.stringify(guests));
+    const sanitized = Array.isArray(guests) ? guests.map(sanitizeGuestRecord) : [];
+    localStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
   } catch (e) { }
 };
 
@@ -825,16 +853,26 @@ export const api = {
 
   async createGuest(guestData) {
     let created = null;
+    const cleanGuestData = {
+      ...guestData,
+      call_count: guestData.call_count !== undefined && !isNaN(Number(guestData.call_count)) ? Number(guestData.call_count) : 0,
+      call_status: guestData.call_status && isNaN(Number(guestData.call_status)) ? guestData.call_status : "Not Called",
+      last_call_summary:
+        guestData.last_call_summary &&
+        guestData.last_call_summary.trim().toLowerCase() !== (guestData.guest_name || "").trim().toLowerCase()
+          ? guestData.last_call_summary
+          : null,
+    };
     try {
       const res = await fetch(`${API_BASE_URL}/guests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(guestData),
+        body: JSON.stringify(cleanGuestData),
       });
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          created = json.data;
+          created = sanitizeGuestRecord(json.data);
         }
       }
     } catch (e) { }
@@ -847,16 +885,18 @@ export const api = {
     }
 
     const nextSr = list.length > 0 ? Math.max(...list.map((g) => Number(g.sr_no) || 0)) + 1 : 1;
-    const newGuest = {
-      ...guestData,
+    const newGuest = sanitizeGuestRecord({
+      ...cleanGuestData,
       id: `guest_${Date.now().toString(36)}`,
-      sr_no: guestData.sr_no || nextSr,
-      wedding_id: guestData.wedding_id || "wedding_01",
-      side: guestData.side || "Groom",
-      call_count: guestData.call_count || 0,
-      call_status: guestData.call_status || "Not Called",
+      sr_no: cleanGuestData.sr_no || nextSr,
+      wedding_id: cleanGuestData.wedding_id || "wedding_01",
+      side: cleanGuestData.side || "Groom",
+      call_count: 0,
+      call_status: "Not Called",
+      last_called_at: null,
+      last_call_summary: null,
       created_at: new Date().toISOString(),
-    };
+    });
     const updatedList = [newGuest, ...list];
     setCachedGuests(updatedList);
     return newGuest;
@@ -899,23 +939,31 @@ export const api = {
 
   async updateGuest(id, guestData) {
     let updated = null;
+    const cleanGuestData = {
+      ...guestData,
+      last_call_summary:
+        guestData.last_call_summary &&
+        guestData.last_call_summary.trim().toLowerCase() !== (guestData.guest_name || "").trim().toLowerCase()
+          ? guestData.last_call_summary
+          : (guestData.last_call_summary === undefined ? undefined : null),
+    };
     try {
       const res = await fetch(`${API_BASE_URL}/guests/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(guestData),
+        body: JSON.stringify(cleanGuestData),
       });
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          updated = json.data;
+          updated = sanitizeGuestRecord(json.data);
         }
       }
     } catch (e) { }
 
     const list = getCachedGuests();
     const idx = list.findIndex((g) => g.id === id);
-    const finalGuest = updated || { ...guestData, id };
+    const finalGuest = sanitizeGuestRecord(updated || { ...cleanGuestData, id });
     if (idx !== -1) {
       list[idx] = { ...list[idx], ...finalGuest };
     } else {

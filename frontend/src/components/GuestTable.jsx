@@ -65,10 +65,7 @@ export default function GuestTable({
           const avatarTheme = getAvatarTheme(guest.guest_name);
           const rsvp = (guest.rsvp_status || "Pending").toLowerCase();
           const side = (guest.side || "Groom").toLowerCase();
-          const callCount = Math.max(
-            Number(guest.call_count) || 0,
-            guest.last_call_summary ? 1 : 0
-          );
+          const callCount = Number(guest.call_count) || 0;
           const hasArrival = Boolean(
             guest.arrival_date || guest.arrival_time || guest.arrival_flight_train_no || guest.arrival_location
           );
@@ -294,10 +291,7 @@ export default function GuestTable({
               const avatarTheme = getAvatarTheme(guest.guest_name);
               const rsvp = (guest.rsvp_status || "Pending").toLowerCase();
               const side = (guest.side || "Groom").toLowerCase();
-              const callCount = Math.max(
-                Number(guest.call_count) || 0,
-                guest.last_call_summary ? 1 : 0
-              );
+              const callCount = Number(guest.call_count) || 0;
 
               const hasArrival = Boolean(
                 guest.arrival_date ||
@@ -534,7 +528,8 @@ export default function GuestTable({
                         </button>
                       </div>
 
-                      {guest.last_call_summary && (
+                      {guest.last_call_summary &&
+                        guest.last_call_summary.trim().toLowerCase() !== (guest.guest_name || "").trim().toLowerCase() && (
                         <p
                           title={guest.last_call_summary}
                           className="text-[10px] text-slate-500 line-clamp-1 italic mt-1.5 max-w-[200px]"

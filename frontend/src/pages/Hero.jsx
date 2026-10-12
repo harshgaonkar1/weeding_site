@@ -304,6 +304,30 @@ export default function Hero() {
         wedding_id: targetWeddingId,
       };
 
+      // Ensure last_call_summary is NEVER the guest's name
+      if (
+        payload.last_call_summary &&
+        payload.guest_name &&
+        payload.last_call_summary.trim().toLowerCase() === payload.guest_name.trim().toLowerCase()
+      ) {
+        payload.last_call_summary = null;
+      }
+
+      // If creating a brand new guest, ensure call tracking starts strictly at 0
+      if (!editingGuest) {
+        payload.call_count = 0;
+        payload.call_status = "Not Called";
+        payload.last_called_at = null;
+        payload.last_call_summary = null;
+      } else {
+        if (payload.call_status === "1" || payload.call_status === "2" || (!isNaN(Number(payload.call_status)) && payload.call_status !== "Not Called")) {
+          payload.call_status = Number(payload.call_count) > 0 ? "Connected" : "Not Called";
+        }
+        if (!payload.last_call_summary && Number(payload.call_count) === 1 && !payload.last_called_at) {
+          payload.call_count = 0;
+        }
+      }
+
       if (editingGuest) {
         const updatedGuest = await api.updateGuest(editingGuest.id, payload);
         const merged = { ...editingGuest, ...payload, ...(updatedGuest || {}) };

@@ -151,10 +151,60 @@ export const GuestModel = {
 
         const { data, error } = await query;
         if (data && !error) {
-          // Keep in-memory store in sync
-          store.guests = data;
+          // Sanitize any previously corrupted records where last_call_summary === guest_name
+          const sanitized = data.map((g) => {
+            let fixed = false;
+            let callSummary = g.last_call_summary;
+            let callStatus = g.call_status;
+            let callCount = Number(g.call_count) || 0;
 
-          let list = [...data];
+            if (
+              callSummary &&
+              g.guest_name &&
+              callSummary.trim().toLowerCase() === g.guest_name.trim().toLowerCase()
+            ) {
+              callSummary = null;
+              fixed = true;
+            }
+
+            if (callStatus === "1" || callStatus === "2" || (!isNaN(Number(callStatus)) && callStatus !== "Not Called")) {
+              callStatus = callCount > 0 ? "Connected" : "Not Called";
+              fixed = true;
+            }
+
+            if (fixed && (callSummary === null || !callSummary)) {
+              if (callCount === 1 && !g.last_called_at) {
+                callCount = 0;
+              }
+            }
+
+            if (fixed) {
+              const updatedRow = {
+                ...g,
+                last_call_summary: callSummary,
+                call_status: callStatus,
+                call_count: callCount,
+              };
+              // Asynchronously heal the record in Supabase
+              supabase
+                .from("guests")
+                .update({
+                  last_call_summary: callSummary,
+                  call_status: callStatus,
+                  call_count: callCount,
+                })
+                .eq("id", g.id)
+                .then(() => {})
+                .catch(() => {});
+              return updatedRow;
+            }
+            return g;
+          });
+
+          // Keep in-memory store in sync
+          store.guests = sanitized;
+
+          let list = [...sanitized];
 
           // Side filter
           if (side && side !== "All") {
@@ -368,11 +418,14 @@ export const GuestModel = {
       departure_location: data.departure_location || null,
       departure_flight_train_no: data.departure_flight_train_no || null,
       id_card_copy: data.id_card_copy || null,
-      special_request: data.special_request || null,
-      call_count: data.call_count !== undefined ? Number(data.call_count) : 0,
-      call_status: data.call_status || "Not Called",
+      call_count: data.call_count !== undefined && !isNaN(Number(data.call_count)) ? Number(data.call_count) : 0,
+      call_status: data.call_status && isNaN(Number(data.call_status)) ? data.call_status : "Not Called",
       last_called_at: data.last_called_at || null,
-      last_call_summary: data.last_call_summary || null,
+      last_call_summary:
+        data.last_call_summary &&
+        data.last_call_summary.trim().toLowerCase() !== (data.guest_name || "").trim().toLowerCase()
+          ? data.last_call_summary.trim()
+          : null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -544,11 +597,23 @@ export const GuestModel = {
       id_card_copy: data.id_card_copy !== undefined ? (data.id_card_copy || null) : existing.id_card_copy,
       special_request: data.special_request !== undefined ? (data.special_request || null) : existing.special_request,
       call_count: data.call_count !== undefined && data.call_count !== "" && !isNaN(Number(data.call_count)) ? Number(data.call_count) : (existing.call_count || 0),
-      call_status: data.call_status !== undefined && data.call_status ? String(data.call_status) : (existing.call_status || "Not Called"),
+      call_status: data.call_status !== undefined && data.call_status && isNaN(Number(data.call_status)) ? String(data.call_status) : (existing.call_status && isNaN(Number(existing.call_status)) ? existing.call_status : "Not Called"),
       last_called_at: data.last_called_at !== undefined ? (data.last_called_at || null) : existing.last_called_at,
       last_call_summary: data.last_call_summary !== undefined ? (data.last_call_summary || null) : existing.last_call_summary,
       updated_at: new Date().toISOString(),
     };
+
+    // Safety guard: ensure last_call_summary is NEVER accidentally set to guest_name
+    if (
+      cleanRecord.last_call_summary &&
+      cleanRecord.guest_name &&
+      cleanRecord.last_call_summary.trim().toLowerCase() === cleanRecord.guest_name.trim().toLowerCase()
+    ) {
+      cleanRecord.last_call_summary = null;
+    }
+    if (cleanRecord.call_status === "1" || cleanRecord.call_status === "2" || (!isNaN(Number(cleanRecord.call_status)) && cleanRecord.call_status !== "Not Called")) {
+      cleanRecord.call_status = Number(cleanRecord.call_count) > 0 ? "Connected" : "Not Called";
+    }
 
     let updatedResult = null;
 

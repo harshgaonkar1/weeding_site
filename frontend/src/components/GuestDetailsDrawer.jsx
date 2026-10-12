@@ -34,10 +34,7 @@ export default function GuestDetailsDrawer({
   const isIdReceived = (guest.id_card_received || "").toLowerCase() === "yes";
   const isImage = guest.id_card_copy && guest.id_card_copy.startsWith("data:image");
   const guestSide = (guest.side || "Groom").toLowerCase();
-  const callCount = Math.max(
-    Number(guest.call_count) || 0,
-    guest.last_call_summary ? 1 : 0
-  );
+  const callCount = Number(guest.call_count) || 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
@@ -173,7 +170,8 @@ export default function GuestDetailsDrawer({
                 </div>
               )}
 
-              {guest.last_call_summary && (
+              {guest.last_call_summary &&
+                guest.last_call_summary.trim().toLowerCase() !== (guest.guest_name || "").trim().toLowerCase() && (
                 <div className="bg-white border border-emerald-200 p-2.5 rounded-xl text-slate-800">
                   <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">
                     Latest Call Summary:
