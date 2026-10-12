@@ -169,48 +169,90 @@ export const WeddingModel = {
     const existing = await this.getById(id);
     if (!existing) return null;
 
+    const cleanWeddingRecord = {
+      groom_name: data.groom_name !== undefined ? String(data.groom_name).trim() : existing.groom_name,
+      bride_name: data.bride_name !== undefined ? String(data.bride_name).trim() : existing.bride_name,
+      wedding_date: data.wedding_date !== undefined ? (data.wedding_date || null) : existing.wedding_date,
+      venue: data.venue !== undefined ? (data.venue || null) : existing.venue,
+      city: data.city !== undefined ? (data.city || null) : existing.city,
+      cover_theme: data.cover_theme !== undefined ? data.cover_theme : (existing.cover_theme || "emerald"),
+      notes: data.notes !== undefined ? (data.notes || null) : existing.notes,
+      client_username: data.client_username !== undefined ? (data.client_username || null) : existing.client_username,
+      client_password: data.client_password !== undefined ? (data.client_password || null) : existing.client_password,
+      google_sheet_id: data.google_sheet_id !== undefined ? (data.google_sheet_id || null) : existing.google_sheet_id,
+      google_sheet_url: data.google_sheet_url !== undefined ? (data.google_sheet_url || null) : existing.google_sheet_url,
+      google_sheet_sync_status: data.google_sheet_sync_status !== undefined ? (data.google_sheet_sync_status || "connected") : (existing.google_sheet_sync_status || "connected"),
+      google_sheet_last_synced: data.google_sheet_last_synced !== undefined ? (data.google_sheet_last_synced || null) : (existing.google_sheet_last_synced || new Date().toISOString()),
+      updated_at: new Date().toISOString(),
+    };
+
+    let updatedResult = null;
+
     if (supabase) {
       try {
-        await supabase.from("weddings").update(data).eq("id", id);
-      } catch (err) {}
+        const { data: supaUpdated, error: supaError } = await supabase
+          .from("weddings")
+          .update(cleanWeddingRecord)
+          .eq("id", id)
+          .select();
+
+        if (supaError) {
+          console.error("❌ Supabase wedding update error:", supaError.message);
+        } else if (supaUpdated && supaUpdated.length > 0) {
+          updatedResult = supaUpdated[0];
+        }
+      } catch (err) {
+        console.warn("Supabase wedding update notice:", err.message);
+      }
     }
 
-    const query = `
-      UPDATE weddings SET
-        groom_name = COALESCE($1, groom_name),
-        bride_name = COALESCE($2, bride_name),
-        wedding_date = $3,
-        venue = $4,
-        city = $5,
-        cover_theme = COALESCE($6, cover_theme),
-        notes = $7,
-        client_username = COALESCE($8, client_username),
-        client_password = COALESCE($9, client_password),
-        google_sheet_id = COALESCE($10, google_sheet_id),
-        google_sheet_url = COALESCE($11, google_sheet_url),
-        google_sheet_sync_status = COALESCE($12, google_sheet_sync_status),
-        google_sheet_last_synced = COALESCE($13, google_sheet_last_synced),
-        updated_at = NOW()
-      WHERE id = $14
-    `;
-    const values = [
-      data.groom_name !== undefined ? data.groom_name : existing.groom_name,
-      data.bride_name !== undefined ? data.bride_name : existing.bride_name,
-      data.wedding_date !== undefined ? data.wedding_date : existing.wedding_date,
-      data.venue !== undefined ? data.venue : existing.venue,
-      data.city !== undefined ? data.city : existing.city,
-      data.cover_theme !== undefined ? data.cover_theme : existing.cover_theme,
-      data.notes !== undefined ? data.notes : existing.notes,
-      data.client_username !== undefined ? data.client_username : existing.client_username,
-      data.client_password !== undefined ? data.client_password : existing.client_password,
-      data.google_sheet_id !== undefined ? data.google_sheet_id : existing.google_sheet_id,
-      data.google_sheet_url !== undefined ? data.google_sheet_url : existing.google_sheet_url,
-      data.google_sheet_sync_status !== undefined ? data.google_sheet_sync_status : existing.google_sheet_sync_status,
-      data.google_sheet_last_synced !== undefined ? data.google_sheet_last_synced : existing.google_sheet_last_synced,
-      id,
-    ];
-    await pool.query(query, values);
-    return this.getById(id);
+    const merged = { ...existing, ...cleanWeddingRecord, id };
+    const wIdx = store.weddings.findIndex((w) => w.id === id);
+    if (wIdx >= 0) {
+      store.weddings[wIdx] = { ...store.weddings[wIdx], ...merged };
+    } else {
+      store.weddings.push(merged);
+    }
+
+    try {
+      const query = `
+        UPDATE weddings SET
+          groom_name = COALESCE($1, groom_name),
+          bride_name = COALESCE($2, bride_name),
+          wedding_date = $3,
+          venue = $4,
+          city = $5,
+          cover_theme = COALESCE($6, cover_theme),
+          notes = $7,
+          client_username = COALESCE($8, client_username),
+          client_password = COALESCE($9, client_password),
+          google_sheet_id = COALESCE($10, google_sheet_id),
+          google_sheet_url = COALESCE($11, google_sheet_url),
+          google_sheet_sync_status = COALESCE($12, google_sheet_sync_status),
+          google_sheet_last_synced = COALESCE($13, google_sheet_last_synced),
+          updated_at = NOW()
+        WHERE id = $14
+      `;
+      const values = [
+        cleanWeddingRecord.groom_name,
+        cleanWeddingRecord.bride_name,
+        cleanWeddingRecord.wedding_date,
+        cleanWeddingRecord.venue,
+        cleanWeddingRecord.city,
+        cleanWeddingRecord.cover_theme,
+        cleanWeddingRecord.notes,
+        cleanWeddingRecord.client_username,
+        cleanWeddingRecord.client_password,
+        cleanWeddingRecord.google_sheet_id,
+        cleanWeddingRecord.google_sheet_url,
+        cleanWeddingRecord.google_sheet_sync_status,
+        cleanWeddingRecord.google_sheet_last_synced,
+        id,
+      ];
+      await pool.query(query, values);
+    } catch (e) {}
+
+    return updatedResult || merged;
   },
 
   // 5. Authenticate wedding client credentials directly from Database

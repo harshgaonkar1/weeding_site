@@ -438,118 +438,139 @@ export const query = async (text, params = []) => {
   // ============================================================
   if (lowerSql.startsWith("update weddings")) {
     const id = params[params.length - 1];
-    const idx = store.weddings.findIndex((w) => w.id === id);
-    if (idx >= 0) {
-      store.weddings[idx] = {
-        ...store.weddings[idx],
-        groom_name: params[0] !== undefined ? params[0] : store.weddings[idx].groom_name,
-        bride_name: params[1] !== undefined ? params[1] : store.weddings[idx].bride_name,
-        wedding_date: params[2] !== undefined ? params[2] : store.weddings[idx].wedding_date,
-        venue: params[3] !== undefined ? params[3] : store.weddings[idx].venue,
-        city: params[4] !== undefined ? params[4] : store.weddings[idx].city,
-        cover_theme: params[5] !== undefined ? params[5] : store.weddings[idx].cover_theme,
-        notes: params[6] !== undefined ? params[6] : store.weddings[idx].notes,
-        client_username: params[7] !== undefined ? params[7] : store.weddings[idx].client_username,
-        client_password: params[8] !== undefined ? params[8] : store.weddings[idx].client_password,
-        google_sheet_id: params[9] !== undefined ? params[9] : store.weddings[idx].google_sheet_id,
-        google_sheet_url: params[10] !== undefined ? params[10] : store.weddings[idx].google_sheet_url,
-        google_sheet_sync_status: params[11] !== undefined ? params[11] : store.weddings[idx].google_sheet_sync_status,
-        google_sheet_last_synced: params[12] !== undefined ? params[12] : store.weddings[idx].google_sheet_last_synced,
-        updated_at: new Date().toISOString(),
-      };
-      if (supabase) {
-        try {
-          await supabase.from("weddings").update(store.weddings[idx]).eq("id", id);
-        } catch (err) {
-          console.warn("Supabase wedding update notice:", err.message);
-        }
-      }
-      return formatResult([store.weddings[idx]]);
+    let idx = store.weddings.findIndex((w) => w.id === id);
+    if (idx === -1) {
+      store.weddings.push({ id, created_at: new Date().toISOString() });
+      idx = store.weddings.length - 1;
     }
-    return formatResult([]);
+
+    const currentWedding = store.weddings[idx] || {};
+    store.weddings[idx] = {
+      ...currentWedding,
+      id,
+      groom_name: params[0] !== undefined ? params[0] : currentWedding.groom_name,
+      bride_name: params[1] !== undefined ? params[1] : currentWedding.bride_name,
+      wedding_date: params[2] !== undefined ? params[2] : currentWedding.wedding_date,
+      venue: params[3] !== undefined ? params[3] : currentWedding.venue,
+      city: params[4] !== undefined ? params[4] : currentWedding.city,
+      cover_theme: params[5] !== undefined ? params[5] : currentWedding.cover_theme,
+      notes: params[6] !== undefined ? params[6] : currentWedding.notes,
+      client_username: params[7] !== undefined ? params[7] : currentWedding.client_username,
+      client_password: params[8] !== undefined ? params[8] : currentWedding.client_password,
+      google_sheet_id: params[9] !== undefined ? params[9] : currentWedding.google_sheet_id,
+      google_sheet_url: params[10] !== undefined ? params[10] : currentWedding.google_sheet_url,
+      google_sheet_sync_status: params[11] !== undefined ? params[11] : currentWedding.google_sheet_sync_status,
+      google_sheet_last_synced: params[12] !== undefined ? params[12] : currentWedding.google_sheet_last_synced,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (supabase) {
+      try {
+        const supaPayload = { ...store.weddings[idx] };
+        delete supaPayload.id;
+        delete supaPayload.total_guests;
+        delete supaPayload.confirmed_guests;
+        delete supaPayload.bride_guests;
+        delete supaPayload.groom_guests;
+        await supabase.from("weddings").update(supaPayload).eq("id", id);
+      } catch (err) {
+        console.warn("Supabase wedding update notice:", err.message);
+      }
+    }
+    return formatResult([store.weddings[idx]]);
   }
 
   if (lowerSql.startsWith("update guests")) {
     const id = params[params.length - 1];
-    const idx = store.guests.findIndex((g) => g.id === id);
-    if (idx >= 0) {
-      const updatedObj = {
-        ...store.guests[idx],
-        updated_at: new Date().toISOString(),
-      };
-
-      if (lowerSql.includes("call_count = $1") || lowerSql.includes("call_count =")) {
-        if (params[0] !== undefined) updatedObj.call_count = Number(params[0]) || 1;
-        if (params[1] !== undefined) updatedObj.call_status = params[1] || "Connected";
-        updatedObj.last_called_at = new Date().toISOString();
-        if (params[2] !== undefined) updatedObj.last_call_summary = params[2] || "";
-        let pIdx = 3;
-        if (lowerSql.includes("rsvp_status = $")) {
-          updatedObj.rsvp_status = params[pIdx++];
-        }
-        if (lowerSql.includes("special_request = $")) {
-          updatedObj.special_request = params[pIdx++];
-        }
-      } else if (lowerSql.includes("call_status = $1, last_call_summary = $2")) {
-        updatedObj.call_status = params[0] || "Connected";
-        updatedObj.last_call_summary = params[1] || "";
-        if (!updatedObj.call_count || Number(updatedObj.call_count) === 0) {
-          updatedObj.call_count = 1;
-        }
-      } else if (params.length >= 22) {
-        if (params[0] !== undefined) updatedObj.wedding_id = params[0];
-        if (params[1] !== undefined) updatedObj.sr_no = Number(params[1]);
-        if (params[2] !== undefined) updatedObj.guest_name = params[2];
-        if (params[3] !== undefined) updatedObj.contact = params[3];
-        if (params[4] !== undefined) updatedObj.side = params[4];
-        if (params[5] !== undefined) updatedObj.rsvp_status = params[5];
-        if (params[6] !== undefined) updatedObj.id_card_received = params[6];
-        if (params[7] !== undefined) updatedObj.arrival_date = params[7];
-        if (params[8] !== undefined) updatedObj.arrival_time = params[8];
-        if (params[9] !== undefined) updatedObj.arrival_location = params[9];
-        if (params[10] !== undefined) updatedObj.arrival_flight_train_no = params[10];
-        if (params[11] !== undefined) updatedObj.departure_date = params[11];
-        if (params[12] !== undefined) updatedObj.departure_time = params[12];
-        if (params[13] !== undefined) updatedObj.departure_location = params[13];
-        if (params[14] !== undefined) updatedObj.departure_flight_train_no = params[14];
-        if (params[15] !== undefined) updatedObj.id_card_copy = params[15];
-        if (params[16] !== undefined) updatedObj.special_request = params[16];
-        if (params[17] !== undefined) updatedObj.call_count = Number(params[17]);
-        if (params[18] !== undefined) updatedObj.call_status = params[18];
-        if (params[19] !== undefined) updatedObj.last_called_at = params[19];
-        if (params[20] !== undefined) updatedObj.last_call_summary = params[20];
-      }
-
-      store.guests[idx] = updatedObj;
-      if (supabase) {
-        try {
-          await supabase.from("guests").update(updatedObj).eq("id", id);
-        } catch (err) {
-          console.warn("Supabase guest update notice:", err.message);
-        }
-      }
-      return formatResult([updatedObj]);
+    let idx = store.guests.findIndex((g) => g.id === id);
+    if (idx === -1) {
+      store.guests.push({ id, created_at: new Date().toISOString() });
+      idx = store.guests.length - 1;
     }
-    return formatResult([]);
+
+    const currentGuest = store.guests[idx] || {};
+    const updatedObj = {
+      ...currentGuest,
+      id,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (lowerSql.includes("call_count = $1") || lowerSql.includes("call_count =")) {
+      if (params[0] !== undefined) updatedObj.call_count = Number(params[0]) || 1;
+      if (params[1] !== undefined) updatedObj.call_status = params[1] || "Connected";
+      updatedObj.last_called_at = new Date().toISOString();
+      if (params[2] !== undefined) updatedObj.last_call_summary = params[2] || "";
+      let pIdx = 3;
+      if (lowerSql.includes("rsvp_status = $")) {
+        updatedObj.rsvp_status = params[pIdx++];
+      }
+      if (lowerSql.includes("special_request = $")) {
+        updatedObj.special_request = params[pIdx++];
+      }
+    } else if (lowerSql.includes("call_status = $1, last_call_summary = $2")) {
+      updatedObj.call_status = params[0] || "Connected";
+      updatedObj.last_call_summary = params[1] || "";
+      if (!updatedObj.call_count || Number(updatedObj.call_count) === 0) {
+        updatedObj.call_count = 1;
+      }
+    } else if (params.length >= 22) {
+      if (params[0] !== undefined) updatedObj.wedding_id = params[0];
+      if (params[1] !== undefined && params[1] !== "") updatedObj.sr_no = Number(params[1]) || 1;
+      if (params[2] !== undefined) updatedObj.guest_name = params[2];
+      if (params[3] !== undefined) updatedObj.contact = params[3];
+      if (params[4] !== undefined) updatedObj.side = params[4];
+      if (params[5] !== undefined) updatedObj.rsvp_status = params[5];
+      if (params[6] !== undefined) updatedObj.id_card_received = params[6];
+      if (params[7] !== undefined) updatedObj.arrival_date = params[7];
+      if (params[8] !== undefined) updatedObj.arrival_time = params[8];
+      if (params[9] !== undefined) updatedObj.arrival_location = params[9];
+      if (params[10] !== undefined) updatedObj.arrival_flight_train_no = params[10];
+      if (params[11] !== undefined) updatedObj.departure_date = params[11];
+      if (params[12] !== undefined) updatedObj.departure_time = params[12];
+      if (params[13] !== undefined) updatedObj.departure_location = params[13];
+      if (params[14] !== undefined) updatedObj.departure_flight_train_no = params[14];
+      if (params[15] !== undefined) updatedObj.id_card_copy = params[15];
+      if (params[16] !== undefined) updatedObj.special_request = params[16];
+      if (params[17] !== undefined && params[17] !== "") updatedObj.call_count = Number(params[17]) || 0;
+      if (params[18] !== undefined) updatedObj.call_status = params[18];
+      if (params[19] !== undefined) updatedObj.last_called_at = params[19] || null;
+      if (params[20] !== undefined) updatedObj.last_call_summary = params[20];
+    }
+
+    store.guests[idx] = updatedObj;
+    if (supabase) {
+      try {
+        const supaPayload = { ...updatedObj };
+        delete supaPayload.id;
+        await supabase.from("guests").update(supaPayload).eq("id", id);
+      } catch (err) {
+        console.warn("Supabase guest update notice:", err.message);
+      }
+    }
+    return formatResult([updatedObj]);
   }
 
   if (lowerSql.startsWith("update guest_call_logs")) {
     const id = params[params.length - 1];
-    const idx = store.guest_call_logs.findIndex((l) => l.id === id);
-    if (idx >= 0) {
-      if (params[0] !== undefined) store.guest_call_logs[idx].call_outcome = params[0];
-      if (params[1] !== undefined) store.guest_call_logs[idx].call_summary = params[1];
-      if (params[2] !== undefined) store.guest_call_logs[idx].callback_date = params[2];
-      if (supabase) {
-        try {
-          await supabase.from("guest_call_logs").update(store.guest_call_logs[idx]).eq("id", id);
-        } catch (err) {
-          console.warn("Supabase call log update notice:", err.message);
-        }
-      }
-      return formatResult([store.guest_call_logs[idx]]);
+    let idx = store.guest_call_logs.findIndex((l) => l.id === id);
+    if (idx === -1) {
+      store.guest_call_logs.push({ id });
+      idx = store.guest_call_logs.length - 1;
     }
-    return formatResult([]);
+
+    if (params[0] !== undefined) store.guest_call_logs[idx].call_outcome = params[0];
+    if (params[1] !== undefined) store.guest_call_logs[idx].call_summary = params[1];
+    if (params[2] !== undefined) store.guest_call_logs[idx].callback_date = params[2];
+    if (supabase) {
+      try {
+        const supaLog = { ...store.guest_call_logs[idx] };
+        delete supaLog.id;
+        await supabase.from("guest_call_logs").update(supaLog).eq("id", id);
+      } catch (err) {
+        console.warn("Supabase call log update notice:", err.message);
+      }
+    }
+    return formatResult([store.guest_call_logs[idx]]);
   }
 
   // ============================================================

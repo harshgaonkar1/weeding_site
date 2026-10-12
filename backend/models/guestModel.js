@@ -524,74 +524,120 @@ export const GuestModel = {
     const existing = await this.getById(id);
     if (!existing) return null;
 
-    const updatedData = {
-      ...existing,
-      ...data,
+    // Clean and validate every single field strictly according to schema
+    const cleanRecord = {
+      wedding_id: data.wedding_id !== undefined && data.wedding_id !== null ? String(data.wedding_id) : existing.wedding_id,
+      sr_no: data.sr_no !== undefined && data.sr_no !== "" && !isNaN(Number(data.sr_no)) ? Number(data.sr_no) : (existing.sr_no || 1),
+      guest_name: data.guest_name !== undefined ? String(data.guest_name).trim() : existing.guest_name,
+      contact: data.contact !== undefined ? (data.contact ? String(data.contact).trim() : null) : existing.contact,
+      side: data.side !== undefined && data.side ? String(data.side) : (existing.side || "Groom"),
+      rsvp_status: data.rsvp_status !== undefined && data.rsvp_status ? String(data.rsvp_status) : (existing.rsvp_status || "Confirmed"),
+      id_card_received: data.id_card_received !== undefined && data.id_card_received ? String(data.id_card_received) : (existing.id_card_received || "No"),
+      arrival_date: data.arrival_date !== undefined ? (data.arrival_date || null) : existing.arrival_date,
+      arrival_time: data.arrival_time !== undefined ? (data.arrival_time || null) : existing.arrival_time,
+      arrival_location: data.arrival_location !== undefined ? (data.arrival_location || null) : existing.arrival_location,
+      arrival_flight_train_no: data.arrival_flight_train_no !== undefined ? (data.arrival_flight_train_no || null) : existing.arrival_flight_train_no,
+      departure_date: data.departure_date !== undefined ? (data.departure_date || null) : existing.departure_date,
+      departure_time: data.departure_time !== undefined ? (data.departure_time || null) : existing.departure_time,
+      departure_location: data.departure_location !== undefined ? (data.departure_location || null) : existing.departure_location,
+      departure_flight_train_no: data.departure_flight_train_no !== undefined ? (data.departure_flight_train_no || null) : existing.departure_flight_train_no,
+      id_card_copy: data.id_card_copy !== undefined ? (data.id_card_copy || null) : existing.id_card_copy,
+      special_request: data.special_request !== undefined ? (data.special_request || null) : existing.special_request,
+      call_count: data.call_count !== undefined && data.call_count !== "" && !isNaN(Number(data.call_count)) ? Number(data.call_count) : (existing.call_count || 0),
+      call_status: data.call_status !== undefined && data.call_status ? String(data.call_status) : (existing.call_status || "Not Called"),
+      last_called_at: data.last_called_at !== undefined ? (data.last_called_at || null) : existing.last_called_at,
+      last_call_summary: data.last_call_summary !== undefined ? (data.last_call_summary || null) : existing.last_call_summary,
       updated_at: new Date().toISOString(),
     };
 
+    let updatedResult = null;
+
     if (supabase) {
       try {
-        await supabase.from("guests").update(updatedData).eq("id", id);
+        const { data: supaUpdated, error: supaError } = await supabase
+          .from("guests")
+          .update(cleanRecord)
+          .eq("id", id)
+          .select();
+
+        if (supaError) {
+          console.error("❌ Supabase guest update error:", supaError.message, supaError.details || "");
+        } else if (supaUpdated && supaUpdated.length > 0) {
+          updatedResult = supaUpdated[0];
+        }
       } catch (err) {
         console.warn("Supabase guest update notice:", err.message);
       }
     }
 
-    const query = `
-      UPDATE guests SET
-        wedding_id = COALESCE($1, wedding_id),
-        sr_no = COALESCE($2, sr_no),
-        guest_name = COALESCE($3, guest_name),
-        contact = $4,
-        side = COALESCE($5, side),
-        rsvp_status = COALESCE($6, rsvp_status),
-        id_card_received = COALESCE($7, id_card_received),
-        arrival_date = $8,
-        arrival_time = $9,
-        arrival_location = $10,
-        arrival_flight_train_no = $11,
-        departure_date = $12,
-        departure_time = $13,
-        departure_location = $14,
-        departure_flight_train_no = $15,
-        id_card_copy = $16,
-        special_request = $17,
-        call_count = COALESCE($18, call_count),
-        call_status = COALESCE($19, call_status),
-        last_called_at = COALESCE($20, last_called_at),
-        last_call_summary = COALESCE($21, last_call_summary),
-        updated_at = NOW()
-      WHERE id = $22
-    `;
+    // Always keep in-memory store in sync
+    const merged = { ...existing, ...cleanRecord, id };
+    const sIdx = store.guests.findIndex((g) => g.id === id);
+    if (sIdx >= 0) {
+      store.guests[sIdx] = { ...store.guests[sIdx], ...merged };
+    } else {
+      store.guests.push(merged);
+    }
 
-    const values = [
-      data.wedding_id !== undefined ? data.wedding_id : existing.wedding_id,
-      data.sr_no !== undefined ? data.sr_no : existing.sr_no,
-      data.guest_name !== undefined ? data.guest_name : existing.guest_name,
-      data.contact !== undefined ? data.contact : existing.contact,
-      data.side !== undefined ? data.side : existing.side,
-      data.rsvp_status !== undefined ? data.rsvp_status : existing.rsvp_status,
-      data.id_card_received !== undefined ? data.id_card_received : existing.id_card_received,
-      data.arrival_date !== undefined ? data.arrival_date : existing.arrival_date,
-      data.arrival_time !== undefined ? data.arrival_time : existing.arrival_time,
-      data.arrival_location !== undefined ? data.arrival_location : existing.arrival_location,
-      data.arrival_flight_train_no !== undefined ? data.arrival_flight_train_no : existing.arrival_flight_train_no,
-      data.departure_date !== undefined ? data.departure_date : existing.departure_date,
-      data.departure_time !== undefined ? data.departure_time : existing.departure_time,
-      data.departure_location !== undefined ? data.departure_location : existing.departure_location,
-      data.departure_flight_train_no !== undefined ? data.departure_flight_train_no : existing.departure_flight_train_no,
-      data.id_card_copy !== undefined ? data.id_card_copy : existing.id_card_copy,
-      data.special_request !== undefined ? data.special_request : existing.special_request,
-      data.call_count !== undefined ? Number(data.call_count) : existing.call_count,
-      data.call_status !== undefined ? data.call_status : existing.call_status,
-      data.last_called_at !== undefined ? data.last_called_at : existing.last_called_at,
-      data.last_call_summary !== undefined ? data.last_call_summary : existing.last_call_summary,
-      id,
-    ];
+    try {
+      const query = `
+        UPDATE guests SET
+          wedding_id = $1,
+          sr_no = $2,
+          guest_name = $3,
+          contact = $4,
+          side = $5,
+          rsvp_status = $6,
+          id_card_received = $7,
+          arrival_date = $8,
+          arrival_time = $9,
+          arrival_location = $10,
+          arrival_flight_train_no = $11,
+          departure_date = $12,
+          departure_time = $13,
+          departure_location = $14,
+          departure_flight_train_no = $15,
+          id_card_copy = $16,
+          special_request = $17,
+          call_count = $18,
+          call_status = $19,
+          last_called_at = $20,
+          last_call_summary = $21,
+          updated_at = NOW()
+        WHERE id = $22
+      `;
 
-    await pool.query(query, values);
-    return this.getById(id);
+      const values = [
+        cleanRecord.wedding_id,
+        cleanRecord.sr_no,
+        cleanRecord.guest_name,
+        cleanRecord.contact,
+        cleanRecord.side,
+        cleanRecord.rsvp_status,
+        cleanRecord.id_card_received,
+        cleanRecord.arrival_date,
+        cleanRecord.arrival_time,
+        cleanRecord.arrival_location,
+        cleanRecord.arrival_flight_train_no,
+        cleanRecord.departure_date,
+        cleanRecord.departure_time,
+        cleanRecord.departure_location,
+        cleanRecord.departure_flight_train_no,
+        cleanRecord.id_card_copy,
+        cleanRecord.special_request,
+        cleanRecord.call_count,
+        cleanRecord.call_status,
+        cleanRecord.last_called_at,
+        cleanRecord.last_call_summary,
+        id,
+      ];
+
+      await pool.query(query, values);
+    } catch (poolErr) {
+      console.warn("Pool query update notice:", poolErr.message);
+    }
+
+    return updatedResult || merged;
   },
 
   // 5. Delete a guest and their call logs

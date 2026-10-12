@@ -288,7 +288,15 @@ export default function GuestModal({
       return;
     }
 
-    onSubmit(formData);
+    const cleanSrNo =
+      formData.sr_no !== undefined && formData.sr_no !== ""
+        ? Number(formData.sr_no) || formData.sr_no
+        : (initialData?.sr_no || nextSrNo);
+
+    onSubmit({
+      ...formData,
+      sr_no: cleanSrNo,
+    });
   };
 
   const currentSrNo = formData.sr_no || nextSrNo;

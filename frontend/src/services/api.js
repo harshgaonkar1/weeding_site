@@ -654,6 +654,7 @@ export const api = {
   },
 
   async updateWedding(id, weddingData) {
+    let updated = null;
     try {
       const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
         method: "PUT",
@@ -662,18 +663,22 @@ export const api = {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return json.data;
+        if (json.success && json.data) {
+          updated = json.data;
+        }
       }
     } catch (e) { }
 
     const list = getCachedWeddings();
     const idx = list.findIndex((w) => w.id === id);
+    const finalWedding = updated || { ...weddingData, id };
     if (idx !== -1) {
-      list[idx] = { ...list[idx], ...weddingData };
-      setCachedWeddings(list);
-      return list[idx];
+      list[idx] = { ...list[idx], ...finalWedding };
+    } else {
+      list.push(finalWedding);
     }
-    return null;
+    setCachedWeddings(list);
+    return list[idx] || finalWedding;
   },
 
   async deleteWedding(id) {
@@ -740,6 +745,15 @@ export const api = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
+          // Merge fetched guests into local cache
+          const cached = getCachedGuests();
+          const merged = [...json.data];
+          for (const c of cached) {
+            if (!merged.some((m) => m.id === c.id)) {
+              merged.push(c);
+            }
+          }
+          setCachedGuests(merged);
           return { data: json.data, source: "backend" };
         }
       }
@@ -901,12 +915,14 @@ export const api = {
 
     const list = getCachedGuests();
     const idx = list.findIndex((g) => g.id === id);
+    const finalGuest = updated || { ...guestData, id };
     if (idx !== -1) {
-      list[idx] = { ...list[idx], ...(updated || guestData) };
-      setCachedGuests(list);
-      return list[idx];
+      list[idx] = { ...list[idx], ...finalGuest };
+    } else {
+      list.push(finalGuest);
     }
-    return updated || null;
+    setCachedGuests(list);
+    return finalGuest;
   },
 
   async deleteGuest(id) {

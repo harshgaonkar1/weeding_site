@@ -210,12 +210,19 @@ export default function Hero() {
       if (editingWedding) {
         const updated = await api.updateWedding(editingWedding.id, formData);
         showToast("Marriage Card updated!");
+        const mergedWedding = { ...editingWedding, ...formData, ...(updated || {}) };
+        setWeddings((prev) =>
+          prev.map((w) => (w.id === editingWedding.id ? { ...w, ...mergedWedding } : w))
+        );
         if (selectedWedding?.id === editingWedding.id) {
-          setSelectedWedding(updated || { ...selectedWedding, ...formData });
+          setSelectedWedding((prev) => ({ ...prev, ...mergedWedding }));
         }
       } else {
         const created = await api.createWedding(formData);
         showToast("New Marriage Card & Client Portal Created!");
+        if (created) {
+          setWeddings((prev) => [created, ...prev.filter((w) => w.id !== created.id)]);
+        }
         setSelectedWedding(created);
         setActiveTab("directory");
         setCredentialsModalWedding(created);
@@ -239,15 +246,16 @@ export default function Hero() {
     }
     try {
       setIsDeletingWedding(true);
-      await api.deleteWedding(deletingWedding.id);
+      const delId = deletingWedding.id;
+      setWeddings((prev) => prev.filter((w) => w.id !== delId));
+      await api.deleteWedding(delId);
       showToast("Marriage card removed");
-      if (selectedWedding?.id === deletingWedding.id) {
+      if (selectedWedding?.id === delId) {
         setSelectedWedding(null);
         setActiveTab("weddings");
       }
       setDeletingWedding(null);
-      await loadWeddings();
-      await loadGuests();
+      await Promise.all([loadWeddings(), loadGuests()]);
     } catch (err) {
       showToast("Failed to delete marriage card", "error");
     } finally {
@@ -284,17 +292,34 @@ export default function Hero() {
     }
     setIsSubmittingGuest(true);
     try {
+      const targetWeddingId =
+        formData.wedding_id ||
+        editingGuest?.wedding_id ||
+        (selectedWedding && selectedWedding.id !== "all" ? selectedWedding.id : null) ||
+        "wedding_01";
+
       const payload = {
+        ...(editingGuest || {}),
         ...formData,
-        wedding_id: selectedWedding ? selectedWedding.id : "wedding_01",
+        wedding_id: targetWeddingId,
       };
 
       if (editingGuest) {
-        await api.updateGuest(editingGuest.id, payload);
+        const updatedGuest = await api.updateGuest(editingGuest.id, payload);
+        const merged = { ...editingGuest, ...payload, ...(updatedGuest || {}) };
+        setGuests((prev) =>
+          prev.map((g) => (g.id === editingGuest.id ? merged : g))
+        );
+        if (selectedGuest?.id === editingGuest.id) {
+          setSelectedGuest(merged);
+        }
         showToast("Guest updated successfully!");
       } else {
-        await api.createGuest(payload);
+        const created = await api.createGuest(payload);
         showToast("Guest added to directory!");
+        if (created) {
+          setGuests((prev) => [created, ...prev.filter((g) => g.id !== created.id)]);
+        }
       }
       setIsAddGuestModalOpen(false);
       setEditingGuest(null);
@@ -313,6 +338,10 @@ export default function Hero() {
     }
     setIsDeletingGuest(true);
     try {
+      setGuests((prev) => prev.filter((g) => g.id !== id));
+      if (selectedGuest?.id === id) {
+        setSelectedGuest(null);
+      }
       await api.deleteGuest(id);
       showToast("Guest entry removed");
       setDeletingGuest(null);
@@ -800,10 +829,17 @@ export default function Hero() {
         isOpen={Boolean(googleSheetModalWedding)}
         wedding={googleSheetModalWedding}
         onClose={() => setGoogleSheetModalWedding(null)}
-        onSyncSuccess={async () => {
+        onSyncSuccess={async ({ updatedWedding } = {}) => {
           showToast("✓ Google Sheet synchronized with database!");
-          await loadGuests();
-          await loadWeddings();
+          if (updatedWedding) {
+            setWeddings((prev) =>
+              prev.map((w) => (w.id === updatedWedding.id ? { ...w, ...updatedWedding } : w))
+            );
+            if (selectedWedding?.id === updatedWedding.id) {
+              setSelectedWedding((prev) => ({ ...prev, ...updatedWedding }));
+            }
+          }
+          await Promise.all([loadGuests(), loadWeddings()]);
         }}
       />
     </div>
