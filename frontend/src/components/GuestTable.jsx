@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   FileText,
   Edit3,
@@ -15,6 +15,10 @@ import {
   MapPin,
   Calendar,
   Plane,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -39,9 +43,27 @@ export default function GuestTable({
   onViewGuest,
   onOpenCallLogs,
   onOpenQuickWhatsApp,
+  onUpdateRsvp,
 }) {
   const { isAdmin, isViewOnly } = useAuth();
-  const showCallDesk = !isViewOnly;
+  const showCallDesk = true;
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  // Reset to page 1 if guest list changes or current page exceeds total pages
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [guests.length]);
+
+  const totalPages = pageSize === "all" ? 1 : Math.ceil(guests.length / pageSize);
+
+  const paginatedGuests = useMemo(() => {
+    if (pageSize === "all") return guests;
+    const start = (currentPage - 1) * pageSize;
+    return guests.slice(start, start + pageSize);
+  }, [guests, currentPage, pageSize]);
 
   if (guests.length === 0) {
     return (
@@ -61,7 +83,7 @@ export default function GuestTable({
     <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs my-3 sm:my-4 animate-fadeIn">
       {/* 1. Mobile Cards View (< md) */}
       <div className="block md:hidden divide-y divide-slate-100">
-        {guests.map((guest) => {
+        {paginatedGuests.map((guest) => {
           const avatarTheme = getAvatarTheme(guest.guest_name);
           const rsvp = (guest.rsvp_status || "Pending").toLowerCase();
           const side = (guest.side || "Groom").toLowerCase();
@@ -116,27 +138,58 @@ export default function GuestTable({
                       ) : (
                         <span className="text-[10px] text-slate-400 italic">No phone</span>
                       )}
+
+                      {guest.id_card_copy && (
+                        <button
+                          type="button"
+                          onClick={() => onViewGuest && onViewGuest(guest)}
+                          className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded flex items-center gap-0.5 cursor-pointer ml-auto"
+                          title="View attached ID Card / PDF"
+                        >
+                          <FileText className="w-2.5 h-2.5 text-emerald-600" />
+                          <span>ID PDF</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* RSVP Status Pill */}
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 shadow-2xs ${
-                    rsvp === "confirmed"
-                      ? "bg-[#dcfce7] text-[#166534] border border-[#86efac]"
-                      : rsvp === "declined"
-                      ? "bg-rose-50 text-rose-700 border border-rose-200"
-                      : "bg-[#fef9c3] text-[#854d0e] border border-[#fde047]"
-                  }`}
-                >
-                  {rsvp === "confirmed" ? (
-                    <CheckCircle2 className="w-3 h-3 text-[#16a34a]" />
-                  ) : (
-                    <Clock className="w-3 h-3" />
-                  )}
-                  <span className="capitalize">{guest.rsvp_status || "Pending"}</span>
-                </span>
+                {/* RSVP Status Pill / Quick Selector */}
+                {!isViewOnly && onUpdateRsvp ? (
+                  <select
+                    value={rsvp === "confirmed" ? "Confirmed" : rsvp === "declined" || rsvp.includes("regret") ? "Declined" : "Pending"}
+                    onChange={(e) => onUpdateRsvp(guest, e.target.value)}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 shadow-2xs cursor-pointer focus:outline-none transition-all ${
+                      rsvp === "confirmed"
+                        ? "bg-[#dcfce7] text-[#166534] border border-[#86efac]"
+                        : rsvp === "declined" || rsvp.includes("regret")
+                        ? "bg-rose-50 text-rose-700 border border-rose-200"
+                        : "bg-[#fef9c3] text-[#854d0e] border border-[#fde047]"
+                    }`}
+                    title="Tap to change RSVP status"
+                  >
+                    <option value="Confirmed" className="bg-white text-emerald-800 font-bold">✓ Confirmed</option>
+                    <option value="Pending" className="bg-white text-amber-800 font-bold">⏳ Pending</option>
+                    <option value="Declined" className="bg-white text-rose-800 font-bold">✕ Declined</option>
+                  </select>
+                ) : (
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 shadow-2xs ${
+                      rsvp === "confirmed"
+                        ? "bg-[#dcfce7] text-[#166534] border border-[#86efac]"
+                        : rsvp === "declined"
+                        ? "bg-rose-50 text-rose-700 border border-rose-200"
+                        : "bg-[#fef9c3] text-[#854d0e] border border-[#fde047]"
+                    }`}
+                  >
+                    {rsvp === "confirmed" ? (
+                      <CheckCircle2 className="w-3 h-3 text-[#16a34a]" />
+                    ) : (
+                      <Clock className="w-3 h-3" />
+                    )}
+                    <span className="capitalize">{guest.rsvp_status || "Pending"}</span>
+                  </span>
+                )}
               </div>
 
               {/* Logistics Row (Arrival & Departure) */}
@@ -194,7 +247,7 @@ export default function GuestTable({
                       className="bg-[#0f2922] hover:bg-[#163a30] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs"
                     >
                       <PhoneCall className="w-2.5 h-2.5 text-[#84e030]" />
-                      <span>{callCount > 0 ? "Notes" : "Log Call"}</span>
+                      <span>{isViewOnly ? `Responses (${callCount})` : callCount > 0 ? "Notes" : "Log Call"}</span>
                     </button>
                   </div>
                 ) : (
@@ -277,7 +330,7 @@ export default function GuestTable({
                 <th className="py-3.5 px-4 bg-[#f4faf4]/80 text-[#1c4d25] min-w-[190px]">
                   <div className="flex items-center gap-1.5">
                     <PhoneCall className="w-3.5 h-3.5 text-[#16a34a]" />
-                    <span>Call Desk</span>
+                    <span>Call Responses</span>
                   </div>
                 </th>
               )}
@@ -287,7 +340,7 @@ export default function GuestTable({
 
           {/* Table Body */}
           <tbody className="divide-y divide-slate-100 text-xs">
-            {guests.map((guest) => {
+            {paginatedGuests.map((guest) => {
               const avatarTheme = getAvatarTheme(guest.guest_name);
               const rsvp = (guest.rsvp_status || "Pending").toLowerCase();
               const side = (guest.side || "Groom").toLowerCase();
@@ -347,9 +400,33 @@ export default function GuestTable({
                                 <MessageSquare className="w-3 h-3 stroke-[2.5]" />
                               </button>
                             )}
+                            {guest.id_card_copy && (
+                              <button
+                                type="button"
+                                onClick={() => onViewGuest && onViewGuest(guest)}
+                                title="View attached ID Card / PDF document"
+                                className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-1.5 py-0.2 rounded-md inline-flex items-center gap-1 cursor-pointer transition-transform hover:scale-105"
+                              >
+                                <FileText className="w-2.5 h-2.5 text-emerald-600" />
+                                <span>ID PDF</span>
+                              </button>
+                            )}
                           </div>
                         ) : (
-                          <span className="text-[10px] text-slate-400">No phone</span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-slate-400">No phone</span>
+                            {guest.id_card_copy && (
+                              <button
+                                type="button"
+                                onClick={() => onViewGuest && onViewGuest(guest)}
+                                title="View attached ID Card / PDF document"
+                                className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-1.5 py-0.2 rounded-md inline-flex items-center gap-1 cursor-pointer transition-transform hover:scale-105"
+                              >
+                                <FileText className="w-2.5 h-2.5 text-emerald-600" />
+                                <span>ID PDF</span>
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -370,21 +447,40 @@ export default function GuestTable({
 
                   {/* RSVP */}
                   <td className="py-3.5 px-3">
-                    <span
-                      className={`inline-block px-2.5 py-1 rounded-full font-bold text-[11px] shadow-2xs ${
-                        rsvp === "confirmed"
-                          ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                    {!isViewOnly && onUpdateRsvp ? (
+                      <select
+                        value={rsvp === "confirmed" ? "Confirmed" : rsvp === "declined" || rsvp.includes("regret") ? "Declined" : "Pending"}
+                        onChange={(e) => onUpdateRsvp(guest, e.target.value)}
+                        className={`inline-block px-2.5 py-1 rounded-full font-bold text-[11px] shadow-2xs cursor-pointer focus:outline-none transition-all ${
+                          rsvp === "confirmed"
+                            ? "bg-emerald-100 text-emerald-900 border border-emerald-300 hover:bg-emerald-200"
+                            : rsvp === "declined" || rsvp.includes("regret") || rsvp.includes("not")
+                            ? "bg-rose-100 text-rose-900 border border-rose-200 hover:bg-rose-200"
+                            : "bg-amber-100 text-amber-900 border border-amber-200 hover:bg-amber-200"
+                        }`}
+                        title="Click to toggle or change RSVP status"
+                      >
+                        <option value="Confirmed" className="bg-white text-emerald-800 font-bold">✓ Confirmed</option>
+                        <option value="Pending" className="bg-white text-amber-800 font-bold">⏳ Pending</option>
+                        <option value="Declined" className="bg-white text-rose-800 font-bold">✕ Regrets</option>
+                      </select>
+                    ) : (
+                      <span
+                        className={`inline-block px-2.5 py-1 rounded-full font-bold text-[11px] shadow-2xs ${
+                          rsvp === "confirmed"
+                            ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                            : rsvp === "declined" || rsvp.includes("regret") || rsvp.includes("not")
+                            ? "bg-rose-100 text-rose-900 border border-rose-200"
+                            : "bg-amber-100 text-amber-900 border border-amber-200"
+                        }`}
+                      >
+                        {rsvp === "confirmed"
+                          ? "✓ Confirmed"
                           : rsvp === "declined" || rsvp.includes("regret") || rsvp.includes("not")
-                          ? "bg-rose-100 text-rose-900 border border-rose-200"
-                          : "bg-amber-100 text-amber-900 border border-amber-200"
-                      }`}
-                    >
-                      {rsvp === "confirmed"
-                        ? "✓ Confirmed"
-                        : rsvp === "declined" || rsvp.includes("regret") || rsvp.includes("not")
-                        ? "✕ Regrets"
-                        : "⏳ Pending"}
-                    </span>
+                          ? "✕ Regrets"
+                          : "⏳ Pending"}
+                      </span>
+                    )}
                   </td>
 
                   {/* DIRECT ARRIVAL LOGISTICS */}
@@ -524,7 +620,7 @@ export default function GuestTable({
                           className="bg-[#0f2922] hover:bg-[#163a30] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs btn-interactive"
                         >
                           <PhoneCall className="w-2.5 h-2.5 text-[#84e030]" />
-                          <span>{callCount > 0 ? "Notes" : "Log Call"}</span>
+                          <span>{isViewOnly ? `Responses (${callCount})` : callCount > 0 ? "Notes" : "Log Call"}</span>
                         </button>
                       </div>
 
@@ -592,6 +688,123 @@ export default function GuestTable({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls Bar */}
+      {guests.length > 0 && (
+        <div className="px-4 py-3 bg-[#fbfdfb] border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          {/* Left: Summary text */}
+          <div className="text-slate-500 font-medium text-center sm:text-left">
+            Showing{" "}
+            <span className="font-bold text-slate-800">
+              {pageSize === "all" ? 1 : (currentPage - 1) * pageSize + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-bold text-slate-800">
+              {pageSize === "all" ? guests.length : Math.min(currentPage * pageSize, guests.length)}
+            </span>{" "}
+            of <span className="font-bold text-slate-900">{guests.length}</span> guests
+          </div>
+
+          {/* Right: Controls & Page size */}
+          <div className="flex items-center gap-3 flex-wrap justify-center">
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <span className="text-[11px]">Show:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(e.target.value === "all" ? "all" : Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value="all">All ({guests.length})</option>
+              </select>
+            </div>
+
+            {/* Page Navigation Buttons */}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                {/* First Page */}
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(1)}
+                  className="p-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Previous Page */}
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="p-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Page Number Pills */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                    .map((p, index, array) => {
+                      const prevPage = array[index - 1];
+                      const showEllipsis = prevPage && p - prevPage > 1;
+
+                      return (
+                        <React.Fragment key={p}>
+                          {showEllipsis && (
+                            <span className="px-1 text-slate-400 font-bold">...</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setCurrentPage(p)}
+                            className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              currentPage === p
+                                ? "bg-[#0f2922] text-[#84e030] shadow-2xs"
+                                : "text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+
+                {/* Next Page */}
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="p-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Last Page */}
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="p-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

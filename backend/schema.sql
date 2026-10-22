@@ -143,6 +143,23 @@ CREATE INDEX IF NOT EXISTS idx_guest_call_logs_wedding_id ON guest_call_logs (we
 CREATE INDEX IF NOT EXISTS idx_guest_call_logs_called_at ON guest_call_logs (called_at);
 
 -- ---------------------------------------------------------
+-- 5b. Direct Chat / Messages Table (User & Admin Communication)
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS wedding_messages (
+  id VARCHAR(64) PRIMARY KEY,
+  wedding_id VARCHAR(64) NOT NULL,
+  sender_id VARCHAR(64) NOT NULL,
+  sender_name VARCHAR(255) NOT NULL,
+  sender_role VARCHAR(50) NOT NULL, -- 'admin', 'client', or 'bot'
+  message TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_wedding_messages_wedding_id ON wedding_messages (wedding_id);
+CREATE INDEX IF NOT EXISTS idx_wedding_messages_created_at ON wedding_messages (created_at);
+
+-- ---------------------------------------------------------
 -- 6. Row Level Security (RLS) Policies for Public / Service Access
 -- ---------------------------------------------------------
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

@@ -34,6 +34,15 @@ const SUGGESTED_NOTES_TAGS = [
   "Room check-in early morning",
 ];
 
+const normalizeRsvp = (status) => {
+  if (!status) return "Confirmed";
+  const s = String(status).toLowerCase().trim();
+  if (s.includes("confirm") || s.includes("attend")) return "Confirmed";
+  if (s.includes("pend")) return "Pending";
+  if (s.includes("decline") || s.includes("regret") || s.includes("not")) return "Declined";
+  return "Confirmed";
+};
+
 export default function CallLogModal({
   isOpen,
   guest,
@@ -41,7 +50,7 @@ export default function CallLogModal({
   onClose,
   onCallLogged,
 }) {
-  const { user } = useAuth();
+  const { user, isViewOnly } = useAuth();
 
   const [activeTab, setActiveTab] = useState("call_desk"); // 'call_desk' or 'edit_guest'
   const [callLogs, setCallLogs] = useState([]);
@@ -84,7 +93,7 @@ export default function CallLogModal({
         loadLogs(guest.id);
         setSummary("");
         setCallbackDate("");
-        setUpdateRsvp(guest.rsvp_status || "Confirmed");
+        setUpdateRsvp(normalizeRsvp(guest.rsvp_status));
         setErrorMsg("");
         setSuccessMsg("");
         setEditingLogId(null);
@@ -94,7 +103,7 @@ export default function CallLogModal({
           guest_name: guest.guest_name || "",
           contact: guest.contact || "",
           side: guest.side || "Groom",
-          rsvp_status: guest.rsvp_status || "Confirmed",
+          rsvp_status: normalizeRsvp(guest.rsvp_status),
           arrival_date: guest.arrival_date || "",
           arrival_flight_train_no: guest.arrival_flight_train_no || "",
           departure_date: guest.departure_date || "",
@@ -292,20 +301,22 @@ export default function CallLogModal({
                   : "bg-white/10 text-white hover:bg-white/20"
               }`}
             >
-              📞 Log Call Notes ({callLogs.length})
+              📞 {isViewOnly ? "Call History & Responses" : "Log Call Notes"} ({callLogs.length})
             </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("edit_guest")}
-              className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer btn-interactive ${
-                activeTab === "edit_guest"
-                  ? "bg-[#84e030] text-[#0f2922] shadow-xs font-extrabold"
-                  : "bg-white/10 text-white hover:bg-white/20"
-              }`}
-            >
-              ✏️ Edit Guest Info
-            </button>
+            {!isViewOnly && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("edit_guest")}
+                className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer btn-interactive ${
+                  activeTab === "edit_guest"
+                    ? "bg-[#84e030] text-[#0f2922] shadow-xs font-extrabold"
+                    : "bg-white/10 text-white hover:bg-white/20"
+                }`}
+              >
+                ✏️ Edit Guest Info
+              </button>
+            )}
           </div>
         </div>
 
@@ -328,113 +339,130 @@ export default function CallLogModal({
           {/* TAB 1: LOG CALL & NOTES */}
           {activeTab === "call_desk" && (
             <>
-              {/* Form */}
-              <form onSubmit={handleSubmit} autoComplete="off" className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800">
-                    Log Checkpoint #{nextCallNumber}
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    Agent: <strong>{user?.name || "Agent"}</strong>
-                  </span>
-                </div>
+              {/* Form - Only for Admin and Call Center Agents */}
+              {!isViewOnly ? (
+                <form onSubmit={handleSubmit} autoComplete="off" className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800">
+                      Log Checkpoint #{nextCallNumber}
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Agent: <strong>{user?.name || "Agent"}</strong>
+                    </span>
+                  </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Call Outcome
+                      </label>
+                      <select
+                        value={outcome}
+                        onChange={(e) => setOutcome(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
+                      >
+                        {CALL_OUTCOMES.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Update RSVP
+                      </label>
+                      <select
+                        value={updateRsvp}
+                        onChange={(e) => setUpdateRsvp(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
+                      >
+                        <option value="Confirmed">✓ Confirmed</option>
+                        <option value="Pending">⏳ Pending</option>
+                        <option value="Declined">✕ Declined</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {outcome === "Callback Requested" && (
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Callback Note / Time
+                      </label>
+                      <input
+                        type="text"
+                        value={callbackDate}
+                        onChange={(e) => setCallbackDate(e.target.value)}
+                        placeholder="e.g. Friday 4 PM"
+                        className="w-full bg-white border border-purple-300 rounded-lg px-2.5 py-1.5 text-xs"
+                      />
+                    </div>
+                  )}
+
                   <div>
                     <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                      Call Outcome
+                      Call Summary & Discussion Notes <span className="text-rose-500">*</span>
                     </label>
-                    <select
-                      value={outcome}
-                      onChange={(e) => setOutcome(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
-                    >
-                      {CALL_OUTCOMES.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
+
+                    {/* Tag Suggestions */}
+                    <div className="flex flex-wrap gap-1 mb-1.5">
+                      {SUGGESTED_NOTES_TAGS.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleAddTagToSummary(tag)}
+                          className="text-[10px] bg-white border border-slate-200 hover:bg-emerald-50 px-2 py-0.5 rounded text-slate-600 cursor-pointer"
+                        >
+                          + {tag}
+                        </button>
                       ))}
-                    </select>
-                  </div>
+                    </div>
 
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                      Update RSVP
-                    </label>
-                    <select
-                      value={updateRsvp}
-                      onChange={(e) => setUpdateRsvp(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
-                    >
-                      <option value="Confirmed">✓ Confirmed</option>
-                      <option value="Pending">⏳ Pending</option>
-                      <option value="Declined">✕ Declined</option>
-                    </select>
-                  </div>
-                </div>
-
-                {outcome === "Callback Requested" && (
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                      Callback Note / Time
-                    </label>
-                    <input
-                      type="text"
-                      value={callbackDate}
-                      onChange={(e) => setCallbackDate(e.target.value)}
-                      placeholder="e.g. Friday 4 PM"
-                      className="w-full bg-white border border-purple-300 rounded-lg px-2.5 py-1.5 text-xs"
+                    <textarea
+                      required
+                      rows={3}
+                      value={summary}
+                      onChange={(e) => setSummary(e.target.value)}
+                      placeholder="Type discussion points, travel confirmation, room requests, or follow-up notes..."
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#84e030]"
                     />
                   </div>
-                )}
 
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                    Call Summary & Discussion Notes <span className="text-rose-500">*</span>
-                  </label>
-
-                  {/* Tag Suggestions */}
-                  <div className="flex flex-wrap gap-1 mb-1.5">
-                    {SUGGESTED_NOTES_TAGS.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => handleAddTagToSummary(tag)}
-                        className="text-[10px] bg-white border border-slate-200 hover:bg-emerald-50 px-2 py-0.5 rounded text-slate-600 cursor-pointer"
-                      >
-                        + {tag}
-                      </button>
-                    ))}
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="bg-[#0f2922] hover:bg-[#163a30] text-white px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5 text-[#84e030]" />
+                      <span>{isSubmitting ? "Saving..." : `Save Call #${nextCallNumber}`}</span>
+                    </button>
                   </div>
-
-                  <textarea
-                    required
-                    rows={3}
-                    value={summary}
-                    onChange={(e) => setSummary(e.target.value)}
-                    placeholder="Type discussion points, travel confirmation, room requests, or follow-up notes..."
-                    className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#84e030]"
-                  />
+                </form>
+              ) : (
+                <div className="bg-[#f0fbf3] border border-emerald-200 rounded-xl p-3 flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <PhoneCall className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <p className="font-bold text-slate-900">Call Center History & Responses</p>
+                      <p className="text-[11px] text-slate-600">
+                        Review all call checkpoints and guest responses logged by the call desk below.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-bold text-xs bg-white text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full shadow-2xs shrink-0">
+                    {callLogs.length} Logged
+                  </span>
                 </div>
-
-                <div className="flex justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-[#0f2922] hover:bg-[#163a30] text-white px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                  >
-                    <PhoneCall className="w-3.5 h-3.5 text-[#84e030]" />
-                    <span>{isSubmitting ? "Saving..." : `Save Call #${nextCallNumber}`}</span>
-                  </button>
-                </div>
-              </form>
+              )}
 
               {/* Past Call History */}
               <div className="space-y-2 pt-1">
@@ -463,34 +491,39 @@ export default function CallLogModal({
 
                             <div className="flex items-center gap-2 text-[10px] text-slate-500">
                               <span>{log.called_at ? new Date(log.called_at).toLocaleDateString() : ""}</span>
-                              {!isEditing ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingLogId(log.id);
-                                    setEditingLogSummary(log.call_summary || "");
-                                    setEditingLogOutcome(log.call_outcome || "Connected");
-                                  }}
-                                  className="text-emerald-700 hover:underline font-bold"
-                                >
-                                  Edit Note
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveEditLog(log.id)}
-                                  className="text-emerald-800 font-bold"
-                                >
-                                  Save
-                                </button>
+                              {!isViewOnly && (
+                                <>
+                                  {!isEditing ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingLogId(log.id);
+                                        setEditingLogSummary(log.call_summary || "");
+                                        setEditingLogOutcome(log.call_outcome || "Connected");
+                                      }}
+                                      className="text-emerald-700 hover:underline font-bold"
+                                    >
+                                      Edit Note
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveEditLog(log.id)}
+                                      className="text-emerald-800 font-bold"
+                                    >
+                                      Save
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteLog(log.id)}
+                                    className="text-slate-400 hover:text-rose-600"
+                                    title="Delete note"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteLog(log.id)}
-                                className="text-slate-400 hover:text-rose-600"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
                             </div>
                           </div>
 
@@ -502,10 +535,19 @@ export default function CallLogModal({
                               className="w-full bg-white border border-emerald-300 rounded p-1.5 text-xs text-slate-800"
                             />
                           ) : (
-                            <p className="text-slate-700 whitespace-pre-line text-[11px] bg-white p-2 rounded border border-slate-100">
+                            <p className="text-slate-700 whitespace-pre-line text-[11px] bg-white p-2 rounded border border-slate-100 leading-relaxed">
                               {log.call_summary}
                             </p>
                           )}
+
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+                            <span>Agent: <strong>{log.agent_name || "Sarah (Call Desk)"}</strong></span>
+                            {log.callback_date && (
+                              <span className="text-purple-700 font-semibold bg-purple-50 px-1.5 py-0.2 rounded border border-purple-100">
+                                Callback: {log.callback_date}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       );
                     })}

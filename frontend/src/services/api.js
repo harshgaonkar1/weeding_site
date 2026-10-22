@@ -1,5 +1,6 @@
 // API Service for Multi-Wedding, Guest Logistics & Call Center Management
 import { API_BASE_URL, BACKEND_SERVER_URL } from "../config/apiConfig";
+import { generate500GuestsForRohanPriya } from "./guestGenerator.js";
 
 export { API_BASE_URL, BACKEND_SERVER_URL };
 
@@ -52,16 +53,16 @@ const INITIAL_FALLBACK_WEDDINGS = [
     venue: "Taj Exotica Resort & Spa",
     city: "Goa",
     cover_theme: "rose",
-    notes: "Beachside sunset wedding and Sangeet evening",
+    notes: "Beachside sunset wedding and Sangeet evening at Taj Exotica Goa (500 Guests)",
     client_username: "rohan_priya",
     client_password: "Rohan@2026",
     google_sheet_id: "wed_rohan_priya_02",
     google_sheet_url: "https://docs.google.com/spreadsheets/d/wed_rohan_priya_02/edit",
     google_sheet_sync_status: "connected",
-    total_guests: 1,
-    confirmed_guests: 1,
-    bride_guests: 1,
-    groom_guests: 0,
+    total_guests: 500,
+    confirmed_guests: 380,
+    bride_guests: 250,
+    groom_guests: 250,
   },
   {
     id: "wedding_03",
@@ -136,31 +137,7 @@ const INITIAL_FALLBACK_GUESTS = [
     last_call_summary: "Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle.",
     created_at: "2026-09-02T12:30:00.000Z",
   },
-  {
-    id: "guest_sophia_01",
-    wedding_id: "wedding_02",
-    sr_no: 1,
-    guest_name: "Sophia Rodriguez",
-    contact: "+91 98765 43210",
-    side: "Bride",
-    rsvp_status: "Confirmed",
-    id_card_received: "Yes",
-    arrival_date: "2026-12-14",
-    arrival_time: "01:00 PM",
-    arrival_location: "Goa Dabolim Airport (GOI)",
-    arrival_flight_train_no: "6E-241",
-    departure_date: "2026-12-17",
-    departure_time: "11:30 AM",
-    departure_location: "Goa Dabolim Airport (GOI)",
-    departure_flight_train_no: "6E-244",
-    id_card_copy: "passport_sophia.pdf",
-    special_request: "Sea-facing room preference",
-    call_count: 2,
-    call_status: "Callback Requested",
-    last_called_at: "2026-09-23 10:15:00",
-    last_call_summary: "Called 2nd time. Sophia requested a callback on Friday to confirm travel dates.",
-    created_at: "2026-09-03T14:00:00.000Z",
-  },
+  ...generate500GuestsForRohanPriya(),
 ];
 
 // Initial fallback call logs
@@ -207,11 +184,24 @@ const INITIAL_FALLBACK_CALL_LOGS = {
   ],
 };
 
+const sanitizeWeddingFrontend = (w) => {
+  if (!w) return w;
+  let groom = (w.groom_name || "").trim();
+  if (!groom || groom.startsWith("wedding_") || groom === w.id) {
+    if (w.client_username) {
+      const uPart = w.client_username.split("_")[0]?.replace(/[0-9]/g, "");
+      if (uPart) groom = uPart.charAt(0).toUpperCase() + uPart.slice(1);
+    }
+    if (!groom || groom.startsWith("wedding_")) groom = "Groom";
+  }
+  return { ...w, groom_name: groom };
+};
+
 // Helper to manage localStorage cache
 const getCachedWeddings = () => {
   try {
     const cached = localStorage.getItem("manish_weddings_data");
-    const weddingList = cached ? JSON.parse(cached) : INITIAL_FALLBACK_WEDDINGS;
+    const weddingList = (cached ? JSON.parse(cached) : INITIAL_FALLBACK_WEDDINGS).map(sanitizeWeddingFrontend);
     const guests = getCachedGuests();
 
     return weddingList.map((w) => {
@@ -234,12 +224,13 @@ const getCachedWeddings = () => {
       };
     });
   } catch (e) { }
-  return INITIAL_FALLBACK_WEDDINGS;
+  return INITIAL_FALLBACK_WEDDINGS.map(sanitizeWeddingFrontend);
 };
 
 const setCachedWeddings = (weddings) => {
   try {
-    localStorage.setItem("manish_weddings_data", JSON.stringify(weddings));
+    const sanitized = (weddings || []).map(sanitizeWeddingFrontend);
+    localStorage.setItem("manish_weddings_data", JSON.stringify(sanitized));
   } catch (e) { }
 };
 
@@ -278,8 +269,17 @@ const getCachedGuests = () => {
   try {
     const cached = localStorage.getItem("manish_guest_data_v3");
     if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) return parsed.map(sanitizeGuestRecord);
+      let parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) {
+        const rohanPriyaCount = parsed.filter((g) => g.wedding_id === "wedding_02").length;
+        if (rohanPriyaCount < 500) {
+          const nonWedding02 = parsed.filter((g) => g.wedding_id !== "wedding_02");
+          const all500 = generate500GuestsForRohanPriya();
+          parsed = [...nonWedding02, ...all500];
+          setCachedGuests(parsed);
+        }
+        return parsed.map(sanitizeGuestRecord);
+      }
     }
   } catch (e) { }
   return INITIAL_FALLBACK_GUESTS.map(sanitizeGuestRecord);
@@ -289,7 +289,19 @@ const setCachedGuests = (guests) => {
   try {
     const sanitized = Array.isArray(guests) ? guests.map(sanitizeGuestRecord) : [];
     localStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
-  } catch (e) { }
+  } catch (e) {
+    try {
+      // If full data exceeds browser localStorage quota due to large PDFs/images,
+      // preserve guests in cache without breaking local storage:
+      const sanitized = Array.isArray(guests)
+        ? guests.map((g) => ({
+            ...sanitizeGuestRecord(g),
+            id_card_copy: g.id_card_copy && g.id_card_copy.length > 50000 ? g.id_card_copy.slice(0, 100) : g.id_card_copy,
+          }))
+        : [];
+      localStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
+    } catch (e2) { }
+  }
 };
 
 const getCachedCallLogs = (guestId) => {
@@ -639,8 +651,9 @@ export const api = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          setCachedWeddings(json.data);
-          return json.data;
+          const sanitized = json.data.map(sanitizeWeddingFrontend);
+          setCachedWeddings(sanitized);
+          return sanitized;
         }
       }
     } catch (e) { }
@@ -1427,6 +1440,154 @@ function syncAllGuestsToDatabase() {
       isConfigured: false,
       message: "Backend API not responding or credentials not loaded.",
     };
+  },
+
+  // ============================================================
+  // DIRECT USER & ADMIN MESSAGING & CHATBOT API
+  // ============================================================
+  async fetchMessages(weddingId) {
+    if (!weddingId) return [];
+    try {
+      const res = await fetch(`${API_BASE_URL}/messages/${weddingId}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          localStorage.setItem(`cached_messages_${weddingId}`, JSON.stringify(json.data));
+          return json.data;
+        }
+      }
+    } catch (e) {
+      console.warn("Messages API unreachable, loading cached messages:", e.message);
+    }
+
+    try {
+      const local = localStorage.getItem(`cached_messages_${weddingId}`);
+      if (local) return JSON.parse(local);
+    } catch (e) {}
+
+    // Default seed messages for wedding_01
+    if (weddingId === "wedding_01") {
+      return [
+        {
+          id: "msg_seed_01",
+          wedding_id: "wedding_01",
+          sender_id: "user_admin_01",
+          sender_name: "Manish (Admin)",
+          sender_role: "admin",
+          message: "Hello Aaditya & Ananya! Welcome to your live wedding portal. Our logistics and telecaller team is actively monitoring guest arrivals and RSVP confirmations.",
+          is_read: true,
+          created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+        },
+        {
+          id: "msg_seed_02",
+          wedding_id: "wedding_01",
+          sender_id: "client_aaditya_ananya",
+          sender_name: "Aaditya Roy",
+          sender_role: "client",
+          message: "Hi Manish, thank you! Could you please make sure the airport shuttle is confirmed for the guests arriving on 27th Nov at Mumbai T2 / Udaipur Airport?",
+          is_read: true,
+          created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
+        },
+        {
+          id: "msg_seed_03",
+          wedding_id: "wedding_01",
+          sender_id: "user_admin_01",
+          sender_name: "Manish (Admin)",
+          sender_role: "admin",
+          message: "Absolutely! The telecaller desk has logged their flight numbers (AI-682). We have dedicated Innovas on standby at the airport terminal.",
+          is_read: false,
+          created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+        },
+      ];
+    }
+    return [];
+  },
+
+  async sendMessage({ wedding_id, sender_id, sender_name, sender_role = "client", message, trigger_bot_reply = false }) {
+    if (!wedding_id || !message) return null;
+    try {
+      const res = await fetch(`${API_BASE_URL}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wedding_id,
+          sender_id,
+          sender_name,
+          sender_role,
+          message,
+          trigger_bot_reply,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return json;
+      }
+    } catch (e) {
+      console.warn("Error sending message via API, caching locally:", e);
+    }
+
+    // Local fallback
+    const newMsg = {
+      id: `msg_local_${Date.now()}`,
+      wedding_id,
+      sender_id: sender_id || "client_user",
+      sender_name: sender_name || (sender_role === "admin" ? "Manish (Admin)" : "Wedding Client"),
+      sender_role,
+      message,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    let list = [];
+    try {
+      const local = localStorage.getItem(`cached_messages_${wedding_id}`);
+      if (local) list = JSON.parse(local);
+    } catch (e) {}
+
+    list.push(newMsg);
+
+    let botReply = null;
+    if (sender_role === "client" && trigger_bot_reply) {
+      botReply = {
+        id: `msg_bot_${Date.now() + 1}`,
+        wedding_id,
+        sender_id: "bot_concierge",
+        sender_name: "Emitly Wedding Bot 🤖",
+        sender_role: "bot",
+        message: "Message received! Super Admin Manish has been alerted. Our telecaller team will verify guest details shortly.",
+        is_read: false,
+        created_at: new Date(Date.now() + 500).toISOString(),
+      };
+      list.push(botReply);
+    }
+
+    try {
+      localStorage.setItem(`cached_messages_${wedding_id}`, JSON.stringify(list));
+    } catch (e) {}
+
+    return { success: true, data: newMsg, botReply };
+  },
+
+  async markMessagesRead(weddingId, readerRole = "client") {
+    if (!weddingId) return;
+    try {
+      await fetch(`${API_BASE_URL}/messages/read/${weddingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ readerRole }),
+      });
+    } catch (e) {}
+
+    try {
+      const local = localStorage.getItem(`cached_messages_${weddingId}`);
+      if (local) {
+        const msgs = JSON.parse(local).map((m) => {
+          if (m.sender_role !== readerRole) m.is_read = true;
+          return m;
+        });
+        localStorage.setItem(`cached_messages_${weddingId}`, JSON.stringify(msgs));
+      }
+    } catch (e) {}
   },
 };
 

@@ -1,7 +1,30 @@
 import pool from "../Db_connection/dbconnection.js";
 import { supabase } from "../Db_connection/supabaseClient.js";
+import { store } from "../Db_connection/queries.js";
 import crypto from "crypto";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
+
+// Helper to heal any corrupted wedding groom names
+const sanitizeWeddingRecord = (w) => {
+  if (!w) return w;
+  let groom = (w.groom_name || "").trim();
+  if (!groom || groom.startsWith("wedding_") || groom === w.id) {
+    if (w.client_username) {
+      const usernamePart = w.client_username.split("_")[0];
+      const cleanName = usernamePart.replace(/[0-9]/g, "");
+      if (cleanName) {
+        groom = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+      } else if (usernamePart) {
+        groom = usernamePart.charAt(0).toUpperCase() + usernamePart.slice(1);
+      }
+    }
+    if (!groom || groom.startsWith("wedding_")) groom = "Groom";
+    if (supabase && w.id && groom !== "Groom" && w.groom_name !== groom) {
+      supabase.from("weddings").update({ groom_name: groom }).eq("id", w.id).then(() => {}).catch(() => {});
+    }
+  }
+  return { ...w, groom_name: groom };
+};
 
 export const WeddingModel = {
   // 1. Get all weddings with guest counts and stats
@@ -14,7 +37,8 @@ export const WeddingModel = {
         
         if (weddingsData && weddingsData.length > 0) {
           const guestsList = guestsData || [];
-          return weddingsData.map((w) => {
+          return weddingsData.map((rawW) => {
+            const w = sanitizeWeddingRecord(rawW);
             const wGuests = guestsList.filter((g) => g.wedding_id === w.id);
             return {
               ...w,
@@ -52,10 +76,11 @@ export const WeddingModel = {
       try {
         const { data: wedding } = await supabase.from("weddings").select("*").eq("id", id).single();
         if (wedding) {
+          const sanitized = sanitizeWeddingRecord(wedding);
           const { data: guestsData } = await supabase.from("guests").select("rsvp_status, side").eq("wedding_id", id);
           const wGuests = guestsData || [];
           return {
-            ...wedding,
+            ...sanitized,
             total_guests: wGuests.length,
             confirmed_guests: wGuests.filter((g) => (g.rsvp_status || "").toLowerCase() === "confirmed").length,
             bride_guests: wGuests.filter((g) => (g.side || "").toLowerCase() === "bride").length,
@@ -78,7 +103,7 @@ export const WeddingModel = {
       GROUP BY w.id
     `;
     const { rows } = await pool.query(query, [id]);
-    return rows[0] || null;
+    return rows[0] ? sanitizeWeddingRecord(rows[0]) : null;
   },
 
   // 3. Create wedding / marriage card
@@ -169,8 +194,18 @@ export const WeddingModel = {
     const existing = await this.getById(id);
     if (!existing) return null;
 
+    let safeGroom = data.groom_name !== undefined ? String(data.groom_name).trim() : existing.groom_name;
+    if (safeGroom && (safeGroom.startsWith("wedding_") || safeGroom === id)) {
+      if (existing.groom_name && !existing.groom_name.startsWith("wedding_") && existing.groom_name !== id) {
+        safeGroom = existing.groom_name;
+      } else if (existing.client_username) {
+        const uPart = existing.client_username.split("_")[0]?.replace(/[0-9]/g, "");
+        if (uPart) safeGroom = uPart.charAt(0).toUpperCase() + uPart.slice(1);
+      }
+    }
+
     const cleanWeddingRecord = {
-      groom_name: data.groom_name !== undefined ? String(data.groom_name).trim() : existing.groom_name,
+      groom_name: safeGroom,
       bride_name: data.bride_name !== undefined ? String(data.bride_name).trim() : existing.bride_name,
       wedding_date: data.wedding_date !== undefined ? (data.wedding_date || null) : existing.wedding_date,
       venue: data.venue !== undefined ? (data.venue || null) : existing.venue,

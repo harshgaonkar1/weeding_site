@@ -15,6 +15,7 @@ import {
   KeyRound,
   ShieldCheck,
   MessageSquare,
+  BarChart3,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -32,6 +33,8 @@ import CallLogModal from "../components/CallLogModal";
 import AdminPasswordModal from "../components/AdminPasswordModal";
 import GoogleSheetModal from "../components/GoogleSheetModal";
 import WhatsAppMessageModal from "../components/WhatsAppMessageModal";
+import AnalyticsView from "../components/AnalyticsView";
+import ChatBotModal from "../components/ChatBotModal";
 import LoginPage from "./LoginPage";
 import { api, calculateStatsFromList } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -95,6 +98,9 @@ export default function Hero() {
   // Google Sheet Sync Modal State
   const [googleSheetModalWedding, setGoogleSheetModalWedding] = useState(null);
 
+  // Live Chat Bot / Admin & Client Messenger State
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+
   // Toast Notification
   const [toast, setToast] = useState(null);
 
@@ -116,7 +122,7 @@ export default function Hero() {
   // 1b. Handle Marriage Client Scoping & Role Switching
   useEffect(() => {
     if (isMarriageClient && user?.wedding_id) {
-      setActiveTab("directory");
+      setActiveTab((prev) => (prev === "weddings" ? "directory" : prev));
       const matched =
         weddings.find((w) => w.id === user.wedding_id) ||
         user.wedding || {
@@ -336,8 +342,8 @@ export default function Hero() {
         setGuests((prev) =>
           prev.map((g) => (g.id === editingGuest.id ? merged : g))
         );
-        if (selectedGuest?.id === editingGuest.id) {
-          setSelectedGuest(merged);
+        if (viewingGuest?.id === editingGuest.id) {
+          setViewingGuest(merged);
         }
         showToast("Guest updated successfully!");
       } else {
@@ -370,8 +376,8 @@ export default function Hero() {
     setIsDeletingGuest(true);
     try {
       setGuests((prev) => prev.filter((g) => g.id !== id));
-      if (selectedGuest?.id === id) {
-        setSelectedGuest(null);
+      if (viewingGuest?.id === id) {
+        setViewingGuest(null);
       }
       await api.deleteGuest(id);
       showToast("Guest entry removed");
@@ -387,6 +393,38 @@ export default function Hero() {
   // Call Logger Trigger
   const handleOpenCallLogs = (guest) => {
     setCallingGuest(guest);
+  };
+
+  const handleQuickUpdateRsvp = async (guest, newRsvp) => {
+    if (isViewOnly) {
+      showToast("Read-only access in client portal mode", "error");
+      return;
+    }
+    const previousRsvp = guest.rsvp_status;
+    const updatedGuest = { ...guest, rsvp_status: newRsvp };
+
+    // Optimistic UI update
+    setGuests((prev) =>
+      prev.map((g) => (g.id === guest.id ? updatedGuest : g))
+    );
+    setStats(() => {
+      const currentList = guests.map((g) => (g.id === guest.id ? updatedGuest : g));
+      return calculateStatsFromList(currentList);
+    });
+
+    try {
+      await api.updateGuest(guest.id, {
+        ...updatedGuest,
+        wedding_id: guest.wedding_id || selectedWedding?.id || "wedding_01",
+      });
+      showToast(`RSVP updated to ${newRsvp} for ${guest.guest_name}`);
+    } catch (err) {
+      // Revert on error
+      setGuests((prev) =>
+        prev.map((g) => (g.id === guest.id ? { ...g, rsvp_status: previousRsvp } : g))
+      );
+      showToast("Failed to update RSVP: " + err.message, "error");
+    }
   };
 
   const handleCallLogged = async () => {
@@ -489,6 +527,7 @@ export default function Hero() {
           }}
           isMobileNavOpen={isMobileNavOpen}
           setIsMobileNavOpen={setIsMobileNavOpen}
+          onOpenChat={() => setIsChatModalOpen(true)}
         />
 
         {/* Right Main Content */}
@@ -536,9 +575,24 @@ export default function Hero() {
                   View Only Dashboard
                 </span>
               </div>
-              <p className="text-[11px] text-amber-900/80 font-medium">
-                Live Guest Registrations, Travel Logistics & RSVP Summary (Read-Only Mode)
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab((prev) => (prev === "analytics" ? "directory" : "analytics"))}
+                  className="bg-white hover:bg-amber-100/70 text-amber-950 border border-amber-300 px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <BarChart3 className="w-3.5 h-3.5 text-amber-800" />
+                  <span>{activeTab === "analytics" ? "Guest Directory Table" : "Analytics & Graphs"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsChatModalOpen(true)}
+                  className="bg-[#0f2922] hover:bg-[#163a30] text-white px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-[#84e030]" />
+                  <span>Chat with Admin</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -725,8 +779,21 @@ export default function Hero() {
                   setWhatsAppModalInitialGuest(guest);
                   setIsWhatsAppModalOpen(true);
                 }}
+                onUpdateRsvp={handleQuickUpdateRsvp}
               />
             </div>
+          )}
+
+          {/* ================= VIEW 3: ANALYTICS & TRENDS (BAR GRAPH, LINE GRAPH, LOGISTICS) ================= */}
+          {activeTab === "analytics" && (
+            <AnalyticsView
+              guests={guests}
+              wedding={selectedWedding || (weddings && weddings[0])}
+              weddings={weddings}
+              onSelectWedding={handleSelectWedding}
+              isAdmin={isAdmin}
+              isMarriageClient={isMarriageClient}
+            />
           )}
         </main>
       </div>
@@ -872,6 +939,15 @@ export default function Hero() {
           }
           await Promise.all([loadGuests(), loadWeddings()]);
         }}
+      />
+
+      {/* 11. Live Chat Bot & Direct Messenger Modal (User & Admin Communication) */}
+      <ChatBotModal
+        isOpen={isChatModalOpen}
+        onClose={() => setIsChatModalOpen(false)}
+        selectedWedding={selectedWedding || (weddings && weddings[0])}
+        weddings={weddings}
+        onSelectWedding={handleSelectWedding}
       />
     </div>
   );

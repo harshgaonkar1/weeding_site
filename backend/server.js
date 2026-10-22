@@ -10,6 +10,7 @@ import guestRoutes from "./routes/guestRoutes.js";
 import weddingRoutes from "./routes/weddingRoutes.js";
 import callLogRoutes from "./routes/callLogRoutes.js";
 import googleSheetsRoutes from "./routes/googleSheetsRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
 import { getExportDir } from "./services/excelService.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +73,7 @@ app.use("/api/weddings", weddingRoutes);
 app.use("/api/guests", guestRoutes);
 app.use("/api/call-logs", callLogRoutes);
 app.use("/api/sheets", googleSheetsRoutes);
+app.use("/api/messages", messageRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

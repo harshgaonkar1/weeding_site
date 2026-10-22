@@ -6,6 +6,7 @@
 // ============================================================
 
 import { supabase } from "./supabaseClient.js";
+import { generate500GuestsForRohanPriya } from "../services/guestGenerator.js";
 
 // ============================================================
 // In-Memory Data Store (Synchronized with Supabase)
@@ -144,32 +145,7 @@ export const store = {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
-    {
-      id: "guest_sophia_01",
-      wedding_id: "wedding_02",
-      sr_no: 1,
-      guest_name: "Sophia Rodriguez",
-      contact: "+91 98765 43210",
-      side: "Bride",
-      rsvp_status: "Pending",
-      id_card_received: "No",
-      arrival_date: "2026-12-14",
-      arrival_time: "01:00 PM",
-      arrival_location: "Goa Dabolim Airport (GOI)",
-      arrival_flight_train_no: "6E-241",
-      departure_date: "2026-12-17",
-      departure_time: "11:30 AM",
-      departure_location: "Goa Dabolim Airport (GOI)",
-      departure_flight_train_no: "6E-244",
-      id_card_copy: null,
-      special_request: "Sea-facing room preference",
-      call_count: 2,
-      call_status: "Callback Requested",
-      last_called_at: "2026-09-23T10:15:00Z",
-      last_call_summary: "Called 2nd time. Sophia requested a callback on Friday to confirm travel dates.",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
+    ...generate500GuestsForRohanPriya(),
   ],
   guest_call_logs: [
     {
@@ -211,6 +187,38 @@ export const store = {
       call_outcome: "Connected",
       call_summary: "1st call checkpoint: Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle pickup.",
       called_at: "2026-09-22T15:00:00Z",
+    },
+  ],
+  messages: [
+    {
+      id: "msg_seed_01",
+      wedding_id: "wedding_01",
+      sender_id: "user_admin_01",
+      sender_name: "Manish (Admin)",
+      sender_role: "admin",
+      message: "Hello Aaditya & Ananya! Welcome to your live wedding portal. Our logistics and telecaller team is actively monitoring guest arrivals and RSVP confirmations.",
+      is_read: true,
+      created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+    },
+    {
+      id: "msg_seed_02",
+      wedding_id: "wedding_01",
+      sender_id: "client_aaditya_ananya",
+      sender_name: "Aaditya Roy",
+      sender_role: "client",
+      message: "Hi Manish, thank you! Could you please make sure the airport shuttle is confirmed for the guests arriving on 27th Nov at Mumbai T2 / Udaipur Airport?",
+      is_read: true,
+      created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
+    },
+    {
+      id: "msg_seed_03",
+      wedding_id: "wedding_01",
+      sender_id: "user_admin_01",
+      sender_name: "Manish (Admin)",
+      sender_role: "admin",
+      message: "Absolutely! The telecaller desk has logged their flight numbers (AI-682). We have dedicated Innovas on standby at the airport terminal.",
+      is_read: false,
+      created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
     },
   ],
 };
@@ -433,10 +441,55 @@ export const query = async (text, params = []) => {
     return formatResult([newLog]);
   }
 
+  if (lowerSql.startsWith("insert into wedding_messages")) {
+    const newMsg = {
+      id: params[0],
+      wedding_id: params[1],
+      sender_id: params[2],
+      sender_name: params[3],
+      sender_role: params[4],
+      message: params[5],
+      is_read: params[6] === true,
+      created_at: params[7] || new Date().toISOString(),
+    };
+    if (!store.messages) store.messages = [];
+    store.messages.push(newMsg);
+    if (supabase) {
+      try {
+        await supabase.from("wedding_messages").insert([newMsg]);
+      } catch (err) {}
+    }
+    return formatResult([newMsg]);
+  }
+
   // ============================================================
   // C. UPDATE OPERATIONS
   // ============================================================
   if (lowerSql.startsWith("update weddings")) {
+    // 1. Partial update: google_sheet_last_synced update from GoogleSheetsService
+    if (lowerSql.includes("google_sheet_last_synced") && (params.length === 1 || !lowerSql.includes("groom_name ="))) {
+      const id = params[params.length - 1];
+      const idx = store.weddings.findIndex((w) => w.id === id);
+      if (idx >= 0) {
+        store.weddings[idx].google_sheet_last_synced = new Date().toISOString();
+        store.weddings[idx].google_sheet_sync_status = "synced";
+        store.weddings[idx].updated_at = new Date().toISOString();
+      }
+      if (supabase) {
+        try {
+          await supabase.from("weddings").update({
+            google_sheet_last_synced: new Date().toISOString(),
+            google_sheet_sync_status: "synced",
+            updated_at: new Date().toISOString(),
+          }).eq("id", id);
+        } catch (err) {
+          console.warn("Supabase wedding sync status update notice:", err.message);
+        }
+      }
+      return formatResult(idx >= 0 ? [store.weddings[idx]] : []);
+    }
+
+    // 2. Full wedding update
     const id = params[params.length - 1];
     let idx = store.weddings.findIndex((w) => w.id === id);
     if (idx === -1) {
@@ -445,10 +498,21 @@ export const query = async (text, params = []) => {
     }
 
     const currentWedding = store.weddings[idx] || {};
+    // Extra safety: NEVER set groom_name to a wedding_ID!
+    let safeGroom = params[0] !== undefined ? params[0] : currentWedding.groom_name;
+    if (safeGroom && (String(safeGroom).startsWith("wedding_") || String(safeGroom) === id)) {
+      if (currentWedding.groom_name && !String(currentWedding.groom_name).startsWith("wedding_")) {
+        safeGroom = currentWedding.groom_name;
+      } else if (currentWedding.client_username) {
+        const uPart = currentWedding.client_username.split("_")[0]?.replace(/[0-9]/g, "");
+        if (uPart) safeGroom = uPart.charAt(0).toUpperCase() + uPart.slice(1);
+      }
+    }
+
     store.weddings[idx] = {
       ...currentWedding,
       id,
-      groom_name: params[0] !== undefined ? params[0] : currentWedding.groom_name,
+      groom_name: safeGroom,
       bride_name: params[1] !== undefined ? params[1] : currentWedding.bride_name,
       wedding_date: params[2] !== undefined ? params[2] : currentWedding.wedding_date,
       venue: params[3] !== undefined ? params[3] : currentWedding.venue,
@@ -623,6 +687,20 @@ export const query = async (text, params = []) => {
     return formatResult(rows);
   }
 
+  // Helper to heal corrupted wedding groom names
+  const healWedding = (w) => {
+    if (!w) return w;
+    let groom = (w.groom_name || "").trim();
+    if (!groom || groom.startsWith("wedding_") || groom === w.id) {
+      if (w.client_username) {
+        const uPart = w.client_username.split("_")[0]?.replace(/[0-9]/g, "");
+        if (uPart) groom = uPart.charAt(0).toUpperCase() + uPart.slice(1);
+      }
+      if (!groom || groom.startsWith("wedding_")) groom = "Groom";
+    }
+    return { ...w, groom_name: groom };
+  };
+
   // 2. Weddings Queries
   if (lowerSql.includes("from weddings")) {
     if (lowerSql.startsWith("select count(*)")) {
@@ -639,9 +717,10 @@ export const query = async (text, params = []) => {
           (w.client_username && w.client_username.toLowerCase() === idOrUser.replace("@weddingportal.com", ""))
       );
       if (wedding) {
-        const weddingGuests = store.guests.filter((g) => g.wedding_id === wedding.id);
+        const cleanW = healWedding(wedding);
+        const weddingGuests = store.guests.filter((g) => g.wedding_id === cleanW.id);
         const enriched = {
-          ...wedding,
+          ...cleanW,
           total_guests: weddingGuests.length,
           confirmed_guests: weddingGuests.filter((g) => (g.rsvp_status || "").toLowerCase() === "confirmed").length,
           bride_guests: weddingGuests.filter((g) => (g.side || "").toLowerCase() === "bride").length,
@@ -653,7 +732,8 @@ export const query = async (text, params = []) => {
     }
 
     // All weddings with stats
-    const rows = store.weddings.map((w) => {
+    const rows = store.weddings.map((rawW) => {
+      const w = healWedding(rawW);
       const weddingGuests = store.guests.filter((g) => g.wedding_id === w.id);
       return {
         ...w,
@@ -735,6 +815,15 @@ export const query = async (text, params = []) => {
       return formatResult(c ? [c] : []);
     }
     return formatResult(store.guest_call_logs);
+  }
+
+  // 5. Wedding Messages Queries (Admin & Client Chat)
+  if (lowerSql.includes("from wedding_messages")) {
+    if (lowerSql.includes("where wedding_id = $1")) {
+      const list = (store.messages || []).filter((m) => m.wedding_id === params[0]);
+      return formatResult(list);
+    }
+    return formatResult(store.messages || []);
   }
 
   // Default empty result

@@ -26,13 +26,22 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
+const normalizeRsvp = (status) => {
+  if (!status) return "Confirmed";
+  const s = String(status).toLowerCase().trim();
+  if (s.includes("confirm") || s.includes("attend")) return "Confirmed";
+  if (s.includes("pend")) return "Pending";
+  if (s.includes("decline") || s.includes("regret") || s.includes("not")) return "Declined";
+  return "Confirmed";
+};
+
 export default function GuestModal({
   isOpen,
   onClose,
   onSubmit,
   initialData = null,
   isSubmitting = false,
-  nextSrNo = 3,
+  nextSrNo = 1,
   currentWeddingId = "wedding_01",
 }) {
   const [formData, setFormData] = useState({
@@ -42,15 +51,15 @@ export default function GuestModal({
     contact: "",
     side: "Groom",
     rsvp_status: "Confirmed",
-    id_card_received: "Yes",
-    arrival_date: "09-08-2026",
-    arrival_time: "10:00 AM",
-    arrival_location: "Mumbai Int. Airport (T2)",
-    arrival_flight_train_no: "AI-682",
-    departure_date: "09-11-2026",
-    departure_time: "06:30 PM",
-    departure_location: "Mumbai Int. Airport (T2)",
-    departure_flight_train_no: "AI-894",
+    id_card_received: "No",
+    arrival_date: "",
+    arrival_time: "",
+    arrival_location: "",
+    arrival_flight_train_no: "",
+    departure_date: "",
+    departure_time: "",
+    departure_location: "",
+    departure_flight_train_no: "",
     id_card_copy: "",
     special_request: "",
   });
@@ -68,8 +77,8 @@ export default function GuestModal({
         guest_name: initialData.guest_name || "",
         contact: initialData.contact || "",
         side: initialData.side || "Groom",
-        rsvp_status: initialData.rsvp_status || "Confirmed",
-        id_card_received: initialData.id_card_received || "Yes",
+        rsvp_status: normalizeRsvp(initialData.rsvp_status),
+        id_card_received: initialData.id_card_received || "No",
         arrival_date: initialData.arrival_date || "",
         arrival_time: initialData.arrival_time || "",
         arrival_location: initialData.arrival_location || "",
@@ -83,11 +92,24 @@ export default function GuestModal({
       });
 
       if (initialData.id_card_copy) {
+        const isPdf =
+          initialData.id_card_copy.includes(".pdf") ||
+          initialData.id_card_copy.startsWith("data:application/pdf") ||
+          initialData.id_card_copy.startsWith("data:application/x-pdf");
+        const isImg = initialData.id_card_copy.startsWith("data:image");
+
+        let docName = "Government_ID_Document.pdf";
+        if (initialData.id_card_copy.startsWith("data:")) {
+          docName = `${(initialData.guest_name || "Guest").replace(/\s+/g, "_")}_ID_Card.${isPdf ? "pdf" : "png"}`;
+        } else {
+          docName = initialData.id_card_copy;
+        }
+
         setFileDetails({
-          name: initialData.id_card_copy.startsWith("data:") ? "uploaded_document" : initialData.id_card_copy,
-          preview: initialData.id_card_copy.startsWith("data:image") ? initialData.id_card_copy : null,
-          isPdf: initialData.id_card_copy.includes(".pdf") || initialData.id_card_copy.startsWith("data:application/pdf"),
-          size: "Attached Document",
+          name: docName,
+          preview: isImg ? initialData.id_card_copy : null,
+          isPdf: isPdf,
+          size: "Saved in Database",
         });
       } else {
         setFileDetails(null);
@@ -100,15 +122,15 @@ export default function GuestModal({
         contact: "",
         side: "Groom",
         rsvp_status: "Confirmed",
-        id_card_received: "Yes",
-        arrival_date: "09-08-2026",
-        arrival_time: "10:00 AM",
-        arrival_location: "Mumbai Int. Airport (T2)",
-        arrival_flight_train_no: "AI-682",
-        departure_date: "09-11-2026",
-        departure_time: "06:30 PM",
-        departure_location: "Mumbai Int. Airport (T2)",
-        departure_flight_train_no: "AI-894",
+        id_card_received: "No",
+        arrival_date: "",
+        arrival_time: "",
+        arrival_location: "",
+        arrival_flight_train_no: "",
+        departure_date: "",
+        departure_time: "",
+        departure_location: "",
+        departure_flight_train_no: "",
         id_card_copy: "",
         special_request: "",
       });
@@ -129,17 +151,31 @@ export default function GuestModal({
 
   const handleFileProcess = (file) => {
     if (!file) return;
-    const isValidType = file.type.startsWith("image/") || file.type === "application/pdf" || file.name.endsWith(".pdf");
-    if (!isValidType) {
-      alert("Please upload a valid PDF or Image file (PNG, JPG, WEBP).");
+    const fileName = (file.name || "").toLowerCase();
+    const isPdf =
+      file.type === "application/pdf" ||
+      file.type === "application/x-pdf" ||
+      fileName.endsWith(".pdf");
+    const isImage =
+      file.type.startsWith("image/") ||
+      fileName.endsWith(".png") ||
+      fileName.endsWith(".jpg") ||
+      fileName.endsWith(".jpeg") ||
+      fileName.endsWith(".webp");
+
+    if (!isPdf && !isImage) {
+      alert("Please upload a valid PDF document or Image file (PDF, PNG, JPG, WEBP).");
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      alert("File size is too large (max 15 MB). Please choose a smaller document.");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
       const resultDataUrl = event.target.result;
-      const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
-      const isImage = file.type.startsWith("image/");
 
       setFormData((prev) => ({
         ...prev,
@@ -156,6 +192,7 @@ export default function GuestModal({
         size: formattedSize,
         preview: isImage ? resultDataUrl : null,
         isPdf: isPdf,
+        dataUrl: resultDataUrl,
       });
     };
 
@@ -197,84 +234,7 @@ export default function GuestModal({
     }
   };
 
-  const applyPreset = (presetType) => {
-    if (presetType === "james") {
-      setFormData((prev) => ({
-        ...prev,
-        guest_name: "James Passaquindici",
-        contact: "+1 (555) 234-8901/james@emi.com",
-        side: "Groom",
-        rsvp_status: "Confirmed",
-        id_card_received: "Yes",
-        arrival_date: "09-08-2026",
-        arrival_time: "10:00 AM",
-        arrival_location: "Mumbai Int. Airport (T2)",
-        arrival_flight_train_no: "AI-682",
-        departure_date: "09-11-2026",
-        departure_time: "06:30 PM",
-        departure_location: "Mumbai Int. Airport (T2)",
-        departure_flight_train_no: "AI-894",
-        id_card_copy: "passport_verified_james.pdf",
-        special_request: "Quiet room preference, vegetarian breakfast, airport shuttle pickup...",
-      }));
-      setFileDetails({
-        name: "passport_verified_james.pdf",
-        size: "1.4 MB",
-        isPdf: true,
-        preview: null,
-      });
-    } else if (presetType === "sophia") {
-      setFormData((prev) => ({
-        ...prev,
-        guest_name: "Sophia Rodriguez",
-        contact: "+91 98765 43210/sophia@travel.org",
-        side: "Bride",
-        rsvp_status: "Confirmed",
-        id_card_received: "Yes",
-        arrival_date: "09-09-2026",
-        arrival_time: "08:30 AM",
-        arrival_location: "Mumbai Central Station (MMCT)",
-        arrival_flight_train_no: "Vande Bharat Exp (22221)",
-        departure_date: "09-12-2026",
-        departure_time: "04:15 PM",
-        departure_location: "Mumbai Central Station (MMCT)",
-        departure_flight_train_no: "Tejas Rajdhani (12952)",
-        id_card_copy: "aadhaar_card_sophia.pdf",
-        special_request: "Jain meal preference & ground floor room allocation.",
-      }));
-      setFileDetails({
-        name: "aadhaar_card_sophia.pdf",
-        size: "950 KB",
-        isPdf: true,
-        preview: null,
-      });
-    } else if (presetType === "alex") {
-      setFormData((prev) => ({
-        ...prev,
-        guest_name: "Alex Chen",
-        contact: "+1 (415) 888-2910/alex.chen@emitly.io",
-        side: "Groom",
-        rsvp_status: "Confirmed",
-        id_card_received: "Yes",
-        arrival_date: "09-09-2026",
-        arrival_time: "01:45 PM",
-        arrival_location: "Mumbai Int. Airport (T2)",
-        arrival_flight_train_no: "6E-512",
-        departure_date: "09-13-2026",
-        departure_time: "09:00 PM",
-        departure_location: "Mumbai Int. Airport (T2)",
-        departure_flight_train_no: "6E-883",
-        id_card_copy: "dl_verified_alex.pdf",
-        special_request: "Wheelchair assistance required from boarding gate to hotel cab.",
-      }));
-      setFileDetails({
-        name: "dl_verified_alex.pdf",
-        size: "2.1 MB",
-        isPdf: true,
-        preview: null,
-      });
-    }
-  };
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -335,38 +295,6 @@ export default function GuestModal({
               className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer shrink-0 mt-0.5"
             >
               <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Quick Presets Bar */}
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 sm:gap-2 flex-wrap bg-[#f8fafc] p-2 sm:p-2.5 rounded-xl sm:rounded-2xl">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 mr-1">Quick Presets:</span>
-            
-            <button
-              type="button"
-              onClick={() => applyPreset("james")}
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-[11px] sm:text-xs font-medium text-slate-700 shadow-2xs cursor-pointer"
-            >
-              <span>👤</span>
-              <span>James</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyPreset("sophia")}
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-[11px] sm:text-xs font-medium text-slate-700 shadow-2xs cursor-pointer"
-            >
-              <span>🚆</span>
-              <span>Sophia</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyPreset("alex")}
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full text-[11px] sm:text-xs font-medium text-slate-700 shadow-2xs cursor-pointer"
-            >
-              <span>♿</span>
-              <span>Alex</span>
             </button>
           </div>
         </div>
@@ -763,10 +691,23 @@ export default function GuestModal({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {formData.id_card_copy && (
+                      <a
+                        href={formData.id_card_copy}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={fileDetails?.name || `ID_Card_${formData.guest_name || "Guest"}.${fileDetails?.isPdf ? "pdf" : "png"}`}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold flex items-center gap-1 transition-colors"
+                        title="View or download document"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{fileDetails?.isPdf ? "View PDF" : "View"}</span>
+                      </a>
+                    )}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-[11px] font-semibold transition-colors cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-[11px] font-semibold transition-colors cursor-pointer"
                     >
                       Replace
                     </button>

@@ -419,6 +419,7 @@ export const GuestModel = {
       departure_location: data.departure_location || null,
       departure_flight_train_no: data.departure_flight_train_no || null,
       id_card_copy: data.id_card_copy || null,
+      special_request: data.special_request || null,
       call_count: data.call_count !== undefined && !isNaN(Number(data.call_count)) ? Number(data.call_count) : 0,
       call_status: data.call_status && isNaN(Number(data.call_status)) ? data.call_status : "Not Called",
       last_called_at: data.last_called_at || null,

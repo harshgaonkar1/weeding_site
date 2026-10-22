@@ -143,6 +143,33 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} autoComplete="off" className="space-y-3.5">
+            {/* Quick Fill Credentials for Demo */}
+            {activeTab === "marriage_client" && (
+              <div className="flex items-center gap-1.5 flex-wrap pb-1">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Quick Fill:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdentifier("rohan_priya");
+                    setPassword("Rohan@2026");
+                  }}
+                  className="text-[10.5px] bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer"
+                >
+                  🌴 Rohan & Priya (500 Guests)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdentifier("aaditya_ananya");
+                    setPassword("Aaditya@2026");
+                  }}
+                  className="text-[10.5px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer"
+                >
+                  🏰 Aaditya & Ananya
+                </button>
+              </div>
+            )}
+
             {/* Identifier Field */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">

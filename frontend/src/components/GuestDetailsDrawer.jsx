@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Calendar,
@@ -12,12 +12,15 @@ import {
   PlaneLanding,
   PlaneTakeoff,
   Download,
+  Eye,
   Heart,
   PhoneCall,
   Sparkles,
   Clock,
+  Check,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../services/api";
 
 export default function GuestDetailsDrawer({
   guest,
@@ -28,11 +31,34 @@ export default function GuestDetailsDrawer({
   onOpenQuickWhatsApp,
 }) {
   const { isViewOnly } = useAuth();
+  const [callLogs, setCallLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && guest?.id) {
+      setLoadingLogs(true);
+      api.fetchGuestCallLogs(guest.id)
+        .then((res) => {
+          setCallLogs(res.data || []);
+        })
+        .catch(() => setCallLogs([]))
+        .finally(() => setLoadingLogs(false));
+    } else {
+      setCallLogs([]);
+    }
+  }, [isOpen, guest?.id]);
+
   if (!isOpen || !guest) return null;
 
   const isConfirmed = (guest.rsvp_status || "").toLowerCase() === "confirmed";
   const isIdReceived = (guest.id_card_received || "").toLowerCase() === "yes";
   const isImage = guest.id_card_copy && guest.id_card_copy.startsWith("data:image");
+  const isPdf = guest.id_card_copy && (
+    guest.id_card_copy.includes(".pdf") ||
+    guest.id_card_copy.startsWith("data:application/pdf") ||
+    guest.id_card_copy.startsWith("data:application/x-pdf") ||
+    !isImage
+  );
   const guestSide = (guest.side || "Groom").toLowerCase();
   const callCount = Number(guest.call_count) || 0;
 
@@ -137,62 +163,125 @@ export default function GuestDetailsDrawer({
             </div>
           </div>
 
-          {/* Call Center Checkpoint Progress Card (Admin & Call Center only) */}
-          {!isViewOnly && (
-            <div className="bg-[#f4faf4] border border-[#c3eeb0] rounded-2xl p-4 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[#1c4d25] font-bold text-xs uppercase tracking-wider">
-                  <PhoneCall className="w-4 h-4 text-[#16a34a]" />
-                  <span>Call Center Checkpoints</span>
-                </div>
-                <span className="text-[10px] font-bold bg-[#0f2922] text-[#84e030] px-2.5 py-0.5 rounded-full">
-                  {callCount > 0 ? `✓ ${callCount} Call${callCount === 1 ? "" : "s"} Completed` : "0 Calls Done"}
-                </span>
+          {/* Call Center Checkpoints & Responses (Visible to All Users & Clients) */}
+          <div className="bg-[#f4faf4] border border-[#c3eeb0] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[#1c4d25] font-bold text-xs uppercase tracking-wider">
+                <PhoneCall className="w-4 h-4 text-[#16a34a]" />
+                <span>Call Center Checkpoints & Responses</span>
               </div>
-
-              {callCount > 0 ? (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {Array.from({ length: callCount }, (_, idx) => (
-                    <div
-                      key={idx}
-                      className="inline-flex items-center gap-1.5 bg-emerald-100/80 border border-emerald-300 text-emerald-900 px-2.5 py-1 rounded-xl text-xs font-bold"
-                    >
-                      <div className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-[9px] shadow-2xs">
-                        ✓
-                      </div>
-                      <span>Call #{idx + 1} Done</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-2.5 rounded-xl border bg-white border-slate-200 text-slate-400 text-xs text-center italic">
-                  No calls logged yet
-                </div>
-              )}
-
-              {guest.last_call_summary &&
-                guest.last_call_summary.trim().toLowerCase() !== (guest.guest_name || "").trim().toLowerCase() && (
-                <div className="bg-white border border-emerald-200 p-2.5 rounded-xl text-slate-800">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">
-                    Latest Call Summary:
-                  </span>
-                  <p className="text-xs italic">"{guest.last_call_summary}"</p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  if (onOpenCallLogs) onOpenCallLogs(guest);
-                }}
-                className="w-full bg-[#0f2922] hover:bg-[#163a30] text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-              >
-                <PhoneCall className="w-3.5 h-3.5 text-[#84e030]" />
-                <span>Open Call Center Log & Add Notes</span>
-              </button>
+              <span className="text-[10px] font-bold bg-[#0f2922] text-[#84e030] px-2.5 py-0.5 rounded-full shadow-2xs">
+                {callCount > 0 ? `✓ ${callCount} Call${callCount === 1 ? "" : "s"} Logged` : "0 Calls"}
+              </span>
             </div>
-          )}
+
+            {/* Checkpoint Pills */}
+            {callCount > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {Array.from({ length: Math.max(callCount, callLogs.length) }, (_, idx) => (
+                  <div
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 bg-emerald-100/90 border border-emerald-300 text-emerald-950 px-2.5 py-0.5 rounded-xl text-xs font-bold"
+                  >
+                    <div className="w-3.5 h-3.5 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-[9px] shadow-2xs">
+                      ✓
+                    </div>
+                    <span>Call #{idx + 1}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* List of Calls & Outcomes / Responses */}
+            {loadingLogs ? (
+              <div className="py-2 text-center text-xs text-slate-500 italic">
+                Loading call responses...
+              </div>
+            ) : callLogs.length > 0 ? (
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {callLogs.map((log, index) => {
+                  const outcome = (log.call_outcome || "Connected").toLowerCase();
+                  const isPositive = outcome.includes("confirm") || outcome.includes("connect");
+                  const isDeclined = outcome.includes("decline") || outcome.includes("regret");
+
+                  return (
+                    <div
+                      key={log.id || index}
+                      className="bg-white border border-emerald-200 rounded-xl p-3 space-y-1.5 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-slate-900 text-xs">
+                            Call #{log.call_number || index + 1}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              isPositive
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : isDeclined
+                                ? "bg-rose-50 text-rose-800 border-rose-200"
+                                : "bg-amber-50 text-amber-800 border-amber-200"
+                            }`}
+                          >
+                            {log.call_outcome || "Connected"}
+                          </span>
+                        </div>
+
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {log.called_at ? new Date(log.called_at).toLocaleDateString() : ""}
+                        </span>
+                      </div>
+
+                      {/* Discussion / Response Notes */}
+                      <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100 whitespace-pre-line leading-relaxed">
+                        {log.call_summary || "No notes recorded."}
+                      </p>
+
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+                        <span>Agent: <strong>{log.agent_name || "Sarah (Call Desk)"}</strong></span>
+                        {log.callback_date && (
+                          <span className="text-purple-700 font-semibold bg-purple-50 px-1.5 py-0.2 rounded border border-purple-100">
+                            Callback: {log.callback_date}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : guest.last_call_summary &&
+              guest.last_call_summary.trim().toLowerCase() !== (guest.guest_name || "").trim().toLowerCase() ? (
+              <div className="bg-white border border-emerald-200 p-2.5 rounded-xl text-slate-800 space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                  Latest Call Summary:
+                </span>
+                <p className="text-xs italic bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  "{guest.last_call_summary}"
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl border bg-white border-slate-200 text-slate-400 text-xs text-center italic">
+                No calls or responses recorded yet for this guest.
+              </div>
+            )}
+
+            {/* View Full History or Open Call Desk Action Button */}
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (onOpenCallLogs) onOpenCallLogs(guest);
+              }}
+              className="w-full bg-[#0f2922] hover:bg-[#163a30] text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs text-xs"
+            >
+              <PhoneCall className="w-3.5 h-3.5 text-[#84e030]" />
+              <span>
+                {isViewOnly
+                  ? `View Full Call Log History (${callCount})`
+                  : "Open Call Center Log & Add Notes"}
+              </span>
+            </button>
+          </div>
 
           {/* Arrival Logistics */}
           <div className="bg-[#f2fcf5] border border-emerald-100 rounded-2xl p-4 space-y-2">
@@ -277,16 +366,31 @@ export default function GuestDetailsDrawer({
                     </div>
                   </div>
 
-                  {guest.id_card_copy.startsWith("data:") && (
-                    <a
-                      href={guest.id_card_copy}
-                      download={`ID_Card_${guest.guest_name || "Guest"}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download</span>
-                    </a>
-                  )}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {guest.id_card_copy.startsWith("data:") && (
+                      <a
+                        href={guest.id_card_copy}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition-colors"
+                        title="Open in new window"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>View</span>
+                      </a>
+                    )}
+                    {guest.id_card_copy.startsWith("data:") && (
+                      <a
+                        href={guest.id_card_copy}
+                        download={`${(guest.guest_name || "Guest").replace(/\s+/g, "_")}_ID_Card.${isPdf ? "pdf" : "png"}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                        title="Download file"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 {isImage && (
@@ -295,6 +399,16 @@ export default function GuestDetailsDrawer({
                       src={guest.id_card_copy}
                       alt="ID Card Document"
                       className="w-full h-full object-contain max-h-48"
+                    />
+                  </div>
+                )}
+
+                {isPdf && guest.id_card_copy.startsWith("data:") && (
+                  <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                    <iframe
+                      src={guest.id_card_copy}
+                      title="ID Document PDF Preview"
+                      className="w-full h-56 border-0"
                     />
                   </div>
                 )}

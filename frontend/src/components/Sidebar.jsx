@@ -12,8 +12,10 @@ import {
   ShieldCheck,
   MessageSquare,
   X,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import SidebarChatWidget from "./SidebarChatWidget";
 
 export default function Sidebar({
   totalCount = 2,
@@ -27,6 +29,7 @@ export default function Sidebar({
   onSelectWedding,
   isMobileNavOpen = false,
   setIsMobileNavOpen,
+  onOpenChat,
 }) {
   const {
     user,
@@ -304,6 +307,36 @@ export default function Sidebar({
             </span>
           </button>
 
+          {/* 3. Analytics & Trends (Visual Bar Graphs, Line Graphs, Insights) */}
+          <button
+            onClick={() => {
+              if (!selectedWedding && weddings.length > 0) {
+                onSelectWedding(weddings[0]);
+              }
+              setActiveTab("analytics");
+              closeMobile();
+            }}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === "analytics"
+                ? "bg-[#d4f952] text-[#123118] shadow-xs"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <BarChart3 className="w-4 h-4 stroke-[2.2]" />
+              <span>Analytics & Trends</span>
+            </div>
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                activeTab === "analytics"
+                  ? "bg-[#123118]/10 text-[#123118]"
+                  : "bg-emerald-100 text-emerald-800"
+              }`}
+            >
+              Graphs
+            </span>
+          </button>
+
           {/* Action: Add Marriage Card (Admin Only) */}
           {!isViewOnly && isAdmin && (
             <button
@@ -326,6 +359,12 @@ export default function Sidebar({
             </button>
           )}
         </nav>
+
+        {/* Live Chatbot / Direct Messenger Widget on Sidebar (Only for User & Admin) */}
+        <SidebarChatWidget
+          onOpenChat={onOpenChat}
+          selectedWedding={selectedWedding}
+        />
       </div>
 
       {/* Bottom Profile Footer */}
