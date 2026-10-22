@@ -1452,8 +1452,16 @@ function syncAllGuestsToDatabase() {
       if (res.ok) {
         const json = await res.json();
         if (json.data) {
-          localStorage.setItem(`cached_messages_${weddingId}`, JSON.stringify(json.data));
-          return json.data;
+          const unique = [];
+          const seen = new Set();
+          json.data.forEach((m) => {
+            if (m && m.id && !seen.has(m.id)) {
+              seen.add(m.id);
+              unique.push(m);
+            }
+          });
+          localStorage.setItem(`cached_messages_${weddingId}`, JSON.stringify(unique));
+          return unique;
         }
       }
     } catch (e) {
@@ -1462,7 +1470,18 @@ function syncAllGuestsToDatabase() {
 
     try {
       const local = localStorage.getItem(`cached_messages_${weddingId}`);
-      if (local) return JSON.parse(local);
+      if (local) {
+        const parsed = JSON.parse(local);
+        const unique = [];
+        const seen = new Set();
+        parsed.forEach((m) => {
+          if (m && m.id && !seen.has(m.id)) {
+            seen.add(m.id);
+            unique.push(m);
+          }
+        });
+        return unique;
+      }
     } catch (e) {}
 
     // Default seed messages for wedding_01
@@ -1544,28 +1563,18 @@ function syncAllGuestsToDatabase() {
       if (local) list = JSON.parse(local);
     } catch (e) {}
 
-    list.push(newMsg);
-
-    let botReply = null;
-    if (sender_role === "client" && trigger_bot_reply) {
-      botReply = {
-        id: `msg_bot_${Date.now() + 1}`,
-        wedding_id,
-        sender_id: "bot_concierge",
-        sender_name: "Emitly Wedding Bot 🤖",
-        sender_role: "bot",
-        message: "Message received! Super Admin Manish has been alerted. Our telecaller team will verify guest details shortly.",
-        is_read: false,
-        created_at: new Date(Date.now() + 500).toISOString(),
-      };
-      list.push(botReply);
+    // Avoid duplicate insertions
+    const isDuplicate = list.some(
+      (m) => m.wedding_id === wedding_id && m.message === message && Math.abs(new Date(m.created_at) - new Date()) < 2000
+    );
+    if (!isDuplicate) {
+      list.push(newMsg);
+      try {
+        localStorage.setItem(`cached_messages_${wedding_id}`, JSON.stringify(list));
+      } catch (e) {}
     }
 
-    try {
-      localStorage.setItem(`cached_messages_${wedding_id}`, JSON.stringify(list));
-    } catch (e) {}
-
-    return { success: true, data: newMsg, botReply };
+    return { success: true, data: newMsg };
   },
 
   async markMessagesRead(weddingId, readerRole = "client") {

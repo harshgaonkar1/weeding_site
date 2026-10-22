@@ -35,7 +35,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Create user/admin message
+    // Create user/admin message (exactly 1 message)
     const savedMsg = await MessageModel.create({
       wedding_id,
       sender_id,
@@ -44,29 +44,9 @@ router.post("/", async (req, res) => {
       message: message.trim(),
     });
 
-    let botReply = null;
-    // If sent by client and bot reply requested or admin offline
-    if (sender_role === "client" && trigger_bot_reply) {
-      const botResponses = [
-        "Hi! Super Admin Manish has received your message. Our team is actively reviewing your request and will follow up shortly.",
-        "Message received! For urgent guest pickups or flight changes, our Call Center telecallers are also updated in real time.",
-        "Thank you for reaching out! We've noted your request and Admin Manish will reply soon.",
-      ];
-      const randomReply = botResponses[Math.floor(Math.random() * botResponses.length)];
-
-      botReply = await MessageModel.create({
-        wedding_id,
-        sender_id: "bot_concierge",
-        sender_name: "Emitly Wedding Bot 🤖",
-        sender_role: "bot",
-        message: randomReply,
-      });
-    }
-
     res.status(201).json({
       success: true,
       data: savedMsg,
-      botReply,
     });
   } catch (error) {
     console.error("Error sending message:", error);

@@ -453,7 +453,10 @@ export const query = async (text, params = []) => {
       created_at: params[7] || new Date().toISOString(),
     };
     if (!store.messages) store.messages = [];
-    store.messages.push(newMsg);
+    const exists = store.messages.some((m) => m.id === newMsg.id);
+    if (!exists) {
+      store.messages.push(newMsg);
+    }
     if (supabase) {
       try {
         await supabase.from("wedding_messages").insert([newMsg]);
@@ -819,11 +822,18 @@ export const query = async (text, params = []) => {
 
   // 5. Wedding Messages Queries (Admin & Client Chat)
   if (lowerSql.includes("from wedding_messages")) {
-    if (lowerSql.includes("where wedding_id = $1")) {
-      const list = (store.messages || []).filter((m) => m.wedding_id === params[0]);
-      return formatResult(list);
-    }
-    return formatResult(store.messages || []);
+    const rawList = lowerSql.includes("where wedding_id = $1")
+      ? (store.messages || []).filter((m) => m.wedding_id === params[0])
+      : store.messages || [];
+    const seen = new Set();
+    const unique = rawList.filter((m) => {
+      if (!seen.has(m.id)) {
+        seen.add(m.id);
+        return true;
+      }
+      return false;
+    });
+    return formatResult(unique);
   }
 
   // Default empty result

@@ -13,7 +13,16 @@ export const MessageModel = {
           .select("*")
           .eq("wedding_id", weddingId)
           .order("created_at", { ascending: true });
-        if (data && !error && data.length > 0) return data;
+        if (data && !error && data.length > 0) {
+          const seen = new Set();
+          return data.filter((m) => {
+            if (!seen.has(m.id)) {
+              seen.add(m.id);
+              return true;
+            }
+            return false;
+          });
+        }
       } catch (e) {
         // Fall through to pool / store
       }
@@ -24,12 +33,30 @@ export const MessageModel = {
         "SELECT * FROM wedding_messages WHERE wedding_id = $1 ORDER BY created_at ASC",
         [weddingId]
       );
-      if (rows && rows.length > 0) return rows;
+      if (rows && rows.length > 0) {
+        const seen = new Set();
+        return rows.filter((m) => {
+          if (!seen.has(m.id)) {
+            seen.add(m.id);
+            return true;
+          }
+          return false;
+        });
+      }
     } catch (e) {
       // In-memory fallback
     }
 
-    return (store.messages || []).filter((m) => m.wedding_id === weddingId);
+    const seen = new Set();
+    return (store.messages || [])
+      .filter((m) => m.wedding_id === weddingId)
+      .filter((m) => {
+        if (!seen.has(m.id)) {
+          seen.add(m.id);
+          return true;
+        }
+        return false;
+      });
   },
 
   // 2. Create a new message
@@ -54,10 +81,6 @@ export const MessageModel = {
       created_at,
     };
 
-    // Store in-memory
-    if (!store.messages) store.messages = [];
-    store.messages.push(newMsg);
-
     // Try Supabase
     if (supabase) {
       try {
@@ -67,7 +90,7 @@ export const MessageModel = {
       }
     }
 
-    // Try PostgreSQL
+    // Insert through query engine (which handles store.messages safely without duplicates)
     try {
       await pool.query(
         `INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
@@ -75,7 +98,9 @@ export const MessageModel = {
         [id, wedding_id, newMsg.sender_id, newMsg.sender_name, newMsg.sender_role, newMsg.message, false, created_at]
       );
     } catch (e) {
-      // Retained in store
+      if (!store.messages) store.messages = [];
+      const exists = store.messages.some((m) => m.id === newMsg.id);
+      if (!exists) store.messages.push(newMsg);
     }
 
     return newMsg;

@@ -46,10 +46,10 @@ export default function ChatBotModal({
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [enableBotAssist, setEnableBotAssist] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const messagesEndRef = useRef(null);
+  const isSendingRef = useRef(false);
 
   // Sync active wedding ID when selectedWedding changes
   useEffect(() => {
@@ -65,7 +65,18 @@ export default function ChatBotModal({
     if (!wId) return;
     try {
       const data = await api.fetchMessages(wId);
-      setMessages(data || []);
+      if (data && Array.isArray(data)) {
+        // Deduplicate messages by id
+        const seen = new Set();
+        const unique = [];
+        data.forEach((m) => {
+          if (m && m.id && !seen.has(m.id)) {
+            seen.add(m.id);
+            unique.push(m);
+          }
+        });
+        setMessages(unique);
+      }
       // Mark messages as read for this role
       const myRole = isAdmin ? "admin" : "client";
       api.markMessagesRead(wId, myRole);
@@ -105,9 +116,13 @@ export default function ChatBotModal({
     };
 
   const handleSendMessage = async (customText = null) => {
-    const textToSend = (customText || inputText).trim();
-    if (!textToSend || isSending) return;
+    // Prevent double submission
+    if (isSendingRef.current) return;
 
+    const textToSend = (customText || inputText).trim();
+    if (!textToSend) return;
+
+    isSendingRef.current = true;
     setIsSending(true);
     setInputText("");
 
@@ -117,36 +132,27 @@ export default function ChatBotModal({
       : user?.name || `${currentWedding.groom_name} & ${currentWedding.bride_name}`;
 
     try {
-      // Optimistic message
-      const tempMsg = {
-        id: `temp_${Date.now()}`,
-        wedding_id: activeWeddingId,
-        sender_id: user?.id || (isAdmin ? "user_admin_01" : "client_user"),
-        sender_name: myName,
-        sender_role: myRole,
-        message: textToSend,
-        is_read: false,
-        created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, tempMsg]);
-
-      // Call API
+      // Send exactly 1 message
       const result = await api.sendMessage({
         wedding_id: activeWeddingId,
         sender_id: user?.id,
         sender_name: myName,
         sender_role: myRole,
         message: textToSend,
-        trigger_bot_reply: myRole === "client" && enableBotAssist,
       });
 
-      if (result?.botReply) {
-        setMessages((prev) => [...prev, result.botReply]);
+      if (result?.data) {
+        setMessages((prev) => {
+          const exists = prev.some((m) => m.id === result.data.id);
+          if (exists) return prev;
+          return [...prev, result.data];
+        });
       }
-      loadMessages(activeWeddingId);
+      await loadMessages(activeWeddingId);
     } catch (e) {
       console.error("Error sending message:", e);
     } finally {
+      isSendingRef.current = false;
       setIsSending(false);
     }
   };
@@ -337,24 +343,6 @@ export default function ChatBotModal({
 
         {/* Input & Sending Bar */}
         <div className="p-3 sm:p-4 bg-white border-t border-slate-100 shrink-0 space-y-2">
-          {/* Bot Assist Toggle for Clients */}
-          {!isAdmin && (
-            <div className="flex items-center justify-between px-1 text-[11px] text-slate-500">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={enableBotAssist}
-                  onChange={(e) => setEnableBotAssist(e.target.checked)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span>Enable Bot Assistant Auto-Confirmation</span>
-              </label>
-              <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                ⚡ Instant Response
-              </span>
-            </div>
-          )}
-
           <div className="flex items-center gap-2">
             <textarea
               rows={1}
