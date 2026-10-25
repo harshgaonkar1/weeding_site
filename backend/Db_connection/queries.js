@@ -5,8 +5,42 @@
 // connected to Supabase JS Client.
 // ============================================================
 
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { supabase } from "./supabaseClient.js";
 import { generate500GuestsForRohanPriya } from "../services/guestGenerator.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const MESSAGES_FILE = path.resolve(__dirname, "../database/messages_store.json");
+
+// Helper to save messages to local file
+export const saveMessagesToFile = () => {
+  try {
+    const dir = path.dirname(MESSAGES_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(store.messages || [], null, 2), "utf8");
+  } catch (e) {
+    console.warn("Notice: Could not write messages_store.json:", e.message);
+  }
+};
+
+// Helper to load messages from local file
+const loadMessagesFromFile = () => {
+  try {
+    if (fs.existsSync(MESSAGES_FILE)) {
+      const content = fs.readFileSync(MESSAGES_FILE, "utf8");
+      const list = JSON.parse(content);
+      if (Array.isArray(list) && list.length > 0) {
+        return list;
+      }
+    }
+  } catch (e) {
+    console.warn("Notice: Could not load messages_store.json:", e.message);
+  }
+  return null;
+};
 
 // ============================================================
 // In-Memory Data Store (Synchronized with Supabase)
@@ -223,6 +257,13 @@ export const store = {
   ],
 };
 
+// Initialize store messages from local file if available
+const _savedMessages = loadMessagesFromFile();
+if (_savedMessages && _savedMessages.length > 0) {
+  store.messages = _savedMessages;
+}
+
+
 // ============================================================
 // Helper Result Wrapper
 // ============================================================
@@ -247,9 +288,12 @@ export const query = async (text, params = []) => {
     store.weddings = store.weddings.filter((w) => w.id !== id);
     store.guests = store.guests.filter((g) => g.wedding_id !== id);
     store.guest_call_logs = store.guest_call_logs.filter((c) => c.wedding_id !== id);
+    store.messages = (store.messages || []).filter((m) => m.wedding_id !== id);
+    saveMessagesToFile();
 
     if (supabase) {
       try {
+        await supabase.from("wedding_messages").delete().eq("wedding_id", id);
         await supabase.from("guest_call_logs").delete().eq("wedding_id", id);
         await supabase.from("guests").delete().eq("wedding_id", id);
         await supabase.from("weddings").delete().eq("id", id);
@@ -259,6 +303,23 @@ export const query = async (text, params = []) => {
     }
     const affected = Math.max(1, initialLen - store.weddings.length);
     return formatResult(new Array(affected).fill({ id }));
+  }
+
+  if (lowerSql.startsWith("delete from wedding_messages")) {
+    const weddingId = params[0];
+    const initialLen = (store.messages || []).length;
+    store.messages = (store.messages || []).filter((m) => m.wedding_id !== weddingId);
+    saveMessagesToFile();
+
+    if (supabase) {
+      try {
+        await supabase.from("wedding_messages").delete().eq("wedding_id", weddingId);
+      } catch (err) {
+        console.warn("Supabase wedding_messages delete notice:", err.message);
+      }
+    }
+    const affected = Math.max(1, initialLen - (store.messages || []).length);
+    return formatResult(new Array(affected).fill({ wedding_id: weddingId }));
   }
 
   if (lowerSql.startsWith("delete from guests")) {
@@ -456,14 +517,16 @@ export const query = async (text, params = []) => {
     const exists = store.messages.some((m) => m.id === newMsg.id);
     if (!exists) {
       store.messages.push(newMsg);
+      saveMessagesToFile();
     }
     if (supabase) {
       try {
-        await supabase.from("wedding_messages").insert([newMsg]);
+        await supabase.from("wedding_messages").upsert(newMsg);
       } catch (err) {}
     }
     return formatResult([newMsg]);
   }
+
 
   // ============================================================
   // C. UPDATE OPERATIONS

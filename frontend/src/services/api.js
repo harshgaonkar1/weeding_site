@@ -747,6 +747,9 @@ export const api = {
     setCachedWeddings(list);
     const guests = getCachedGuests().filter((g) => g.wedding_id !== id);
     setCachedGuests(guests);
+    try {
+      localStorage.removeItem(`cached_messages_${id}`);
+    } catch (e) {}
     return true;
   },
 
@@ -1539,6 +1542,25 @@ function syncAllGuestsToDatabase() {
       });
       if (res.ok) {
         const json = await res.json();
+        if (json?.data) {
+          let list = [];
+          try {
+            const local = localStorage.getItem(`cached_messages_${wedding_id}`);
+            if (local) list = JSON.parse(local);
+          } catch (e) {}
+
+          const seen = new Set(list.map((m) => m.id));
+          if (!seen.has(json.data.id)) {
+            list.push(json.data);
+            seen.add(json.data.id);
+          }
+          if (json.bot_reply && !seen.has(json.bot_reply.id)) {
+            list.push(json.bot_reply);
+          }
+          try {
+            localStorage.setItem(`cached_messages_${wedding_id}`, JSON.stringify(list));
+          } catch (e) {}
+        }
         return json;
       }
     } catch (e) {

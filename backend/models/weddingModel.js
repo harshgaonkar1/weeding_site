@@ -367,19 +367,22 @@ export const WeddingModel = {
     return null;
   },
 
-  // 6. Delete wedding and all associated guests and call logs
+  // 6. Delete wedding and all associated guests, call logs, and chat messages
   async delete(id) {
     if (supabase) {
       try {
+        await supabase.from("wedding_messages").delete().eq("wedding_id", id);
         await supabase.from("guest_call_logs").delete().eq("wedding_id", id);
         await supabase.from("guests").delete().eq("wedding_id", id);
         await supabase.from("weddings").delete().eq("id", id);
       } catch (err) {}
     }
 
+    await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [id]).catch(() => {});
     await pool.query("DELETE FROM guest_call_logs WHERE wedding_id = $1", [id]).catch(() => {});
     await pool.query("DELETE FROM guests WHERE wedding_id = $1", [id]);
     const result = await pool.query("DELETE FROM weddings WHERE id = $1", [id]);
     return (result.rowCount || result.affectedRows) > 0;
   },
 };
+

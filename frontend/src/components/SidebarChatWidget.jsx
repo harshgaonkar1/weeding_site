@@ -19,13 +19,18 @@ export default function SidebarChatWidget({
     const checkMessages = async () => {
       try {
         const msgs = await api.fetchMessages(weddingId);
-        if (isMounted && msgs && msgs.length > 0) {
-          const last = msgs[msgs.length - 1];
-          setLatestMessage(last);
+        if (isMounted) {
+          if (msgs && msgs.length > 0) {
+            const last = msgs[msgs.length - 1];
+            setLatestMessage(last);
 
-          const myRole = isAdmin ? "admin" : "client";
-          const unread = msgs.filter((m) => m.sender_role !== myRole && !m.is_read).length;
-          setUnreadCount(unread);
+            const myRole = isAdmin ? "admin" : "client";
+            const unread = msgs.filter((m) => m.sender_role !== myRole && !m.is_read).length;
+            setUnreadCount(unread);
+          } else {
+            setLatestMessage(null);
+            setUnreadCount(0);
+          }
         }
       } catch (e) {}
     };

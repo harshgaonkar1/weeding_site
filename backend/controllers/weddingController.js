@@ -1,5 +1,6 @@
 import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
+import { MessageModel } from "../models/messageModel.js";
 import { ExcelService } from "../services/excelService.js";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
 import fs from "fs";
@@ -141,6 +142,13 @@ export const weddingController = {
         console.warn("⚠️ Note on Google Sheet deletion:", sheetErr.message);
       }
 
+      // Explicitly delete all chat bot / messenger messages for this wedding
+      try {
+        await MessageModel.deleteByWeddingId(id);
+      } catch (msgErr) {
+        console.warn("⚠️ Note on chat messages deletion:", msgErr.message);
+      }
+
       const success = await WeddingModel.delete(id);
       if (!success) {
         return res.status(500).json({
@@ -150,7 +158,7 @@ export const weddingController = {
       }
       res.status(200).json({
         success: true,
-        message: "Wedding, associated guests, and Google Sheet/tab deleted successfully",
+        message: "Wedding, associated guests, chat messages, and Google Sheet/tab deleted successfully",
       });
     } catch (error) {
       console.error("Error deleting wedding:", error);

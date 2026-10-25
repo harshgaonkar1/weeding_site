@@ -51,14 +51,16 @@ export default function ChatBotModal({
   const messagesEndRef = useRef(null);
   const isSendingRef = useRef(false);
 
-  // Sync active wedding ID when selectedWedding changes
+  // Sync active wedding ID when selectedWedding or weddings change
   useEffect(() => {
     if (selectedWedding?.id) {
       setActiveWeddingId(selectedWedding.id);
     } else if (user?.wedding_id) {
       setActiveWeddingId(user.wedding_id);
+    } else if (weddings && weddings.length > 0 && (!activeWeddingId || !weddings.some((w) => w.id === activeWeddingId))) {
+      setActiveWeddingId(weddings[0].id);
     }
-  }, [selectedWedding?.id, user?.wedding_id]);
+  }, [selectedWedding?.id, user?.wedding_id, weddings]);
 
   // Load messages function
   const loadMessages = async (wId = activeWeddingId) => {
@@ -102,7 +104,7 @@ export default function ChatBotModal({
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isSending]);
 
   if (!isOpen) return null;
 
@@ -132,20 +134,26 @@ export default function ChatBotModal({
       : user?.name || `${currentWedding.groom_name} & ${currentWedding.bride_name}`;
 
     try {
-      // Send exactly 1 message
+      // Send message to API which saves it to DB and returns Concierge Bot response for clients
       const result = await api.sendMessage({
         wedding_id: activeWeddingId,
         sender_id: user?.id,
         sender_name: myName,
         sender_role: myRole,
         message: textToSend,
+        trigger_bot_reply: !isAdmin,
       });
 
       if (result?.data) {
         setMessages((prev) => {
-          const exists = prev.some((m) => m.id === result.data.id);
-          if (exists) return prev;
-          return [...prev, result.data];
+          const next = [...prev];
+          if (!next.some((m) => m.id === result.data.id)) {
+            next.push(result.data);
+          }
+          if (result.bot_reply && !next.some((m) => m.id === result.bot_reply.id)) {
+            next.push(result.bot_reply);
+          }
+          return next;
         });
       }
       await loadMessages(activeWeddingId);
@@ -338,6 +346,16 @@ export default function ChatBotModal({
               );
             })
           )}
+
+          {isSending && !isAdmin && (
+            <div className="flex flex-col items-start my-1 animate-pulse">
+              <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl px-3.5 py-2 text-xs text-emerald-800 flex items-center gap-2 shadow-2xs">
+                <Bot className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                <span className="italic text-[11px] font-medium">Emitly Concierge is typing a response...</span>
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 

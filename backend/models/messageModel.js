@@ -6,6 +6,9 @@ import crypto from "crypto";
 export const MessageModel = {
   // 1. Get all messages for a specific wedding
   async getByWeddingId(weddingId) {
+    if (!weddingId) return [];
+
+    let supabaseData = null;
     if (supabase) {
       try {
         const { data, error } = await supabase
@@ -13,19 +16,23 @@ export const MessageModel = {
           .select("*")
           .eq("wedding_id", weddingId)
           .order("created_at", { ascending: true });
-        if (data && !error && data.length > 0) {
-          const seen = new Set();
-          return data.filter((m) => {
-            if (!seen.has(m.id)) {
-              seen.add(m.id);
-              return true;
-            }
-            return false;
-          });
+        if (!error && Array.isArray(data) && data.length > 0) {
+          supabaseData = data;
         }
       } catch (e) {
         // Fall through to pool / store
       }
+    }
+
+    if (supabaseData && supabaseData.length > 0) {
+      const seen = new Set();
+      return supabaseData.filter((m) => {
+        if (!seen.has(m.id)) {
+          seen.add(m.id);
+          return true;
+        }
+        return false;
+      });
     }
 
     try {
@@ -70,27 +77,45 @@ export const MessageModel = {
     const id = `msg_${crypto.randomUUID().slice(0, 10)}`;
     const created_at = new Date().toISOString();
 
+    const role = sender_role || "client";
+    const defaultSenderId =
+      role === "admin"
+        ? "user_admin_01"
+        : role === "bot"
+        ? "emitly_bot"
+        : "client_user";
+
+    const defaultSenderName =
+      role === "admin"
+        ? "Manish (Admin)"
+        : role === "bot"
+        ? "Emitly Bot Concierge"
+        : "Wedding Client";
+
     const newMsg = {
       id,
       wedding_id,
-      sender_id: sender_id || (sender_role === "admin" ? "user_admin_01" : "client_user"),
-      sender_name: sender_name || (sender_role === "admin" ? "Manish (Admin)" : "Wedding Client"),
-      sender_role: sender_role || "client",
+      sender_id: sender_id || defaultSenderId,
+      sender_name: sender_name || defaultSenderName,
+      sender_role: role,
       message: message.trim(),
       is_read: false,
       created_at,
     };
 
-    // Try Supabase
+    // 1. Try Supabase upsert
     if (supabase) {
       try {
-        await supabase.from("wedding_messages").insert([newMsg]);
+        const { error } = await supabase.from("wedding_messages").upsert(newMsg);
+        if (error) {
+          console.warn("Notice: Supabase wedding_messages upsert note:", error.message);
+        }
       } catch (e) {
         console.warn("Notice: Supabase wedding_messages insert failed, retained in store:", e.message);
       }
     }
 
-    // Insert through query engine (which handles store.messages safely without duplicates)
+    // 2. Insert through query engine (which handles store.messages safely without duplicates)
     try {
       await pool.query(
         `INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
@@ -106,7 +131,30 @@ export const MessageModel = {
     return newMsg;
   },
 
-  // 3. Mark messages as read for a wedding
+  // 3. Delete all messages for a specific wedding when the wedding is deleted
+  async deleteByWeddingId(weddingId) {
+    if (!weddingId) return false;
+
+    if (supabase) {
+      try {
+        await supabase.from("wedding_messages").delete().eq("wedding_id", weddingId);
+      } catch (e) {
+        console.warn("Supabase wedding_messages delete notice:", e.message);
+      }
+    }
+
+    try {
+      await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [weddingId]);
+    } catch (e) {}
+
+    if (store.messages) {
+      store.messages = store.messages.filter((m) => m.wedding_id !== weddingId);
+    }
+
+    return true;
+  },
+
+  // 4. Mark messages as read for a wedding
   async markAsRead(weddingId, readerRole) {
     if (store.messages) {
       store.messages.forEach((m) => {
@@ -129,7 +177,7 @@ export const MessageModel = {
     return true;
   },
 
-  // 4. Get unread count for a user role
+  // 5. Get unread count for a user role
   async getUnreadCount(weddingId, forRole) {
     const msgs = (store.messages || []).filter(
       (m) => (!weddingId || m.wedding_id === weddingId) && m.sender_role !== forRole && !m.is_read
@@ -137,3 +185,4 @@ export const MessageModel = {
     return msgs.length;
   },
 };
+

@@ -147,7 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_guest_call_logs_called_at ON guest_call_logs (cal
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS wedding_messages (
   id VARCHAR(64) PRIMARY KEY,
-  wedding_id VARCHAR(64) NOT NULL,
+  wedding_id VARCHAR(64) NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
   sender_id VARCHAR(64) NOT NULL,
   sender_name VARCHAR(255) NOT NULL,
   sender_role VARCHAR(50) NOT NULL, -- 'admin', 'client', or 'bot'
@@ -166,6 +166,7 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE weddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE guests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE guest_call_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wedding_messages ENABLE ROW LEVEL SECURITY;
 
 -- Allow full access to all tables for authenticated/anon/service roles
 DO $$
@@ -181,6 +182,9 @@ BEGIN
 
   DROP POLICY IF EXISTS "Allow full access to guest_call_logs" ON guest_call_logs;
   CREATE POLICY "Allow full access to guest_call_logs" ON guest_call_logs FOR ALL USING (true) WITH CHECK (true);
+
+  DROP POLICY IF EXISTS "Allow full access to wedding_messages" ON wedding_messages;
+  CREATE POLICY "Allow full access to wedding_messages" ON wedding_messages FOR ALL USING (true) WITH CHECK (true);
 END $$;
 
 -- ---------------------------------------------------------
@@ -213,3 +217,11 @@ VALUES
   ('call_log_03', 'guest_viggnesh_02', 'wedding_01', 3, 'Sarah (Call Desk)', 'RSVP Confirmed', '3rd call checkpoint complete. Confirmed 3-day stay, vegetarian breakfast, and cab pickup at Mumbai T2.', NULL, '2026-09-20 11:30:00+00'),
   ('call_log_04', 'guest_manish_04', 'wedding_01', 1, 'Sarah (Call Desk)', 'Connected', '1st call checkpoint: Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle pickup.', NULL, '2026-09-22 15:00:00+00')
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
+VALUES
+  ('msg_seed_01', 'wedding_01', 'user_admin_01', 'Manish (Admin)', 'admin', 'Hello Aaditya & Ananya! Welcome to your live wedding portal. Our logistics and telecaller team is actively monitoring guest arrivals and RSVP confirmations.', true, CURRENT_TIMESTAMP - INTERVAL '1 day'),
+  ('msg_seed_02', 'wedding_01', 'client_aaditya_ananya', 'Aaditya Roy', 'client', 'Hi Manish, thank you! Could you please make sure the airport shuttle is confirmed for the guests arriving on 27th Nov at Mumbai T2 / Udaipur Airport?', true, CURRENT_TIMESTAMP - INTERVAL '12 hours'),
+  ('msg_seed_03', 'wedding_01', 'user_admin_01', 'Manish (Admin)', 'admin', 'Absolutely! The telecaller desk has logged their flight numbers (AI-682). We have dedicated Innovas on standby at the airport terminal.', false, CURRENT_TIMESTAMP - INTERVAL '2 hours')
+ON CONFLICT (id) DO NOTHING;
+
