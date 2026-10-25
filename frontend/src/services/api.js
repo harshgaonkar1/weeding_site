@@ -24,6 +24,17 @@ export const DEFAULT_USERS = {
   },
 };
 
+export const getCurrentUserRole = () => {
+  try {
+    const raw = localStorage.getItem("manish_auth_user");
+    if (raw) {
+      const u = JSON.parse(raw);
+      return u?.role || null;
+    }
+  } catch (e) {}
+  return null;
+};
+
 // Initial seed / fallback weddings
 const INITIAL_FALLBACK_WEDDINGS = [
   {
@@ -875,6 +886,9 @@ export const api = {
   },
 
   async createGuest(guestData) {
+    if (getCurrentUserRole() === "call_center") {
+      throw new Error("Call Center desk has view-only access. Only Super Admin can register new guests.");
+    }
     let created = null;
     const cleanGuestData = {
       ...guestData,
@@ -889,7 +903,10 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE_URL}/guests`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-role": getCurrentUserRole() || "admin",
+        },
         body: JSON.stringify(cleanGuestData),
       });
       if (res.ok) {
@@ -926,10 +943,16 @@ export const api = {
   },
 
   async bulkImportGuests(weddingId, guestList) {
+    if (getCurrentUserRole() === "call_center") {
+      throw new Error("Call Center desk has view-only access. Only Super Admin can import guests.");
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/guests/bulk-import`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-role": getCurrentUserRole() || "admin",
+        },
         body: JSON.stringify({ wedding_id: weddingId, guests: guestList }),
       });
       if (res.ok) {
@@ -961,6 +984,9 @@ export const api = {
   },
 
   async updateGuest(id, guestData) {
+    if (getCurrentUserRole() === "call_center") {
+      throw new Error("Call Center desk has view-only access to guest details. Modifications are not permitted.");
+    }
     let cleanSummary = guestData.last_call_summary;
     if (cleanSummary !== null && cleanSummary !== undefined && guestData.guest_name) {
       const sStr = String(cleanSummary).trim().toLowerCase();
@@ -978,7 +1004,10 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE_URL}/guests/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-role": getCurrentUserRole() || "admin",
+        },
         body: JSON.stringify(cleanGuestData),
       });
       if (res.ok) {
@@ -1010,9 +1039,15 @@ export const api = {
   },
 
   async deleteGuest(id) {
+    if (getCurrentUserRole() === "call_center") {
+      throw new Error("Call Center desk has view-only access. Only Super Admin can delete guests.");
+    }
     try {
       await fetch(`${API_BASE_URL}/guests/${id}`, {
         method: "DELETE",
+        headers: {
+          "x-user-role": getCurrentUserRole() || "admin",
+        },
       });
     } catch (e) { }
 

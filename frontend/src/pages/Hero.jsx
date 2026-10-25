@@ -46,6 +46,9 @@ export default function Hero() {
     isCallCenter,
     isMarriageClient,
     isViewOnly,
+    canEditGuests,
+    canUpdateCallLogs,
+    canSendWhatsApp,
     isLoginModalOpen,
     setIsLoginModalOpen,
     loginModalTab,
@@ -271,8 +274,8 @@ export default function Hero() {
 
   // ------------------- GUEST ACTIONS -------------------
   const handleOpenAddGuestModal = () => {
-    if (isViewOnly) {
-      showToast("Read-only access in client portal mode", "error");
+    if (!canEditGuests) {
+      showToast(isCallCenter ? "Call center desk has view-only access to guest details" : "Read-only access in client portal mode", "error");
       return;
     }
     if (!selectedWedding && weddings.length > 0) {
@@ -283,8 +286,8 @@ export default function Hero() {
   };
 
   const handleOpenEditGuestModal = (guest) => {
-    if (isViewOnly) {
-      showToast("Read-only access in client portal mode", "error");
+    if (!canEditGuests) {
+      showToast(isCallCenter ? "Call center desk cannot update guest details (view-only)" : "Read-only access in client portal mode", "error");
       return;
     }
     setEditingGuest(guest);
@@ -292,8 +295,8 @@ export default function Hero() {
   };
 
   const handleGuestSubmit = async (formData) => {
-    if (isViewOnly) {
-      showToast("Read-only access in client portal mode", "error");
+    if (!canEditGuests) {
+      showToast(isCallCenter ? "Call center desk cannot update guest details" : "Read-only access in client portal mode", "error");
       return;
     }
     setIsSubmittingGuest(true);
@@ -396,8 +399,8 @@ export default function Hero() {
   };
 
   const handleQuickUpdateRsvp = async (guest, newRsvp) => {
-    if (isViewOnly) {
-      showToast("Read-only access in client portal mode", "error");
+    if (!canEditGuests) {
+      showToast(isCallCenter ? "Call center desk cannot update guest details" : "Read-only access in client portal mode", "error");
       return;
     }
     const previousRsvp = guest.rsvp_status;
@@ -551,10 +554,10 @@ export default function Hero() {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#16a34a]"></span>
                 </span>
                 <Headphones className="w-4 h-4 text-[#16a34a]" />
-                <span>Call Center Telecaller Desk Active</span>
+                <span>Call Center Telecaller Desk • View-Only Guest Directory • Call Logging & WhatsApp Messaging Enabled</span>
               </div>
               <span className="text-[10px] font-extrabold bg-[#84e030] text-[#0f2922] px-2.5 py-0.5 rounded-full shadow-2xs">
-                Call Desk Active
+                Call Desk & WhatsApp
               </span>
             </div>
           )}
@@ -707,7 +710,7 @@ export default function Hero() {
                     </button>
                   )}
 
-                  {!isViewOnly && (
+                  {canSendWhatsApp && (
                     <button
                       onClick={() => {
                         setWhatsAppModalInitialGuest(null);
@@ -861,14 +864,14 @@ export default function Hero() {
         isOpen={Boolean(viewingGuest)}
         guest={viewingGuest}
         onClose={() => setViewingGuest(null)}
-        onEdit={(guest) => {
+        onEdit={canEditGuests ? (guest) => {
           setViewingGuest(null);
           handleOpenEditGuestModal(guest);
-        }}
-        onDelete={(guest) => {
+        } : null}
+        onDelete={isAdmin ? (guest) => {
           setViewingGuest(null);
           setDeletingGuest(guest);
-        }}
+        } : null}
         onOpenCallLogs={(guest) => {
           setViewingGuest(null);
           handleOpenCallLogs(guest);

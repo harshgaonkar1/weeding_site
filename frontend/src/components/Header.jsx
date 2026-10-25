@@ -27,6 +27,7 @@ export default function Header({
     isCallCenter,
     isMarriageClient,
     isViewOnly,
+    canEditGuests,
     quickLogin,
     logout,
     setIsLoginModalOpen,
@@ -118,7 +119,7 @@ export default function Header({
 
         {/* Mobile Actions: Add Guest & Profile */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {!isViewOnly && (
+          {canEditGuests && (
             <button
               onClick={onOpenAddModal}
               className="bg-[#0f2922] hover:bg-[#163a30] active:scale-95 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer btn-interactive"
@@ -224,7 +225,7 @@ export default function Header({
           </div>
 
           {/* Add Guest Button (Desktop only - mobile is in top bar) */}
-          {!isViewOnly && (
+          {canEditGuests && (
             <button
               onClick={onOpenAddModal}
               className="hidden md:flex bg-[#0f2922] hover:bg-[#163a30] active:scale-98 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold items-center gap-1.5 shadow-2xs transition-all cursor-pointer btn-interactive"

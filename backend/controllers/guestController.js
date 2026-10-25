@@ -87,6 +87,14 @@ export const guestController = {
   // POST /api/guests
   async createGuest(req, res) {
     try {
+      const userRole = req.headers["x-user-role"];
+      if (userRole === "call_center") {
+        return res.status(403).json({
+          success: false,
+          message: "Call center users have view-only access to guest details. They cannot create new guests.",
+        });
+      }
+
       const { guest_name } = req.body;
       if (!guest_name || guest_name.trim() === "") {
         return res.status(400).json({
@@ -122,6 +130,14 @@ export const guestController = {
   // POST /api/guests/bulk-import
   async bulkImportGuests(req, res) {
     try {
+      const userRole = req.headers["x-user-role"];
+      if (userRole === "call_center") {
+        return res.status(403).json({
+          success: false,
+          message: "Call center users have view-only access to guest details. They cannot import guests.",
+        });
+      }
+
       const { wedding_id = "wedding_01", guests = [] } = req.body;
       if (!Array.isArray(guests) || guests.length === 0) {
         return res.status(400).json({
@@ -158,6 +174,14 @@ export const guestController = {
   // PUT /api/guests/:id
   async updateGuest(req, res) {
     try {
+      const userRole = req.headers["x-user-role"];
+      if (userRole === "call_center") {
+        return res.status(403).json({
+          success: false,
+          message: "Call center users have view-only access to guest details. They cannot modify guest records.",
+        });
+      }
+
       const { id } = req.params;
       const updatedGuest = await GuestModel.update(id, req.body);
       if (!updatedGuest) {
@@ -192,6 +216,14 @@ export const guestController = {
   // DELETE /api/guests/:id
   async deleteGuest(req, res) {
     try {
+      const userRole = req.headers["x-user-role"];
+      if (userRole === "call_center") {
+        return res.status(403).json({
+          success: false,
+          message: "Call center users have view-only access to guest details. They cannot delete guest records.",
+        });
+      }
+
       const { id } = req.params;
       const guest = await GuestModel.getById(id);
       if (!guest) {

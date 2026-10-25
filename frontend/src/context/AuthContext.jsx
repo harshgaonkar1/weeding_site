@@ -120,6 +120,11 @@ export const AuthProvider = ({ children }) => {
   const isViewOnly = user?.role === "marriage_client" || Boolean(user?.is_view_only);
   const weddingId = user?.wedding_id || null;
 
+  // Granular capability permissions
+  const canEditGuests = isAdmin; // Only Super Admin can add, edit, or delete guest records
+  const canUpdateCallLogs = isAdmin || isCallCenter; // Call center & Admin can update call logs
+  const canSendWhatsApp = isAdmin || isCallCenter; // Call center & Admin can send WhatsApp messages
+
   return (
     <AuthContext.Provider
       value={{
@@ -129,6 +134,9 @@ export const AuthProvider = ({ children }) => {
         isCallCenter,
         isMarriageClient,
         isViewOnly,
+        canEditGuests,
+        canUpdateCallLogs,
+        canSendWhatsApp,
         weddingId,
         token,
         login,

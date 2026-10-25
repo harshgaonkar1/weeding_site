@@ -50,7 +50,7 @@ export default function CallLogModal({
   onClose,
   onCallLogged,
 }) {
-  const { user, isViewOnly } = useAuth();
+  const { user, isViewOnly, isAdmin, canEditGuests, canUpdateCallLogs } = useAuth();
 
   const [activeTab, setActiveTab] = useState("call_desk"); // 'call_desk' or 'edit_guest'
   const [callLogs, setCallLogs] = useState([]);
@@ -162,7 +162,7 @@ export default function CallLogModal({
         call_outcome: outcome,
         call_summary: summary.trim(),
         callback_date: callbackDate || null,
-        update_rsvp: updateRsvp || null,
+        update_rsvp: canEditGuests ? (updateRsvp || null) : null,
       });
 
       setSuccessMsg(`✓ Call #${nextCallNumber} recorded!`);
@@ -301,10 +301,10 @@ export default function CallLogModal({
                   : "bg-white/10 text-white hover:bg-white/20"
               }`}
             >
-              📞 {isViewOnly ? "Call History & Responses" : "Log Call Notes"} ({callLogs.length})
+              📞 {!canUpdateCallLogs ? "Call History & Responses" : "Log Call Notes"} ({callLogs.length})
             </button>
 
-            {!isViewOnly && (
+            {canEditGuests && (
               <button
                 type="button"
                 onClick={() => setActiveTab("edit_guest")}
@@ -340,7 +340,7 @@ export default function CallLogModal({
           {activeTab === "call_desk" && (
             <>
               {/* Form - Only for Admin and Call Center Agents */}
-              {!isViewOnly ? (
+              {canUpdateCallLogs ? (
                 <form onSubmit={handleSubmit} autoComplete="off" className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-800">
@@ -369,20 +369,32 @@ export default function CallLogModal({
                       </select>
                     </div>
 
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                        Update RSVP
-                      </label>
-                      <select
-                        value={updateRsvp}
-                        onChange={(e) => setUpdateRsvp(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
-                      >
-                        <option value="Confirmed">✓ Confirmed</option>
-                        <option value="Pending">⏳ Pending</option>
-                        <option value="Declined">✕ Declined</option>
-                      </select>
-                    </div>
+                    {canEditGuests ? (
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                          Update RSVP
+                        </label>
+                        <select
+                          value={updateRsvp}
+                          onChange={(e) => setUpdateRsvp(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
+                        >
+                          <option value="Confirmed">✓ Confirmed</option>
+                          <option value="Pending">⏳ Pending</option>
+                          <option value="Declined">✕ Declined</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                          Guest RSVP (View Only)
+                        </label>
+                        <div className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-between">
+                          <span>{guest.rsvp_status || "Pending"}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">Only Admin can change</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {outcome === "Callback Requested" && (
@@ -491,7 +503,7 @@ export default function CallLogModal({
 
                             <div className="flex items-center gap-2 text-[10px] text-slate-500">
                               <span>{log.called_at ? new Date(log.called_at).toLocaleDateString() : ""}</span>
-                              {!isViewOnly && (
+                              {canUpdateCallLogs && (
                                 <>
                                   {!isEditing ? (
                                     <button
@@ -514,14 +526,16 @@ export default function CallLogModal({
                                       Save
                                     </button>
                                   )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteLog(log.id)}
-                                    className="text-slate-400 hover:text-rose-600"
-                                    title="Delete note"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
+                                  {isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteLog(log.id)}
+                                      className="text-slate-400 hover:text-rose-600"
+                                      title="Delete note"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -557,8 +571,8 @@ export default function CallLogModal({
             </>
           )}
 
-          {/* TAB 2: EDIT GUEST DETAILS */}
-          {activeTab === "edit_guest" && (
+          {/* TAB 2: EDIT GUEST DETAILS (ADMIN ONLY) */}
+          {activeTab === "edit_guest" && canEditGuests && (
             <form onSubmit={handleSaveGuestDetails} autoComplete="off" className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>

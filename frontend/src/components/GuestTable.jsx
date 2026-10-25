@@ -45,7 +45,7 @@ export default function GuestTable({
   onOpenQuickWhatsApp,
   onUpdateRsvp,
 }) {
-  const { isAdmin, isViewOnly } = useAuth();
+  const { isAdmin, isViewOnly, canEditGuests, canUpdateCallLogs, canSendWhatsApp } = useAuth();
   const showCallDesk = true;
 
   // Pagination state
@@ -155,7 +155,7 @@ export default function GuestTable({
                 </div>
 
                 {/* RSVP Status Pill / Quick Selector */}
-                {!isViewOnly && onUpdateRsvp ? (
+                {canEditGuests && onUpdateRsvp ? (
                   <select
                     value={rsvp === "confirmed" ? "Confirmed" : rsvp === "declined" || rsvp.includes("regret") ? "Declined" : "Pending"}
                     onChange={(e) => onUpdateRsvp(guest, e.target.value)}
@@ -247,7 +247,7 @@ export default function GuestTable({
                       className="bg-[#0f2922] hover:bg-[#163a30] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs"
                     >
                       <PhoneCall className="w-2.5 h-2.5 text-[#84e030]" />
-                      <span>{isViewOnly ? `Responses (${callCount})` : callCount > 0 ? "Notes" : "Log Call"}</span>
+                      <span>{!canUpdateCallLogs ? `Responses (${callCount})` : callCount > 0 ? "Notes" : "Log Call"}</span>
                     </button>
                   </div>
                 ) : (
@@ -265,7 +265,7 @@ export default function GuestTable({
                     <Eye className="w-4 h-4" />
                   </button>
 
-                  {!isViewOnly && guest.contact && (
+                  {canSendWhatsApp && guest.contact && (
                     <button
                       type="button"
                       onClick={() => onOpenQuickWhatsApp && onOpenQuickWhatsApp(guest)}
@@ -276,7 +276,7 @@ export default function GuestTable({
                     </button>
                   )}
 
-                  {!isViewOnly && (
+                  {canEditGuests && (
                     <button
                       type="button"
                       onClick={() => onEditGuest(guest)}
@@ -287,7 +287,7 @@ export default function GuestTable({
                     </button>
                   )}
 
-                  {!isViewOnly && isAdmin && (
+                  {isAdmin && (
                     <button
                       type="button"
                       onClick={() => onDeleteGuest(guest)}
@@ -447,7 +447,7 @@ export default function GuestTable({
 
                   {/* RSVP */}
                   <td className="py-3.5 px-3">
-                    {!isViewOnly && onUpdateRsvp ? (
+                    {canEditGuests && onUpdateRsvp ? (
                       <select
                         value={rsvp === "confirmed" ? "Confirmed" : rsvp === "declined" || rsvp.includes("regret") ? "Declined" : "Pending"}
                         onChange={(e) => onUpdateRsvp(guest, e.target.value)}
@@ -620,7 +620,7 @@ export default function GuestTable({
                           className="bg-[#0f2922] hover:bg-[#163a30] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs btn-interactive"
                         >
                           <PhoneCall className="w-2.5 h-2.5 text-[#84e030]" />
-                          <span>{isViewOnly ? `Responses (${callCount})` : callCount > 0 ? "Notes" : "Log Call"}</span>
+                          <span>{!canUpdateCallLogs ? `Responses (${callCount})` : callCount > 0 ? "Notes" : "Log Call"}</span>
                         </button>
                       </div>
 
@@ -648,7 +648,7 @@ export default function GuestTable({
                         <Eye className="w-3.5 h-3.5" />
                       </button>
 
-                      {!isViewOnly && guest.contact && (
+                      {canSendWhatsApp && guest.contact && (
                         <button
                           type="button"
                           onClick={() => onOpenQuickWhatsApp && onOpenQuickWhatsApp(guest)}
@@ -659,7 +659,7 @@ export default function GuestTable({
                         </button>
                       )}
 
-                      {!isViewOnly && (
+                      {canEditGuests && (
                         <button
                           type="button"
                           onClick={() => onEditGuest(guest)}
@@ -670,7 +670,7 @@ export default function GuestTable({
                         </button>
                       )}
 
-                      {!isViewOnly && isAdmin && (
+                      {isAdmin && (
                         <button
                           type="button"
                           onClick={() => onDeleteGuest(guest)}

@@ -30,7 +30,7 @@ export default function GuestDetailsDrawer({
   onOpenCallLogs,
   onOpenQuickWhatsApp,
 }) {
-  const { isViewOnly } = useAuth();
+  const { isViewOnly, canEditGuests, canUpdateCallLogs, canSendWhatsApp } = useAuth();
   const [callLogs, setCallLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
@@ -276,9 +276,9 @@ export default function GuestDetailsDrawer({
             >
               <PhoneCall className="w-3.5 h-3.5 text-[#84e030]" />
               <span>
-                {isViewOnly
-                  ? `View Full Call Log History (${callCount})`
-                  : "Open Call Center Log & Add Notes"}
+                {canUpdateCallLogs
+                  ? "Open Call Center Log & Add Notes"
+                  : `View Full Call Log History (${callCount})`}
               </span>
             </button>
           </div>
@@ -446,7 +446,7 @@ export default function GuestDetailsDrawer({
           >
             Close
           </button>
-          {!isViewOnly && guest.contact && (
+          {canSendWhatsApp && guest.contact && (
             <button
               onClick={() => {
                 onClose();
@@ -458,7 +458,7 @@ export default function GuestDetailsDrawer({
               <span>WhatsApp Message</span>
             </button>
           )}
-          {!isViewOnly && (
+          {canEditGuests && onEdit && (
             <button
               onClick={() => {
                 onClose();
