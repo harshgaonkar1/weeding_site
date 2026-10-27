@@ -367,8 +367,23 @@ export const WeddingModel = {
     return null;
   },
 
-  // 6. Delete wedding and all associated guests, call logs, and chat messages
+  // 6. Synchronously delete wedding from local memory store in <1ms
+  deleteLocal(id) {
+    let deleted = null;
+    if (store && Array.isArray(store.weddings)) {
+      deleted = store.weddings.find((w) => w.id === id) || null;
+      store.weddings = store.weddings.filter((w) => w.id !== id);
+      store.guests = (store.guests || []).filter((g) => g.wedding_id !== id);
+      store.guest_call_logs = (store.guest_call_logs || []).filter((c) => c.wedding_id !== id);
+      store.messages = (store.messages || []).filter((m) => m.wedding_id !== id);
+    }
+    return deleted;
+  },
+
+  // 7. Delete wedding and all associated guests, call logs, and chat messages
   async delete(id) {
+    this.deleteLocal(id);
+
     if (supabase) {
       try {
         await Promise.race([
@@ -379,7 +394,7 @@ export const WeddingModel = {
             supabase.from("weddings").delete().eq("id", id),
           ]),
           new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2500)),
-        ]);
+        ]).catch(() => {});
       } catch (err) {
         console.warn("Supabase delete notice:", err.message);
       }
