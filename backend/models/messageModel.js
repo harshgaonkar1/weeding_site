@@ -23,13 +23,30 @@ export const MessageModel = {
     let supabaseData = null;
     if (supabase) {
       try {
-        const { data, error } = await supabase
-          .from("wedding_messages")
-          .select("*")
-          .eq("wedding_id", weddingId)
-          .order("created_at", { ascending: true });
+        const { data, error } = await Promise.race([
+          supabase
+            .from("wedding_messages")
+            .select("*")
+            .eq("wedding_id", weddingId)
+            .order("created_at", { ascending: true }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500)),
+        ]).catch(() => ({ data: null }));
         if (!error && Array.isArray(data) && data.length > 0) {
           supabaseData = data;
+          // Synchronize with local disk store so messages are permanently retained
+          if (store && Array.isArray(store.messages)) {
+            let changed = false;
+            supabaseData.forEach((msg) => {
+              const idx = store.messages.findIndex((m) => m.id === msg.id);
+              if (idx === -1) {
+                store.messages.push(msg);
+                changed = true;
+              } else {
+                store.messages[idx] = { ...store.messages[idx], ...msg };
+              }
+            });
+            if (changed) saveMessagesToFile();
+          }
         }
       } catch (e) {
         // Fall through to pool / store
@@ -115,30 +132,34 @@ export const MessageModel = {
       created_at,
     };
 
-    // 1. Try Supabase upsert
+    // 1. Immediately store in memory and persist to local messages_store.json on disk
+    if (!store.messages) store.messages = [];
+    const exists = store.messages.some((m) => m.id === newMsg.id);
+    if (!exists) {
+      store.messages.push(newMsg);
+      saveMessagesToFile();
+    }
+
+    // 2. Persist into Supabase database table with safety timeout
     if (supabase) {
       try {
-        const { error } = await supabase.from("wedding_messages").upsert(newMsg);
-        if (error) {
-          console.warn("Notice: Supabase wedding_messages upsert note:", error.message);
-        }
+        await Promise.race([
+          supabase.from("wedding_messages").upsert(newMsg),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase timeout")), 2500)),
+        ]).catch(() => {});
       } catch (e) {
-        console.warn("Notice: Supabase wedding_messages insert failed, retained in store:", e.message);
+        console.warn("Notice: Supabase wedding_messages insert note:", e.message);
       }
     }
 
-    // 2. Insert through query engine (which handles store.messages safely without duplicates)
+    // 3. Persist through query engine
     try {
       await pool.query(
         `INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [id, wedding_id, newMsg.sender_id, newMsg.sender_name, newMsg.sender_role, newMsg.message, false, created_at]
       );
-    } catch (e) {
-      if (!store.messages) store.messages = [];
-      const exists = store.messages.some((m) => m.id === newMsg.id);
-      if (!exists) store.messages.push(newMsg);
-    }
+    } catch (e) {}
 
     return newMsg;
   },
