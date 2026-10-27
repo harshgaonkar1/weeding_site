@@ -293,10 +293,15 @@ export const query = async (text, params = []) => {
 
     if (supabase) {
       try {
-        await supabase.from("wedding_messages").delete().eq("wedding_id", id);
-        await supabase.from("guest_call_logs").delete().eq("wedding_id", id);
-        await supabase.from("guests").delete().eq("wedding_id", id);
-        await supabase.from("weddings").delete().eq("id", id);
+        await Promise.race([
+          Promise.allSettled([
+            supabase.from("wedding_messages").delete().eq("wedding_id", id),
+            supabase.from("guest_call_logs").delete().eq("wedding_id", id),
+            supabase.from("guests").delete().eq("wedding_id", id),
+            supabase.from("weddings").delete().eq("id", id),
+          ]),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
+        ]);
       } catch (err) {
         console.warn("Supabase wedding delete notice:", err.message);
       }
@@ -313,7 +318,10 @@ export const query = async (text, params = []) => {
 
     if (supabase) {
       try {
-        await supabase.from("wedding_messages").delete().eq("wedding_id", weddingId);
+        await Promise.race([
+          supabase.from("wedding_messages").delete().eq("wedding_id", weddingId),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
+        ]);
       } catch (err) {
         console.warn("Supabase wedding_messages delete notice:", err.message);
       }
@@ -331,11 +339,21 @@ export const query = async (text, params = []) => {
     if (supabase) {
       try {
         if (lowerSql.includes("where wedding_id = $1")) {
-          await supabase.from("guest_call_logs").delete().eq("wedding_id", id);
-          await supabase.from("guests").delete().eq("wedding_id", id);
+          await Promise.race([
+            Promise.allSettled([
+              supabase.from("guest_call_logs").delete().eq("wedding_id", id),
+              supabase.from("guests").delete().eq("wedding_id", id),
+            ]),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
+          ]);
         } else {
-          await supabase.from("guest_call_logs").delete().eq("guest_id", id);
-          await supabase.from("guests").delete().eq("id", id);
+          await Promise.race([
+            Promise.allSettled([
+              supabase.from("guest_call_logs").delete().eq("guest_id", id),
+              supabase.from("guests").delete().eq("id", id),
+            ]),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
+          ]);
         }
       } catch (err) {
         console.warn("Supabase guest delete notice:", err.message);
@@ -355,11 +373,20 @@ export const query = async (text, params = []) => {
     if (supabase) {
       try {
         if (lowerSql.includes("where wedding_id = $1")) {
-          await supabase.from("guest_call_logs").delete().eq("wedding_id", id);
+          await Promise.race([
+            supabase.from("guest_call_logs").delete().eq("wedding_id", id),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
+          ]);
         } else if (lowerSql.includes("where guest_id = $1")) {
-          await supabase.from("guest_call_logs").delete().eq("guest_id", id);
+          await Promise.race([
+            supabase.from("guest_call_logs").delete().eq("guest_id", id),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
+          ]);
         } else {
-          await supabase.from("guest_call_logs").delete().eq("id", id);
+          await Promise.race([
+            supabase.from("guest_call_logs").delete().eq("id", id),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
+          ]);
         }
       } catch (err) {
         console.warn("Supabase log delete notice:", err.message);

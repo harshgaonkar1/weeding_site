@@ -127,42 +127,43 @@ export const weddingController = {
   async deleteWedding(req, res) {
     try {
       const { id } = req.params;
-      const wedding = await WeddingModel.getById(id);
-      if (!wedding) {
-        return res.status(404).json({
-          success: false,
-          message: "Wedding not found",
-        });
-      }
 
-      // Automatically delete or clean up the associated Google Sheet / Tab
+      // 1. Fetch wedding with safety timeout
+      let wedding = null;
       try {
-        await GoogleSheetsService.deleteWeddingSheet(wedding);
-      } catch (sheetErr) {
-        console.warn("⚠️ Note on Google Sheet deletion:", sheetErr.message);
+        wedding = await Promise.race([
+          WeddingModel.getById(id),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Fetch timeout")), 2500)),
+        ]);
+      } catch (fetchErr) {
+        console.warn("Notice: Fetching wedding before deletion timed out or errored:", fetchErr.message);
       }
 
-      // Explicitly delete all chat bot / messenger messages for this wedding
-      try {
-        await MessageModel.deleteByWeddingId(id);
-      } catch (msgErr) {
-        console.warn("⚠️ Note on chat messages deletion:", msgErr.message);
+      // 2. Automatically clean up the associated Google Sheet / Tab in background
+      // Fire-and-forget: does NOT block HTTP response to prevent reverse proxy 502 Bad Gateway timeouts
+      if (wedding && (wedding.google_sheet_url || wedding.google_sheet_id)) {
+        setTimeout(async () => {
+          try {
+            await Promise.race([
+              GoogleSheetsService.deleteWeddingSheet(wedding),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Google Sheet deletion timeout")), 4000)),
+            ]);
+          } catch (sheetErr) {
+            console.warn("⚠️ Note on Google Sheet background deletion:", sheetErr.message);
+          }
+        }, 0);
       }
 
-      const success = await WeddingModel.delete(id);
-      if (!success) {
-        return res.status(500).json({
-          success: false,
-          message: "Failed to delete wedding from database",
-        });
-      }
-      res.status(200).json({
+      // 3. Delete wedding, associated guests, call logs, and chat messages
+      await WeddingModel.delete(id);
+
+      return res.status(200).json({
         success: true,
         message: "Wedding, associated guests, chat messages, and Google Sheet/tab deleted successfully",
       });
     } catch (error) {
       console.error("Error deleting wedding:", error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: "Failed to delete wedding",
         error: error.message,

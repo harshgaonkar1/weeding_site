@@ -745,13 +745,17 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
       });
       if (res.ok) {
-        const json = await res.json();
+        const json = await res.json().catch(() => ({}));
         if (json.success) serverSuccess = true;
       }
     } catch (e) {
-      console.warn("deleteWedding server notice:", e);
+      console.warn("deleteWedding server notice:", e?.message || e);
     }
 
     const list = getCachedWeddings().filter((w) => w.id !== id);

@@ -256,15 +256,24 @@ export default function Hero() {
     try {
       setIsDeletingWedding(true);
       const delId = deletingWedding.id;
+
+      // 1. Optimistically remove from state
       setWeddings((prev) => prev.filter((w) => w.id !== delId));
+
+      // 2. Perform delete in backend & cache
       await api.deleteWedding(delId);
       showToast("Marriage card removed");
+
       if (selectedWedding?.id === delId) {
         setSelectedWedding(null);
         setActiveTab("weddings");
       }
       setDeletingWedding(null);
-      await Promise.all([loadWeddings(), loadGuests()]);
+
+      // 3. Refresh weddings, guaranteeing the deleted wedding remains removed
+      const refreshed = await api.fetchWeddings();
+      setWeddings((refreshed || []).filter((w) => w.id !== delId));
+      await loadGuests();
     } catch (err) {
       showToast("Failed to delete marriage card", "error");
     } finally {

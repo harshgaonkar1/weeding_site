@@ -1104,22 +1104,25 @@ export const GoogleSheetsService = {
         }
       }
 
-      // 2. If it was a dedicated standalone Drive file
-      try {
-        console.log(`🗑️ Attempting to delete Google Drive file ${spreadsheetId}...`);
-        await drive.files.delete({
-          fileId: spreadsheetId,
-          supportsAllDrives: true,
-        });
-        console.log(`✅ Successfully deleted Google Drive file ${spreadsheetId}.`);
-      } catch (fileErr) {
-        console.warn("Drive file deletion note (clearing contents instead):", fileErr.message);
+      // 2. Only attempt file deletion if it is NOT a shared folder or shared template spreadsheet
+      const configuredFolder = this.getDriveFolderId();
+      if (spreadsheetId === configuredFolder) {
+        console.log(`ℹ️ Spreadsheet ID matches shared folder; skipping file deletion.`);
+        return;
+      }
+
+      // Check if it's a dedicated standalone file (only 1 sheet and not a shared template)
+      if (sheetsList.length <= 1) {
         try {
+          console.log(`🗑️ Attempting to clean standalone Google Drive file ${spreadsheetId}...`);
           await sheets.spreadsheets.values.clear({
             spreadsheetId: spreadsheetId,
             range: "A1:Z1000",
           });
-        } catch (clearErr) {}
+          console.log(`✅ Cleared standalone sheet contents.`);
+        } catch (clearErr) {
+          console.warn("Drive sheet clear note:", clearErr.message);
+        }
       }
     } catch (err) {
       console.warn("⚠️ Error during Google Sheet deletion:", err.message);
