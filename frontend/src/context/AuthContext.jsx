@@ -73,16 +73,10 @@ export const AuthProvider = ({ children }) => {
     } else if (roleType === "marriage_client") {
       const targetWedding =
         wedding ||
-        (user && user.wedding) || {
-          id: "wedding_01",
-          groom_name: "Aaditya Roy",
-          bride_name: "Ananya Sharma",
-          wedding_date: "2026-11-28",
-          city: "Udaipur, Rajasthan",
-          venue: "The Oberoi Udaivilas",
-          cover_theme: "emerald",
-          client_username: "aaditya_ananya",
-        };
+        (user && user.wedding) ||
+        null;
+
+      if (!targetWedding) return;
 
       const clientUser = {
         id: `marriage_${targetWedding.id}`,

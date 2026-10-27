@@ -35,165 +35,14 @@ export const getCurrentUserRole = () => {
   return null;
 };
 
-// Initial seed / fallback weddings
-const INITIAL_FALLBACK_WEDDINGS = [
-  {
-    id: "wedding_01",
-    groom_name: "Aaditya Roy",
-    bride_name: "Ananya Sharma",
-    wedding_date: "2026-11-28",
-    venue: "The Oberoi Udaivilas",
-    city: "Udaipur, Rajasthan",
-    cover_theme: "emerald",
-    notes: "Royal Palace Wedding with 3-day celebrations & Sangeet",
-    client_username: "aaditya_ananya",
-    client_password: "Aaditya@2026",
-    google_sheet_id: "wed_aaditya_ananya_01",
-    google_sheet_url: "https://docs.google.com/spreadsheets/d/wed_aaditya_ananya_01/edit",
-    google_sheet_sync_status: "connected",
-    total_guests: 2,
-    confirmed_guests: 2,
-    bride_guests: 1,
-    groom_guests: 1,
-  },
-  {
-    id: "wedding_02",
-    groom_name: "Rohan Varma",
-    bride_name: "Priya Desai",
-    wedding_date: "2026-12-15",
-    venue: "Taj Exotica Resort & Spa",
-    city: "Goa",
-    cover_theme: "rose",
-    notes: "Beachside sunset wedding and Sangeet evening at Taj Exotica Goa (500 Guests)",
-    client_username: "rohan_priya",
-    client_password: "Rohan@2026",
-    google_sheet_id: "wed_rohan_priya_02",
-    google_sheet_url: "https://docs.google.com/spreadsheets/d/wed_rohan_priya_02/edit",
-    google_sheet_sync_status: "connected",
-    total_guests: 500,
-    confirmed_guests: 380,
-    bride_guests: 250,
-    groom_guests: 250,
-  },
-  {
-    id: "wedding_03",
-    groom_name: "Aarav Kapoor",
-    bride_name: "Meera Singhania",
-    wedding_date: "2027-01-20",
-    venue: "ITC Grand Chola",
-    city: "Chennai",
-    cover_theme: "purple",
-    notes: "Traditional South Indian & North Indian fusion wedding",
-    client_username: "aarav_meera",
-    client_password: "Aarav@2027",
-    google_sheet_id: "wed_aarav_meera_03",
-    google_sheet_url: "https://docs.google.com/spreadsheets/d/wed_aarav_meera_03/edit",
-    google_sheet_sync_status: "connected",
-    total_guests: 0,
-    confirmed_guests: 0,
-    bride_guests: 0,
-    groom_guests: 0,
-  },
-];
+// Initial seed / fallback weddings (Empty by default)
+const INITIAL_FALLBACK_WEDDINGS = [];
 
-// Initial seed guests scoped to weddings
-const INITIAL_FALLBACK_GUESTS = [
-  {
-    id: "guest_viggnesh_02",
-    wedding_id: "wedding_01",
-    sr_no: 2,
-    guest_name: "Viggnesh",
-    contact: "88888888",
-    side: "Groom",
-    rsvp_status: "Confirmed",
-    id_card_received: "Yes",
-    arrival_date: "2026-09-07",
-    arrival_time: "10:00 AM",
-    arrival_location: "Mumbai Int. Airport (T2)",
-    arrival_flight_train_no: "AI-682",
-    departure_date: "2026-09-10",
-    departure_time: "06:30 PM",
-    departure_location: "Mumbai Int. Airport (T2)",
-    departure_flight_train_no: "AI-894",
-    id_card_copy: null,
-    special_request: "Vegetarian breakfast preference",
-    call_count: 3,
-    call_status: "RSVP Confirmed",
-    last_called_at: "2026-09-20 11:30:00",
-    last_call_summary: "Confirmed 3-day stay and room requirement. Requested airport cab on arrival.",
-    created_at: "2026-09-01T10:00:00.000Z",
-  },
-  {
-    id: "guest_manish_04",
-    wedding_id: "wedding_01",
-    sr_no: 4,
-    guest_name: "Manish",
-    contact: "352148752",
-    side: "Bride",
-    rsvp_status: "Confirmed",
-    id_card_received: "Yes",
-    arrival_date: "2024-09-20",
-    arrival_time: "02:15 PM",
-    arrival_location: "Delhi Airport Terminal 3",
-    arrival_flight_train_no: "6E-409",
-    departure_date: "2024-09-23",
-    departure_time: "11:00 AM",
-    departure_location: "Delhi Airport Terminal 3",
-    departure_flight_train_no: "6E-412",
-    id_card_copy: "government_id_verified.pdf",
-    special_request: "Need wheelchair assistance and vegetarian meal preference.",
-    call_count: 1,
-    call_status: "Connected",
-    last_called_at: "2026-09-22 15:00:00",
-    last_call_summary: "Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle.",
-    created_at: "2026-09-02T12:30:00.000Z",
-  },
-  ...generate500GuestsForRohanPriya(),
-];
+// Initial seed guests scoped to weddings (Empty by default)
+const INITIAL_FALLBACK_GUESTS = [];
 
-// Initial fallback call logs
-const INITIAL_FALLBACK_CALL_LOGS = {
-  guest_viggnesh_02: [
-    {
-      id: "call_log_01",
-      guest_id: "guest_viggnesh_02",
-      call_number: 1,
-      agent_name: "Sarah (Call Desk)",
-      call_outcome: "No Answer",
-      call_summary: "Called at 11:00 AM. Phone rang without answer. Scheduled 2nd attempt for tomorrow.",
-      called_at: "2026-09-18 11:00:00",
-    },
-    {
-      id: "call_log_02",
-      guest_id: "guest_viggnesh_02",
-      call_number: 2,
-      agent_name: "Sarah (Call Desk)",
-      call_outcome: "Connected",
-      call_summary: "Spoke with guest. He requested time till evening to verify flight AI-682 tickets.",
-      called_at: "2026-09-19 14:30:00",
-    },
-    {
-      id: "call_log_03",
-      guest_id: "guest_viggnesh_02",
-      call_number: 3,
-      agent_name: "Sarah (Call Desk)",
-      call_outcome: "RSVP Confirmed",
-      call_summary: "3rd call checkpoint complete. Confirmed 3-day stay, vegetarian breakfast, and cab pickup at Mumbai T2.",
-      called_at: "2026-09-20 11:30:00",
-    },
-  ],
-  guest_manish_04: [
-    {
-      id: "call_log_04",
-      guest_id: "guest_manish_04",
-      call_number: 1,
-      agent_name: "Sarah (Call Desk)",
-      call_outcome: "Connected",
-      call_summary: "1st call checkpoint: Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle pickup.",
-      called_at: "2026-09-22 15:00:00",
-    },
-  ],
-};
+// Initial fallback call logs (Empty by default)
+const INITIAL_FALLBACK_CALL_LOGS = {};
 
 const sanitizeWeddingFrontend = (w) => {
   if (!w) return w;
@@ -280,15 +129,8 @@ const getCachedGuests = () => {
   try {
     const cached = localStorage.getItem("manish_guest_data_v3");
     if (cached) {
-      let parsed = JSON.parse(cached);
+      const parsed = JSON.parse(cached);
       if (Array.isArray(parsed)) {
-        const rohanPriyaCount = parsed.filter((g) => g.wedding_id === "wedding_02").length;
-        if (rohanPriyaCount < 500) {
-          const nonWedding02 = parsed.filter((g) => g.wedding_id !== "wedding_02");
-          const all500 = generate500GuestsForRohanPriya();
-          parsed = [...nonWedding02, ...all500];
-          setCachedGuests(parsed);
-        }
         return parsed.map(sanitizeGuestRecord);
       }
     }

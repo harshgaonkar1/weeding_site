@@ -196,32 +196,4 @@ VALUES
   ('user_agent_01', 'Sarah (Call Center Desk)', 'callcenter@emitly.com', 'call123', 'call_center', '+91 98765 00002', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO weddings (id, groom_name, bride_name, wedding_date, venue, city, cover_theme, notes, client_username, client_password, google_sheet_id, google_sheet_url, google_sheet_sync_status)
-VALUES
-  ('wedding_01', 'Aaditya Roy', 'Ananya Sharma', '2026-11-28', 'The Oberoi Udaivilas', 'Udaipur, Rajasthan', 'emerald', 'Royal Palace Wedding with 3-day celebrations', 'aaditya_ananya', 'Aaditya@2026', 'wed_aaditya_ananya_01', 'https://docs.google.com/spreadsheets/d/wed_aaditya_ananya_01/edit', 'connected'),
-  ('wedding_02', 'Rohan Varma', 'Priya Desai', '2026-12-15', 'Taj Exotica Resort & Spa', 'Goa', 'rose', 'Beachside sunset wedding and Sangeet evening', 'rohan_priya', 'Rohan@2026', 'wed_rohan_priya_02', 'https://docs.google.com/spreadsheets/d/wed_rohan_priya_02/edit', 'connected'),
-  ('wedding_03', 'Aarav Kapoor', 'Meera Singhania', '2027-01-20', 'ITC Grand Chola', 'Chennai', 'purple', 'Traditional South Indian & North Indian fusion wedding', 'aarav_meera', 'Aarav@2027', 'wed_aarav_meera_03', 'https://docs.google.com/spreadsheets/d/wed_aarav_meera_03/edit', 'connected')
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO guests (id, wedding_id, sr_no, guest_name, contact, side, rsvp_status, id_card_received, arrival_date, arrival_time, arrival_location, arrival_flight_train_no, departure_date, departure_time, departure_location, departure_flight_train_no, id_card_copy, special_request, call_count, call_status, last_called_at, last_call_summary)
-VALUES
-  ('guest_viggnesh_02', 'wedding_01', 2, 'Viggnesh', '88888888', 'Groom', 'Confirmed', 'Yes', '2026-09-07', '10:00 AM', 'Mumbai Int. Airport (T2)', 'AI-682', '2026-09-10', '06:30 PM', 'Mumbai Int. Airport (T2)', 'AI-894', NULL, 'Vegetarian breakfast preference', 3, 'RSVP Confirmed', '2026-09-20 11:30:00+00', 'Confirmed 3-day stay and room requirement. Requested airport cab on arrival.'),
-  ('guest_manish_04', 'wedding_01', 4, 'Manish', '352148752', 'Bride', 'Confirmed', 'Yes', '2024-09-20', '02:15 PM', 'Delhi Airport Terminal 3', '6E-409', '2024-09-23', '11:00 AM', 'Delhi Airport Terminal 3', '6E-412', 'government_id_verified.pdf', 'Window seat preference & hotel shuttle pickup', 1, 'Connected', '2026-09-22 15:00:00+00', 'Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle.'),
-  ('guest_sophia_01', 'wedding_02', 1, 'Sophia Rodriguez', '+91 98765 43210', 'Bride', 'Pending', 'No', '2026-12-14', '01:00 PM', 'Goa Dabolim Airport (GOI)', '6E-241', '2026-12-17', '11:30 AM', 'Goa Dabolim Airport (GOI)', '6E-244', NULL, 'Sea-facing room preference', 2, 'Callback Requested', '2026-09-23 10:15:00+00', 'Called 2nd time. Sophia requested a callback on Friday to confirm travel dates.')
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO guest_call_logs (id, guest_id, wedding_id, call_number, agent_name, call_outcome, call_summary, callback_date, called_at)
-VALUES
-  ('call_log_01', 'guest_viggnesh_02', 'wedding_01', 1, 'Sarah (Call Desk)', 'No Answer', 'Called at 11:00 AM. Phone rang without answer. Scheduled 2nd attempt for tomorrow.', NULL, '2026-09-18 11:00:00+00'),
-  ('call_log_02', 'guest_viggnesh_02', 'wedding_01', 2, 'Sarah (Call Desk)', 'Connected', 'Spoke with guest. He requested time till evening to verify flight AI-682 tickets.', NULL, '2026-09-19 14:30:00+00'),
-  ('call_log_03', 'guest_viggnesh_02', 'wedding_01', 3, 'Sarah (Call Desk)', 'RSVP Confirmed', '3rd call checkpoint complete. Confirmed 3-day stay, vegetarian breakfast, and cab pickup at Mumbai T2.', NULL, '2026-09-20 11:30:00+00'),
-  ('call_log_04', 'guest_manish_04', 'wedding_01', 1, 'Sarah (Call Desk)', 'Connected', '1st call checkpoint: Guest confirmed they will reach Terminal 3 on time. Needs hotel shuttle pickup.', NULL, '2026-09-22 15:00:00+00')
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
-VALUES
-  ('msg_seed_01', 'wedding_01', 'user_admin_01', 'Manish (Admin)', 'admin', 'Hello Aaditya & Ananya! Welcome to your live wedding portal. Our logistics and telecaller team is actively monitoring guest arrivals and RSVP confirmations.', true, CURRENT_TIMESTAMP - INTERVAL '1 day'),
-  ('msg_seed_02', 'wedding_01', 'client_aaditya_ananya', 'Aaditya Roy', 'client', 'Hi Manish, thank you! Could you please make sure the airport shuttle is confirmed for the guests arriving on 27th Nov at Mumbai T2 / Udaipur Airport?', true, CURRENT_TIMESTAMP - INTERVAL '12 hours'),
-  ('msg_seed_03', 'wedding_01', 'user_admin_01', 'Manish (Admin)', 'admin', 'Absolutely! The telecaller desk has logged their flight numbers (AI-682). We have dedicated Innovas on standby at the airport terminal.', false, CURRENT_TIMESTAMP - INTERVAL '2 hours')
-ON CONFLICT (id) DO NOTHING;
 
