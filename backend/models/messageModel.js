@@ -1,12 +1,24 @@
 import pool from "../Db_connection/dbconnection.js";
 import { supabase } from "../Db_connection/supabaseClient.js";
-import { store } from "../Db_connection/queries.js";
+import { store, saveMessagesToFile } from "../Db_connection/queries.js";
 import crypto from "crypto";
 
 export const MessageModel = {
   // 1. Get all messages for a specific wedding
   async getByWeddingId(weddingId) {
     if (!weddingId) return [];
+
+    // If the wedding card does not exist, all its messages are deleted
+    if (store && Array.isArray(store.weddings) && store.weddings.length > 0) {
+      const exists = store.weddings.some((w) => w.id === weddingId);
+      if (!exists) {
+        if (store.messages && store.messages.some((m) => m.wedding_id === weddingId)) {
+          store.messages = store.messages.filter((m) => m.wedding_id !== weddingId);
+          saveMessagesToFile();
+        }
+        return [];
+      }
+    }
 
     let supabaseData = null;
     if (supabase) {
@@ -135,21 +147,26 @@ export const MessageModel = {
   async deleteByWeddingId(weddingId) {
     if (!weddingId) return false;
 
+    // Immediately remove from in-memory store and persist to disk
+    if (store && Array.isArray(store.messages)) {
+      store.messages = store.messages.filter((m) => m.wedding_id !== weddingId);
+      saveMessagesToFile();
+    }
+
     if (supabase) {
       try {
-        await supabase.from("wedding_messages").delete().eq("wedding_id", weddingId);
+        await Promise.race([
+          supabase.from("wedding_messages").delete().eq("wedding_id", weddingId),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
+        ]).catch(() => {});
       } catch (e) {
         console.warn("Supabase wedding_messages delete notice:", e.message);
       }
     }
 
     try {
-      await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [weddingId]);
+      await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [weddingId]).catch(() => {});
     } catch (e) {}
-
-    if (store.messages) {
-      store.messages = store.messages.filter((m) => m.wedding_id !== weddingId);
-    }
 
     return true;
   },

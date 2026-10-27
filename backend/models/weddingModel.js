@@ -1,6 +1,6 @@
 import pool from "../Db_connection/dbconnection.js";
 import { supabase } from "../Db_connection/supabaseClient.js";
-import { store } from "../Db_connection/queries.js";
+import { store, saveMessagesToFile } from "../Db_connection/queries.js";
 import crypto from "crypto";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
 
@@ -375,7 +375,9 @@ export const WeddingModel = {
       store.weddings = store.weddings.filter((w) => w.id !== id);
       store.guests = (store.guests || []).filter((g) => g.wedding_id !== id);
       store.guest_call_logs = (store.guest_call_logs || []).filter((c) => c.wedding_id !== id);
+      // Remove all messages associated with this wedding card and persist to disk
       store.messages = (store.messages || []).filter((m) => m.wedding_id !== id);
+      saveMessagesToFile();
     }
     return deleted;
   },

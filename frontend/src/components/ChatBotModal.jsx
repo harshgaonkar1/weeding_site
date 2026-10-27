@@ -41,7 +41,7 @@ export default function ChatBotModal({
 
   // Active wedding context for conversation
   const [activeWeddingId, setActiveWeddingId] = useState(
-    selectedWedding?.id || user?.wedding_id || "wedding_01"
+    selectedWedding?.id || user?.wedding_id || (weddings && weddings[0]?.id) || null
   );
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
@@ -59,12 +59,17 @@ export default function ChatBotModal({
       setActiveWeddingId(user.wedding_id);
     } else if (weddings && weddings.length > 0 && (!activeWeddingId || !weddings.some((w) => w.id === activeWeddingId))) {
       setActiveWeddingId(weddings[0].id);
+    } else if (!weddings || weddings.length === 0) {
+      setActiveWeddingId(null);
     }
   }, [selectedWedding?.id, user?.wedding_id, weddings]);
 
   // Load messages function
   const loadMessages = async (wId = activeWeddingId) => {
-    if (!wId) return;
+    if (!wId) {
+      setMessages([]);
+      return;
+    }
     try {
       const data = await api.fetchMessages(wId);
       if (data && Array.isArray(data)) {

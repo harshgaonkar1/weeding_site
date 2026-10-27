@@ -1489,11 +1489,21 @@ function syncAllGuestsToDatabase() {
   // ============================================================
   async fetchMessages(weddingId) {
     if (!weddingId) return [];
+
+    // Check if the wedding card exists in cached weddings
+    const cachedWeddings = getCachedWeddings();
+    if (cachedWeddings && cachedWeddings.length > 0 && !cachedWeddings.some((w) => w.id === weddingId)) {
+      try {
+        localStorage.removeItem(`cached_messages_${weddingId}`);
+      } catch (e) {}
+      return [];
+    }
+
     try {
       const res = await fetch(`${API_BASE_URL}/messages/${weddingId}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.data) {
+        if (json.data && Array.isArray(json.data)) {
           const unique = [];
           const seen = new Set();
           json.data.forEach((m) => {
@@ -1526,41 +1536,6 @@ function syncAllGuestsToDatabase() {
       }
     } catch (e) {}
 
-    // Default seed messages for wedding_01
-    if (weddingId === "wedding_01") {
-      return [
-        {
-          id: "msg_seed_01",
-          wedding_id: "wedding_01",
-          sender_id: "user_admin_01",
-          sender_name: "Manish (Admin)",
-          sender_role: "admin",
-          message: "Hello Aaditya & Ananya! Welcome to your live wedding portal. Our logistics and telecaller team is actively monitoring guest arrivals and RSVP confirmations.",
-          is_read: true,
-          created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-        },
-        {
-          id: "msg_seed_02",
-          wedding_id: "wedding_01",
-          sender_id: "client_aaditya_ananya",
-          sender_name: "Aaditya Roy",
-          sender_role: "client",
-          message: "Hi Manish, thank you! Could you please make sure the airport shuttle is confirmed for the guests arriving on 27th Nov at Mumbai T2 / Udaipur Airport?",
-          is_read: true,
-          created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
-        },
-        {
-          id: "msg_seed_03",
-          wedding_id: "wedding_01",
-          sender_id: "user_admin_01",
-          sender_name: "Manish (Admin)",
-          sender_role: "admin",
-          message: "Absolutely! The telecaller desk has logged their flight numbers (AI-682). We have dedicated Innovas on standby at the airport terminal.",
-          is_read: false,
-          created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-        },
-      ];
-    }
     return [];
   },
 

@@ -13,7 +13,12 @@ export default function SidebarChatWidget({
 
   // Poll or fetch latest message for unread badge
   useEffect(() => {
-    const weddingId = selectedWedding?.id || user?.wedding_id || "wedding_01";
+    const weddingId = selectedWedding?.id || user?.wedding_id;
+    if (!weddingId) {
+      setLatestMessage(null);
+      setUnreadCount(0);
+      return;
+    }
     let isMounted = true;
 
     const checkMessages = async () => {

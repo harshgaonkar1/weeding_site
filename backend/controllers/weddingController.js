@@ -149,7 +149,10 @@ export const weddingController = {
         } catch (e) {}
 
         try {
-          await WeddingModel.delete(id).catch(() => {});
+          await Promise.allSettled([
+            WeddingModel.delete(id),
+            MessageModel.deleteByWeddingId(id),
+          ]);
         } catch (e) {}
       });
     } catch (error) {

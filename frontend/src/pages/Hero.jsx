@@ -314,7 +314,7 @@ export default function Hero() {
         formData.wedding_id ||
         editingGuest?.wedding_id ||
         (selectedWedding && selectedWedding.id !== "all" ? selectedWedding.id : null) ||
-        "wedding_01";
+        (weddings && weddings.length > 0 ? weddings[0].id : "");
 
       const payload = {
         ...(editingGuest || {}),
@@ -427,7 +427,7 @@ export default function Hero() {
     try {
       await api.updateGuest(guest.id, {
         ...updatedGuest,
-        wedding_id: guest.wedding_id || selectedWedding?.id || "wedding_01",
+        wedding_id: guest.wedding_id || selectedWedding?.id || (weddings && weddings[0]?.id) || "",
       });
       showToast(`RSVP updated to ${newRsvp} for ${guest.guest_name}`);
     } catch (err) {
@@ -865,7 +865,7 @@ export default function Hero() {
         initialData={editingGuest}
         isSubmitting={isSubmittingGuest}
         nextSrNo={nextSrNo}
-        currentWeddingId={selectedWedding?.id || "wedding_01"}
+        currentWeddingId={selectedWedding?.id || (weddings && weddings[0]?.id) || ""}
       />
 
       {/* 6. Guest Details Drawer */}
