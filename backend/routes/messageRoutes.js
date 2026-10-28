@@ -75,6 +75,9 @@ router.post("/", async (req, res) => {
 
     const role = sender_role || "client";
 
+    console.log(`\n📩 [INCOMING CHAT] Wedding: ${safeWeddingId} | From: ${sender_name || 'Anonymous'} (${role})`);
+    console.log(`   Message: "${message.trim()}"`);
+
     // 1. Create and save user/admin message in memory & Supabase DB
     const savedMsg = await MessageModel.create({
       wedding_id: safeWeddingId,

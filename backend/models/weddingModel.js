@@ -20,7 +20,7 @@ const sanitizeWeddingRecord = (w) => {
     }
     if (!groom || groom.startsWith("wedding_")) groom = "Groom";
     if (supabase && w.id && groom !== "Groom" && w.groom_name !== groom) {
-      supabase.from("weddings").update({ groom_name: groom }).eq("id", w.id).then(() => {}).catch(() => {});
+      Promise.resolve(supabase.from("weddings").update({ groom_name: groom }).eq("id", w.id)).catch(() => {});
     }
   }
   return { ...w, groom_name: groom };

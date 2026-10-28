@@ -373,7 +373,7 @@ export const query = async (text, params = []) => {
       saveMessagesToFile();
     }
     if (supabase) {
-      supabase.from("wedding_messages").upsert(newMsg).catch(() => {});
+      Promise.resolve(supabase.from("wedding_messages").upsert(newMsg)).catch(() => {});
     }
     return formatResult([newMsg]);
   }
