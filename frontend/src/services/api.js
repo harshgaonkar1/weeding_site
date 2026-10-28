@@ -1418,15 +1418,24 @@ function syncAllGuestsToDatabase() {
     };
 
     try {
-      let res = await attempt();
-
-      // If server returned 502 (cold-start), wait 3 seconds and retry once
-      if (!res.ok && res.status === 502) {
-        await new Promise((r) => setTimeout(r, 3000));
-        res = await attempt();
+      let res = null;
+      for (let attemptNum = 0; attemptNum < 3; attemptNum++) {
+        try {
+          res = await attempt();
+          if (res && res.ok) break;
+          if (attemptNum < 2) {
+            await new Promise((r) => setTimeout(r, 2000 * (attemptNum + 1)));
+          }
+        } catch (fetchErr) {
+          if (attemptNum < 2) {
+            await new Promise((r) => setTimeout(r, 2000 * (attemptNum + 1)));
+          } else {
+            console.warn("Notice: Network retry exhausted for messages:", fetchErr.message);
+          }
+        }
       }
 
-      if (res.ok) {
+      if (res && res.ok) {
         const json = await res.json();
         if (json?.supabase_saved) {
           console.log("✅ Message confirmed saved in Supabase DB:", json.data?.id);

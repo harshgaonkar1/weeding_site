@@ -5,6 +5,16 @@ import { ConciergeBotService } from "../services/conciergeBotService.js";
 import { store } from "../Db_connection/queries.js";
 
 /**
+ * Helper to produce consistent room names regardless of prefix
+ * e.g. "wedding_98fd25ef" -> "wedding_98fd25ef", "98fd25ef" -> "wedding_98fd25ef"
+ */
+export const getWeddingRoom = (weddingId) => {
+  if (!weddingId) return "wedding_default";
+  const idStr = String(weddingId).trim();
+  return idStr.startsWith("wedding_") ? idStr : `wedding_${idStr}`;
+};
+
+/**
  * Initialize Socket.IO event listeners for Real-Time Wedding Chat & Bot Concierge
  * @param {import("socket.io").Server} io
  */
@@ -15,7 +25,7 @@ export const initializeChatSocket = (io) => {
     // Join wedding-specific chat room
     socket.on("join_wedding", (weddingId) => {
       if (!weddingId) return;
-      const room = `wedding_${weddingId}`;
+      const room = getWeddingRoom(weddingId);
       socket.join(room);
       console.log(`💬 Socket ${socket.id} joined room: ${room}`);
     });
@@ -23,7 +33,7 @@ export const initializeChatSocket = (io) => {
     // Leave wedding chat room
     socket.on("leave_wedding", (weddingId) => {
       if (!weddingId) return;
-      const room = `wedding_${weddingId}`;
+      const room = getWeddingRoom(weddingId);
       socket.leave(room);
     });
 
@@ -37,7 +47,7 @@ export const initializeChatSocket = (io) => {
         }
       } catch (err) {
         if (typeof callback === "function") {
-          callback({ success: false, data: [] });
+          callback({ success: false, data: [], error: err.message });
         }
       }
     });
@@ -48,12 +58,12 @@ export const initializeChatSocket = (io) => {
         const { wedding_id, sender_id, sender_name, sender_role, message, trigger_bot_reply } = data || {};
         const safeWeddingId = wedding_id || "wedding_01";
         if (!message || !message.trim()) {
-          if (typeof callback === "function") callback({ error: "message is required" });
+          if (typeof callback === "function") callback({ success: false, error: "message is required" });
           return;
         }
 
         const role = sender_role || "client";
-        const room = `wedding_${safeWeddingId}`;
+        const room = getWeddingRoom(safeWeddingId);
 
         // 1. Instantly save in-memory & Supabase DB
         const savedMsg = await MessageModel.create({
@@ -116,7 +126,7 @@ export const initializeChatSocket = (io) => {
         }
       } catch (err) {
         console.error("Socket send_message error:", err);
-        if (typeof callback === "function") callback({ error: err.message });
+        if (typeof callback === "function") callback({ success: false, error: err.message });
       }
     });
 
@@ -124,15 +134,18 @@ export const initializeChatSocket = (io) => {
     socket.on("mark_read", async ({ wedding_id, reader_role }) => {
       if (!wedding_id) return;
       try {
-        await MessageModel.markAsRead(wedding_id, reader_role || "client");
-        io.to(`wedding_${wedding_id}`).emit("messages_read", { wedding_id, reader_role });
+        const safeWeddingId = wedding_id || "wedding_01";
+        const room = getWeddingRoom(safeWeddingId);
+        await MessageModel.markAsRead(safeWeddingId, reader_role || "client");
+        io.to(room).emit("messages_read", { wedding_id: safeWeddingId, reader_role });
       } catch (e) {}
     });
 
     // User typing indicator
     socket.on("typing", ({ wedding_id, user_name, is_typing }) => {
       if (!wedding_id) return;
-      socket.to(`wedding_${wedding_id}`).emit("user_typing", { user_name, is_typing });
+      const room = getWeddingRoom(wedding_id);
+      socket.to(room).emit("user_typing", { user_name, is_typing });
     });
 
     socket.on("disconnect", (reason) => {

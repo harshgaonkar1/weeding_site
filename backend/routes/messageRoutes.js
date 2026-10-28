@@ -5,6 +5,7 @@ import { GuestModel } from "../models/guestModel.js";
 import { ConciergeBotService } from "../services/conciergeBotService.js";
 import { store } from "../Db_connection/queries.js";
 import { supabase } from "../Db_connection/supabaseClient.js";
+import { getWeddingRoom } from "../socket/chatSocket.js";
 
 const router = express.Router();
 
@@ -90,7 +91,7 @@ router.post("/", async (req, res) => {
     // Broadcast new message over Socket.IO to wedding room immediately
     const io = req.app.get("io");
     if (io) {
-      io.to(`wedding_${safeWeddingId}`).emit("new_message", savedMsg);
+      io.to(getWeddingRoom(safeWeddingId)).emit("new_message", savedMsg);
     }
 
     let savedBotMsg = null;
@@ -130,7 +131,7 @@ router.post("/", async (req, res) => {
 
         // Broadcast bot reply over Socket.IO to wedding room
         if (io) {
-          io.to(`wedding_${safeWeddingId}`).emit("new_message", savedBotMsg);
+          io.to(getWeddingRoom(safeWeddingId)).emit("new_message", savedBotMsg);
         }
       } catch (botErr) {
         console.warn("Notice: Error generating concierge bot reply:", botErr.message);
@@ -183,7 +184,7 @@ router.put("/read/:weddingId", async (req, res) => {
 
     const io = req.app.get("io");
     if (io) {
-      io.to(`wedding_${safeWeddingId}`).emit("messages_read", {
+      io.to(getWeddingRoom(safeWeddingId)).emit("messages_read", {
         wedding_id: safeWeddingId,
         reader_role: readerRole,
       });

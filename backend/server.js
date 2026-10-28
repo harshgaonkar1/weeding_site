@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { initializeChatSocket } from "./socket/chatSocket.js";
@@ -48,7 +48,7 @@ const io = new SocketIOServer(server, {
   },
   pingTimeout: 60000,
   pingInterval: 25000,
-  transports: ["polling", "websocket"],
+  transports: ["websocket", "polling"],
   allowUpgrades: true,
   allowEIO3: true,
 });
@@ -72,8 +72,13 @@ const ALLOWED_ORIGINS = [
 // CORS middleware - must be FIRST so headers are set even on errors/crashes
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
-  // Return the exact requesting origin if allowlisted, else fallback to first allowed
-  const allowedOrigin = origin || ALLOWED_ORIGINS[0] || "*";
+  const isAllowed =
+    !origin ||
+    origin.endsWith(".vercel.app") ||
+    origin.includes("localhost") ||
+    ALLOWED_ORIGINS.includes(origin);
+
+  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0] || "*";
   res.header("Access-Control-Allow-Origin", allowedOrigin);
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, x-user-role");
@@ -126,9 +131,11 @@ app.use("/api/messages", messageRoutes);
 
 // Global Error Handler with guaranteed CORS headers
 app.use((err, req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin || "*";
+  res.header("Access-Control-Allow-Origin", origin);
+  res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, x-user-role");
   console.error("Unhandled Error:", err);
   res.status(500).json({
     success: false,
@@ -145,8 +152,8 @@ process.on("uncaughtException", (error) => {
   console.error("❌ Uncaught Exception:", error);
 });
 
-// Start Server with Socket.IO Enabled
-server.listen(PORT, async () => {
+// Start Server with Socket.IO Enabled (bind to 0.0.0.0 for Render/Docker)
+server.listen(PORT, "0.0.0.0", async () => {
   console.log(`🚀 Backend Server & Live Socket.IO Chat started on port ${PORT}`);
   await testConnection();
 });
