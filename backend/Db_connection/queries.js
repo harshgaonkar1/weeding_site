@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Database Queries & Execution Engine
 // ------------------------------------------------------------
 // Centralizes all database queries, query execution, and data operations
@@ -107,7 +107,7 @@ export const query = async (text, params = []) => {
       try {
         await Promise.race([
           Promise.allSettled([
-            supabase.from("wedding_messages").delete().eq("wedding_id", id),
+            // no wedding_messages table in supabase
             supabase.from("guest_call_logs").delete().eq("wedding_id", id),
             supabase.from("guests").delete().eq("wedding_id", id),
             supabase.from("weddings").delete().eq("id", id),
@@ -131,7 +131,7 @@ export const query = async (text, params = []) => {
     if (supabase) {
       try {
         await Promise.race([
-          supabase.from("wedding_messages").delete().eq("wedding_id", weddingId),
+          // no wedding_messages table in supabase
           new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
         ]);
       } catch (err) {

@@ -375,50 +375,41 @@ export const WeddingModel = {
       store.weddings = store.weddings.filter((w) => w.id !== id);
       store.guests = (store.guests || []).filter((g) => g.wedding_id !== id);
       store.guest_call_logs = (store.guest_call_logs || []).filter((c) => c.wedding_id !== id);
-      // Remove all messages associated with this wedding card and persist to disk
       store.messages = (store.messages || []).filter((m) => m.wedding_id !== id);
       saveMessagesToFile();
     }
     return deleted;
   },
 
-  // 7. Delete wedding and all associated guests, call logs, and chat messages
+  // 7. Delete wedding and all associated guests & logs from DB & memory
   async delete(id) {
+    if (!id) return true;
+
+    // 1. Purge from in-memory cache & local files
     this.deleteLocal(id);
 
+    // 2. Direct Supabase deletion (fast & clean, strictly valid tables)
     if (supabase) {
       try {
-        // Delete in dependency order: messages & logs first, then guests, then wedding
-        const results = await Promise.allSettled([
-          supabase.from("wedding_messages").delete().eq("wedding_id", id),
-          supabase.from("guest_call_logs").delete().eq("wedding_id", id),
-          supabase.from("guests").delete().eq("wedding_id", id),
+        await Promise.race([
+          (async () => {
+            // Delete dependent records first (call logs & guests)
+            await Promise.allSettled([
+              supabase.from('guest_call_logs').delete().eq('wedding_id', id),
+              supabase.from('guests').delete().eq('wedding_id', id),
+            ]);
+            // Delete wedding record itself
+            const { error: weddingDelErr } = await supabase.from('weddings').delete().eq('id', id);
+            if (weddingDelErr) {
+              console.warn('Supabase wedding delete error for ' + id + ':', weddingDelErr.message);
+            }
+          })(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Supabase delete timeout')), 5000)),
         ]);
-        // Log any Supabase errors for debugging
-        results.forEach((r, i) => {
-          if (r.status === "rejected") {
-            console.warn("Supabase delete step " + i + " failed:", r.reason?.message || r.reason);
-          } else if (r.value?.error) {
-            console.warn("Supabase delete step " + i + " error:", r.value.error.message);
-          }
-        });
-        // Finally delete the wedding itself
-        const { error: weddingDelErr } = await supabase.from("weddings").delete().eq("id", id);
-        if (weddingDelErr) {
-          console.error("Supabase wedding delete failed for " + id + ":", weddingDelErr.message);
-        }
       } catch (err) {
-        console.error("Supabase delete exception for " + id + ":", err.message);
+        console.warn('Supabase delete notice for ' + id + ':', err.message);
       }
     }
-
-    // Also clean up in-memory pool store (in-memory fallback)
-    try {
-      await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [id]).catch(() => {});
-      await pool.query("DELETE FROM guest_call_logs WHERE wedding_id = $1", [id]).catch(() => {});
-      await pool.query("DELETE FROM guests WHERE wedding_id = $1", [id]).catch(() => {});
-      await pool.query("DELETE FROM weddings WHERE id = $1", [id]).catch(() => {});
-    } catch (e) {}
 
     return true;
   },

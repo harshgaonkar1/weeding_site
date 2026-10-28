@@ -4,6 +4,8 @@ import { MessageModel } from "../models/messageModel.js";
 import { ExcelService } from "../services/excelService.js";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
 import fs from "fs";
+import { supabase } from '../Db_connection/supabaseClient.js';
+import { store } from '../Db_connection/queries.js';
 
 export const weddingController = {
   // GET /api/weddings
@@ -127,40 +129,49 @@ export const weddingController = {
   async deleteWedding(req, res) {
     try {
       const { id } = req.params;
-
-      // 1. Purge wedding from local in-memory store immediately
-      const wedding = WeddingModel.deleteLocal(id);
-
-      // 2. Delete from Supabase/DB (awaited - ensures data is actually removed)
-      try {
-        await Promise.allSettled([
-          WeddingModel.delete(id),
-          MessageModel.deleteByWeddingId(id),
-        ]);
-      } catch (dbErr) {
-        console.warn("Warning: DB delete partial failure for wedding :", dbErr.message);
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'Wedding ID is required' });
       }
 
-      // 3. Fire-and-forget Google Sheet cleanup (non-critical)
+      // 1. Fetch wedding info if in memory or Supabase for Google Sheet cleanup
+      let wedding = null;
+      if (store && Array.isArray(store.weddings)) {
+        wedding = store.weddings.find((w) => w.id === id) || null;
+      }
+      if (!wedding && supabase) {
+        try {
+          const { data } = await supabase
+            .from('weddings')
+            .select('id, groom_name, bride_name, google_sheet_id, google_sheet_url')
+            .eq('id', id)
+            .single();
+          wedding = data;
+        } catch (e) {}
+      }
+
+      // 2. Execute DB & local deletion (fast, resilient, non-blocking)
+      await WeddingModel.delete(id);
+
+      // 3. Fire-and-forget Google Sheet cleanup (never blocks HTTP response)
       if (wedding && (wedding.google_sheet_url || wedding.google_sheet_id)) {
         setImmediate(() => {
           Promise.race([
             GoogleSheetsService.deleteWeddingSheet(wedding),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Sheet timeout")), 5000)),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Sheet timeout')), 4000)),
           ]).catch(() => {});
         });
       }
 
-      // 4. Respond with success
+      // 4. Return success immediately
       return res.status(200).json({
         success: true,
-        message: "Wedding, associated guests, and chat messages deleted successfully",
+        message: 'Wedding and associated guest directory deleted successfully',
       });
     } catch (error) {
-      console.error("Error deleting wedding:", error);
+      console.error('Error deleting wedding:', error);
       return res.status(500).json({
         success: false,
-        message: "Failed to delete wedding",
+        message: 'Failed to delete wedding',
         error: error.message,
       });
     }
