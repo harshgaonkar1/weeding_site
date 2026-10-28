@@ -1,4 +1,4 @@
-// API Service for Multi-Wedding, Guest Logistics & Call Center Management
+﻿// API Service for Multi-Wedding, Guest Logistics & Call Center Management
 import { API_BASE_URL, BACKEND_SERVER_URL } from "../config/apiConfig";
 import { generate500GuestsForRohanPriya } from "./guestGenerator.js";
 
@@ -583,8 +583,8 @@ export const api = {
   },
 
   async deleteWedding(id) {
-    let serverSuccess = false;
-    try {
+    // Retry logic for Render cold-start 502/503 errors
+    const attemptDelete = async () => {
       const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
         method: "DELETE",
         headers: {
@@ -592,14 +592,29 @@ export const api = {
           "Accept": "application/json",
         },
       });
+      return res;
+    };
+
+    let serverSuccess = false;
+    try {
+      let res = await attemptDelete();
+      // Retry once if server is waking up (502 Bad Gateway or 503 Service Unavailable)
+      if (res.status === 502 || res.status === 503) {
+        console.warn(`deleteWedding: server returned ${res.status}, retrying in 3s...`);
+        await new Promise((r) => setTimeout(r, 3000));
+        res = await attemptDelete();
+      }
       if (res.ok) {
         const json = await res.json().catch(() => ({}));
         if (json.success) serverSuccess = true;
+      } else {
+        console.warn(`deleteWedding: server returned HTTP ${res.status}`);
       }
     } catch (e) {
       console.warn("deleteWedding server notice:", e?.message || e);
     }
 
+    // Always clean up local cache regardless of server response
     const list = getCachedWeddings().filter((w) => w.id !== id);
     setCachedWeddings(list);
     const guests = getCachedGuests().filter((g) => g.wedding_id !== id);
@@ -607,6 +622,10 @@ export const api = {
     try {
       localStorage.removeItem(`cached_messages_${id}`);
     } catch (e) {}
+
+    if (!serverSuccess) {
+      console.warn(`deleteWedding: removed from local cache but server confirmation failed for ${id}`);
+    }
     return true;
   },
 

@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
@@ -37,13 +37,25 @@ const PORT = process.env.PORT || 5000;
 // Initialize exports folder
 const exportDir = getExportDir();
 
-// Middlewares
+// Allowed CORS origins - add all your Vercel/Netlify/custom URLs here
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://weeding-site-six.vercel.app",
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+// CORS middleware - must be FIRST so headers are set even on errors/crashes
 app.use((req, res, next) => {
-  const origin = req.headers.origin || process.env.CORS_ORIGIN || "*";
-  res.header("Access-Control-Allow-Origin", origin);
+  const origin = req.headers.origin || "";
+  // Return the exact requesting origin if allowlisted, else fallback to first allowed
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : (ALLOWED_ORIGINS[0] || "*");
+  res.header("Access-Control-Allow-Origin", allowedOrigin);
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, x-user-role");
   res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Vary", "Origin");
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -55,7 +67,7 @@ app.use(
     origin: (origin, callback) => callback(null, true),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-user-role"],
   })
 );
 
