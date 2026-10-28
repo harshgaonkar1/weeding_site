@@ -1,264 +1,98 @@
-import pool from "../Db_connection/dbconnection.js";
 import { supabase } from "../Db_connection/supabaseClient.js";
 import { store, saveMessagesToFile } from "../Db_connection/queries.js";
 import crypto from "crypto";
 
 export const MessageModel = {
-  // 1. Get all messages for a specific wedding from Database & Store
+  // 1. Get all messages for a specific wedding
   async getByWeddingId(weddingId) {
     const targetWeddingId = weddingId || "wedding_01";
-    let dbMessages = null;
 
-    // 1. Query live Supabase database
+    // Fetch from Supabase database
     if (supabase) {
       try {
-        let { data, error } = await Promise.race([
-          supabase
-            .from("wedding_messages")
-            .select("*")
-            .eq("wedding_id", targetWeddingId)
-            .order("created_at", { ascending: true }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000)),
-        ]).catch(() => ({ data: null, error: null }));
+        const { data, error } = await supabase
+          .from("wedding_messages")
+          .select("*")
+          .eq("wedding_id", targetWeddingId)
+          .order("created_at", { ascending: true });
 
-        // Fallback to 'messages' table if wedding_messages does not exist
-        if (error && (error.code === "42P01" || error.message?.includes("does not exist"))) {
-          try {
-            const altRes = await Promise.resolve(
-              supabase
-                .from("messages")
-                .select("*")
-                .eq("wedding_id", targetWeddingId)
-                .order("created_at", { ascending: true })
-            );
-            data = altRes?.data;
-          } catch (e) {}
+        if (!error && Array.isArray(data) && data.length > 0) {
+          return data;
         }
-
-        if (Array.isArray(data) && data.length > 0) {
-          dbMessages = data;
-          // Synchronize in-memory and local disk store with live DB data
-          if (store && Array.isArray(store.messages)) {
-            let changed = false;
-            dbMessages.forEach((msg) => {
-              const idx = store.messages.findIndex((m) => m.id === msg.id);
-              if (idx === -1) {
-                store.messages.push(msg);
-                changed = true;
-              } else {
-                store.messages[idx] = { ...store.messages[idx], ...msg };
-              }
-            });
-            if (changed) saveMessagesToFile();
-          }
-        }
-        if (error) {
-          console.error("❌ [DB ERROR] Supabase getByWeddingId query error:", {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            wedding_id: targetWeddingId,
-          });
-        }
-      } catch (e) {
-        console.error("❌ [DB EXCEPTION] Supabase fetch messages exception:", e.message);
+      } catch (err) {
+        console.warn("Notice: Live DB fetch fallback:", err.message);
       }
     }
 
-    if (dbMessages && dbMessages.length > 0) {
-      const seen = new Set();
-      return dbMessages.filter((m) => {
-        if (!seen.has(m.id)) {
-          seen.add(m.id);
-          return true;
-        }
-        return false;
-      });
-    }
-
-    // 2. Query pool engine fallback
-    try {
-      const { rows } = await pool.query(
-        "SELECT * FROM wedding_messages WHERE wedding_id = $1 ORDER BY created_at ASC",
-        [targetWeddingId]
-      );
-      if (rows && rows.length > 0) {
-        const seen = new Set();
-        return rows.filter((m) => {
-          if (!seen.has(m.id)) {
-            seen.add(m.id);
-            return true;
-          }
-          return false;
-        });
-      }
-    } catch (e) {}
-
-    // 3. In-memory / persistent file store fallback
-    const seen = new Set();
-    return (store.messages || [])
-      .filter((m) => m.wedding_id === targetWeddingId)
-      .filter((m) => {
-        if (!seen.has(m.id)) {
-          seen.add(m.id);
-          return true;
-        }
-        return false;
-      });
+    // Local fallback
+    return (store.messages || []).filter((m) => m.wedding_id === targetWeddingId);
   },
 
-  // 2. Create and permanently save a new message in Supabase & Store
-  async create({
-    wedding_id,
-    sender_id,
-    sender_name,
-    sender_role, // 'admin', 'client', or 'bot'
-    message,
-  }) {
+  // 2. Create and permanently save a new message in Supabase
+  async create({ wedding_id, sender_id, sender_name, sender_role, message }) {
     const safeWeddingId = wedding_id || "wedding_01";
-    const id = `msg_${crypto.randomUUID().slice(0, 10)}`;
+    const id = `msg_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
     const created_at = new Date().toISOString();
-
     const role = sender_role || "client";
-    const defaultSenderId =
-      role === "admin"
-        ? "user_admin_01"
-        : role === "bot"
-        ? "emitly_bot"
-        : "client_user";
-
-    const defaultSenderName =
-      role === "admin"
-        ? "Manish (Admin)"
-        : role === "bot"
-        ? "Emitly Bot Concierge"
-        : "Wedding Client";
 
     const newMsg = {
       id,
       wedding_id: safeWeddingId,
-      sender_id: sender_id || defaultSenderId,
-      sender_name: sender_name || defaultSenderName,
+      sender_id: sender_id || (role === "admin" ? "admin" : "client"),
+      sender_name: sender_name || (role === "admin" ? "Admin" : "Client"),
       sender_role: role,
-      message: message.trim(),
+      message: (message || "").trim(),
       is_read: false,
       created_at,
     };
 
-    // 1. Immediately store in memory and persist to local messages_store.json on disk
+    // 1. Save in local in-memory store
     if (!store.messages) store.messages = [];
-    const exists = store.messages.some((m) => m.id === newMsg.id);
-    if (!exists) {
-      store.messages.push(newMsg);
-      saveMessagesToFile();
-    }
+    store.messages.push(newMsg);
+    saveMessagesToFile();
 
-    // 2. Persist directly into Supabase database
+    // 2. Save directly into Supabase database
     if (supabase) {
       try {
-        let { error: supaErr } = await Promise.race([
-          Promise.resolve(supabase.from("wedding_messages").upsert(newMsg)),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase insert timeout")), 3000)),
-        ]).catch((err) => ({ error: err }));
-
-        // Handle foreign key constraint: if parent wedding row doesn't exist yet in weddings table
-        if (supaErr && (supaErr.code === "23503" || supaErr.message?.includes("foreign key"))) {
-          console.warn(`⚠️ Foreign key notice: auto-creating parent wedding ${safeWeddingId} in Supabase`);
-          try {
-            await Promise.resolve(
-              supabase.from("weddings").upsert({
-                id: safeWeddingId,
-                groom_name: "Groom",
-                bride_name: "Bride",
-              })
-            );
-          } catch (wErr) {
-            console.warn("Could not auto-create wedding row:", wErr.message);
+        const { error } = await supabase.from("wedding_messages").insert([newMsg]);
+        if (error) {
+          console.warn("Supabase insert note:", error.message);
+          // If foreign key constraint triggered, auto-create parent wedding row and retry
+          if (error.code === "23503" || error.message?.includes("foreign key")) {
+            await supabase.from("weddings").upsert({
+              id: safeWeddingId,
+              groom_name: "Groom",
+              bride_name: "Bride",
+            });
+            await supabase.from("wedding_messages").insert([newMsg]);
           }
-
-          // Retry insert
-          try {
-            const retry = await Promise.resolve(supabase.from("wedding_messages").upsert(newMsg));
-            supaErr = retry?.error || null;
-          } catch (rErr) {
-            supaErr = rErr;
-          }
-        }
-
-        // Handle table name fallback: if table is named 'messages' instead
-        if (supaErr && (supaErr.code === "42P01" || supaErr.message?.includes("does not exist"))) {
-          console.warn("Table wedding_messages not found, falling back to 'messages' table");
-          try {
-            const altRes = await Promise.resolve(supabase.from("messages").upsert(newMsg));
-            supaErr = altRes?.error || null;
-          } catch (aErr) {
-            supaErr = aErr;
-          }
-        }
-
-        if (supaErr) {
-          console.error("❌ [DB ERROR] Supabase message insert failed:", {
-            code: supaErr.code,
-            message: supaErr.message,
-            details: supaErr.details,
-            hint: supaErr.hint,
-            wedding_id: safeWeddingId,
-            message_id: newMsg.id,
-          });
-          newMsg._supabase_status = { success: false, error: supaErr.message };
         } else {
-          console.log(`✅ [DB SUCCESS] Message ${newMsg.id} saved to Supabase for wedding ${safeWeddingId}`);
-          newMsg._supabase_status = { success: true, error: null };
+          console.log(`✅ [DB SUCCESS] Message saved to Supabase: ${newMsg.id}`);
         }
-      } catch (e) {
-        console.error("❌ [DB EXCEPTION] Supabase message save exception:", e.message);
-        newMsg._supabase_status = { success: false, error: e.message };
+      } catch (err) {
+        console.warn("Supabase save note:", err.message);
       }
-    } else {
-      newMsg._supabase_status = { success: false, error: "Supabase client not initialized" };
     }
-
-    // 3. Persist through PostgreSQL/MySQL query engine
-    try {
-      pool.query(
-        `INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [id, safeWeddingId, newMsg.sender_id, newMsg.sender_name, newMsg.sender_role, newMsg.message, false, created_at]
-      ).catch(() => {});
-    } catch (e) {}
 
     return newMsg;
   },
 
-  // 3. Delete all messages for a specific wedding when the wedding is deleted
+  // 3. Delete messages for a wedding
   async deleteByWeddingId(weddingId) {
-    if (!weddingId) return false;
-
-    // Immediately remove from in-memory store and persist to disk
-    if (store && Array.isArray(store.messages)) {
+    if (!weddingId) return true;
+    if (store && store.messages) {
       store.messages = store.messages.filter((m) => m.wedding_id !== weddingId);
       saveMessagesToFile();
     }
-
     if (supabase) {
       try {
-        await Promise.race([
-          supabase.from("wedding_messages").delete().eq("wedding_id", weddingId),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2000)),
-        ]).catch(() => {});
-      } catch (e) {
-        console.warn("Supabase wedding_messages delete notice:", e.message);
-      }
+        await supabase.from("wedding_messages").delete().eq("wedding_id", weddingId);
+      } catch (e) {}
     }
-
-    try {
-      await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [weddingId]).catch(() => {});
-    } catch (e) {}
-
     return true;
   },
 
-  // 4. Mark messages as read for a wedding (with timeout protection)
+  // 4. Mark messages as read for a wedding
   async markAsRead(weddingId, readerRole) {
     const targetWeddingId = weddingId || "wedding_01";
     if (store && store.messages) {
@@ -269,38 +103,24 @@ export const MessageModel = {
       });
       saveMessagesToFile();
     }
-
     if (supabase) {
       try {
-        const { error: markErr } = await Promise.race([
-          supabase
-            .from("wedding_messages")
-            .update({ is_read: true })
-            .eq("wedding_id", targetWeddingId)
-            .neq("sender_role", readerRole),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase update timeout")), 2000)),
-        ]).catch((err) => ({ error: err }));
-
-        if (markErr) {
-          console.error("❌ [DB ERROR] Supabase markAsRead error:", markErr.message || markErr);
-        } else {
-          console.log(`✅ [DB SUCCESS] Marked messages as read in Supabase for wedding ${targetWeddingId}`);
-        }
-      } catch (e) {
-        console.error("❌ [DB EXCEPTION] Supabase markAsRead exception:", e.message);
-      }
+        await supabase
+          .from("wedding_messages")
+          .update({ is_read: true })
+          .eq("wedding_id", targetWeddingId)
+          .neq("sender_role", readerRole);
+      } catch (e) {}
     }
-
     return true;
   },
 
-  // 5. Get unread count for a user role
+  // 5. Unread count for a role
   async getUnreadCount(weddingId, forRole) {
     const targetWeddingId = weddingId || "wedding_01";
-    const msgs = (store.messages || []).filter(
+    return (store.messages || []).filter(
       (m) => (!targetWeddingId || m.wedding_id === targetWeddingId) && m.sender_role !== forRole && !m.is_read
-    );
-    return msgs.length;
+    ).length;
   },
 };
 

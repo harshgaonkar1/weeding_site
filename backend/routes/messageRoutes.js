@@ -140,8 +140,6 @@ router.post("/", async (req, res) => {
     res.status(201).json({
       success: true,
       data: savedMsg,
-      supabase_saved: savedMsg._supabase_status?.success ?? false,
-      supabase_error: savedMsg._supabase_status?.error ?? null,
       bot_reply: savedBotMsg,
     });
   } catch (error) {
