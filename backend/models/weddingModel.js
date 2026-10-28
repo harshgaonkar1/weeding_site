@@ -1,4 +1,4 @@
-import pool from "../Db_connection/dbconnection.js";
+﻿import pool from "../Db_connection/dbconnection.js";
 import { supabase } from "../Db_connection/supabaseClient.js";
 import { store, saveMessagesToFile } from "../Db_connection/queries.js";
 import crypto from "crypto";
@@ -388,20 +388,31 @@ export const WeddingModel = {
 
     if (supabase) {
       try {
-        await Promise.race([
-          Promise.allSettled([
-            supabase.from("wedding_messages").delete().eq("wedding_id", id),
-            supabase.from("guest_call_logs").delete().eq("wedding_id", id),
-            supabase.from("guests").delete().eq("wedding_id", id),
-            supabase.from("weddings").delete().eq("id", id),
-          ]),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 2500)),
-        ]).catch(() => {});
+        // Delete in dependency order: messages & logs first, then guests, then wedding
+        const results = await Promise.allSettled([
+          supabase.from("wedding_messages").delete().eq("wedding_id", id),
+          supabase.from("guest_call_logs").delete().eq("wedding_id", id),
+          supabase.from("guests").delete().eq("wedding_id", id),
+        ]);
+        // Log any Supabase errors for debugging
+        results.forEach((r, i) => {
+          if (r.status === "rejected") {
+            console.warn("Supabase delete step " + i + " failed:", r.reason?.message || r.reason);
+          } else if (r.value?.error) {
+            console.warn("Supabase delete step " + i + " error:", r.value.error.message);
+          }
+        });
+        // Finally delete the wedding itself
+        const { error: weddingDelErr } = await supabase.from("weddings").delete().eq("id", id);
+        if (weddingDelErr) {
+          console.error("Supabase wedding delete failed for " + id + ":", weddingDelErr.message);
+        }
       } catch (err) {
-        console.warn("Supabase delete notice:", err.message);
+        console.error("Supabase delete exception for " + id + ":", err.message);
       }
     }
 
+    // Also clean up in-memory pool store (in-memory fallback)
     try {
       await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [id]).catch(() => {});
       await pool.query("DELETE FROM guest_call_logs WHERE wedding_id = $1", [id]).catch(() => {});
@@ -412,4 +423,3 @@ export const WeddingModel = {
     return true;
   },
 };
-
