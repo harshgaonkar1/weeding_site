@@ -1,56 +1,5 @@
-﻿// API Service for Multi-Wedding, Guest Logistics & Call Center Management
-import { API_BASE_URL, BACKEND_SERVER_URL, SUPABASE_URL, SUPABASE_KEY } from "../config/apiConfig";
-
-// Direct Supabase REST helper for guaranteed immediate database deletions
-const directSupabaseDeleteWedding = async (weddingId) => {
-  if (!weddingId) return;
-  try {
-    const headers = {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-    };
-    // 1. Delete dependent guest call logs
-    await fetch(`${SUPABASE_URL}/rest/v1/guest_call_logs?wedding_id=eq.${encodeURIComponent(weddingId)}`, {
-      method: "DELETE",
-      headers,
-    }).catch(() => {});
-
-    // 2. Delete all guests belonging to this wedding
-    await fetch(`${SUPABASE_URL}/rest/v1/guests?wedding_id=eq.${encodeURIComponent(weddingId)}`, {
-      method: "DELETE",
-      headers,
-    }).catch(() => {});
-
-    // 3. Delete wedding record itself from Supabase
-    await fetch(`${SUPABASE_URL}/rest/v1/weddings?id=eq.${encodeURIComponent(weddingId)}`, {
-      method: "DELETE",
-      headers,
-    }).catch(() => {});
-  } catch (err) {
-    console.warn("Direct Supabase delete notice:", err);
-  }
-};
-
-const directSupabaseDeleteGuest = async (guestId) => {
-  if (!guestId) return;
-  try {
-    const headers = {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-    };
-    await fetch(`${SUPABASE_URL}/rest/v1/guest_call_logs?guest_id=eq.${encodeURIComponent(guestId)}`, {
-      method: "DELETE",
-      headers,
-    }).catch(() => {});
-
-    await fetch(`${SUPABASE_URL}/rest/v1/guests?id=eq.${encodeURIComponent(guestId)}`, {
-      method: "DELETE",
-      headers,
-    }).catch(() => {});
-  } catch (err) {}
-};
+// API Service for Multi-Wedding, Guest Logistics & Call Center Management
+import { API_BASE_URL, BACKEND_SERVER_URL } from "../config/apiConfig";
 import { generate500GuestsForRohanPriya } from "./guestGenerator.js";
 
 export { API_BASE_URL, BACKEND_SERVER_URL };
@@ -562,24 +511,6 @@ export const api = {
       }
     } catch (e) { }
 
-    // Direct Supabase fallback if backend server is sleeping or unavailable
-    try {
-      const sRes = await fetch(`${SUPABASE_URL}/rest/v1/weddings?select=*&order=created_at.desc`, {
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-        },
-      });
-      if (sRes.ok) {
-        const sData = await sRes.json();
-        if (Array.isArray(sData)) {
-          const sanitized = sData.map(sanitizeWeddingFrontend);
-          setCachedWeddings(sanitized);
-          return sanitized;
-        }
-      }
-    } catch (e) {}
-
     return getCachedWeddings();
   },
   async createWedding(weddingData) {
@@ -654,29 +585,7 @@ export const api = {
   async deleteWedding(id) {
     if (!id) return true;
 
-    // 1. Direct Supabase database erasure (guaranteed immediate removal in < 300ms)
-    const directPromise = directSupabaseDeleteWedding(id);
-
-    // 2. Also call backend endpoint to purge server store & Google Sheet
-    const backendPromise = (async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        });
-        return res.ok;
-      } catch (e) {
-        return false;
-      }
-    })();
-
-    // Await database erasure
-    await Promise.allSettled([directPromise, backendPromise]);
-
-    // 3. Purge from local browser cache immediately
+    // 1. Purge from local browser cache immediately
     const list = getCachedWeddings().filter((w) => w.id !== id);
     setCachedWeddings(list);
     const guests = getCachedGuests().filter((g) => g.wedding_id !== id);
@@ -685,7 +594,42 @@ export const api = {
       localStorage.removeItem('cached_messages_' + id);
     } catch (e) {}
 
-    return true;
+    // 2. Call backend endpoint to purge database store & Google Sheet
+    try {
+      let res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      // Fallback: if DELETE is blocked by proxies, try POST /:id/delete
+      if (!res.ok) {
+        res = await fetch(`${API_BASE_URL}/weddings/${id}/delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+      }
+      return res.ok;
+    } catch (e) {
+      console.warn("deleteWedding server notice:", e.message);
+      try {
+        const fallbackRes = await fetch(`${API_BASE_URL}/weddings/${id}/delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+        return fallbackRes.ok;
+      } catch (err) {
+        return false;
+      }
+    }
   },
   async exportMarriageExcel(weddingId) {
     try {
@@ -966,25 +910,21 @@ export const api = {
     }
     if (!id) return true;
 
-    // 1. Direct Supabase deletion
-    const directPromise = directSupabaseDeleteGuest(id);
-
-    // 2. Also notify backend
-    const backendPromise = (async () => {
-      try {
-        await fetch(`${API_BASE_URL}/guests/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'x-user-role': getCurrentUserRole() || 'admin',
-          },
-        });
-      } catch (e) {}
-    })();
-
-    await Promise.allSettled([directPromise, backendPromise]);
-
+    // 1. Purge from local cache immediately
     const list = getCachedGuests().filter((g) => g.id !== id);
     setCachedGuests(list);
+
+    // 2. Notify backend to delete from database
+    try {
+      await fetch(`${API_BASE_URL}/guests/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-user-role': getCurrentUserRole() || 'admin',
+        },
+      });
+    } catch (e) {
+      console.warn("deleteGuest server notice:", e.message);
+    }
     return true;
   },
   async fetchGuestCallLogs(guestId) {

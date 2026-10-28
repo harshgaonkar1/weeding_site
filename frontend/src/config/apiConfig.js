@@ -7,15 +7,6 @@ export const BACKEND_SERVER_URL =
   (typeof API_BASE_URL === "string" ? API_BASE_URL.replace(/\/api\/?$/, "") : "") ||
   "http://localhost:5000";
 
-// Direct Supabase Connection (bypasses Render timeouts for guaranteed fast DB sync)
-export const SUPABASE_URL =
-  import.meta?.env?.VITE_SUPABASE_URL || "https://xzhhxgvtmevjzsowzyvg.supabase.co";
-
-export const SUPABASE_KEY =
-  import.meta?.env?.VITE_SUPABASE_KEY ||
-  import.meta?.env?.VITE_SUPABASE_ANON_KEY ||
-  "sb_secret_r5q8zQ_U_MZSXpNl9JSeKA_leatzfk-";
-
 /**
  * Helper to construct full backend API endpoint URLs
  * @param {string} endpoint - e.g. '/guests' or 'auth/login'
@@ -29,7 +20,5 @@ export const getApiUrl = (endpoint = "") => {
 export default {
   API_BASE_URL,
   BACKEND_SERVER_URL,
-  SUPABASE_URL,
-  SUPABASE_KEY,
   getApiUrl,
 };

@@ -140,12 +140,14 @@ export const weddingController = {
       }
       if (!wedding && supabase) {
         try {
-          const { data } = await supabase
+          const fetchPromise = supabase
             .from('weddings')
             .select('id, groom_name, bride_name, google_sheet_id, google_sheet_url')
             .eq('id', id)
             .single();
-          wedding = data;
+          const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: null }), 1500));
+          const result = await Promise.race([fetchPromise, timeoutPromise]);
+          wedding = result?.data || null;
         } catch (e) {}
       }
 
