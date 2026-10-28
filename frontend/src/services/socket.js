@@ -13,10 +13,10 @@ export const getSocket = () => {
     socket = io(serverUrl, {
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 2000,
+      timeout: 10000,
       transports: ["websocket", "polling"],
       withCredentials: true,
     });
@@ -31,10 +31,12 @@ export const getSocket = () => {
 
     socket.on("disconnect", (reason) => {
       console.log("🔌 Socket.IO disconnected:", reason);
+      if (reason === "io server disconnect") {
+        socket.connect();
+      }
     });
   }
 
-  // If disconnected, reconnect
   if (socket && !socket.connected) {
     socket.connect();
   }
@@ -65,11 +67,11 @@ export const leaveWeddingChat = (weddingId) => {
 };
 
 /**
- * Send a message via Socket.IO
+ * Send a message via Socket.IO - buffers automatically even if connecting
  */
 export const sendSocketMessage = (messageData, callback) => {
   const s = getSocket();
-  if (s && s.connected) {
+  if (s) {
     s.emit("send_message", messageData, callback);
     return true;
   }
@@ -81,7 +83,7 @@ export const sendSocketMessage = (messageData, callback) => {
  */
 export const markSocketMessagesRead = (weddingId, readerRole = "client") => {
   const s = getSocket();
-  if (s && s.connected) {
+  if (s) {
     s.emit("mark_read", { wedding_id: weddingId, reader_role: readerRole });
   }
 };
@@ -91,10 +93,9 @@ export const markSocketMessagesRead = (weddingId, readerRole = "client") => {
  */
 export const emitTyping = (weddingId, userName, isTyping) => {
   const s = getSocket();
-  if (s && s.connected) {
+  if (s) {
     s.emit("typing", { wedding_id: weddingId, user_name: userName, is_typing: isTyping });
   }
 };
 
 export default getSocket;
-

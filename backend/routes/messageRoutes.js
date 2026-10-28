@@ -3,6 +3,7 @@ import { MessageModel } from "../models/messageModel.js";
 import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
 import { ConciergeBotService } from "../services/conciergeBotService.js";
+import { store } from "../Db_connection/queries.js";
 
 const router = express.Router();
 
@@ -27,7 +28,6 @@ router.get("/:weddingId", async (req, res) => {
 });
 
 // 2. Post a new message (from client, admin, or user)
-// If from a client/user, automatically generate and save the Concierge Bot reply into the DB!
 router.post("/", async (req, res) => {
   try {
     const { wedding_id, sender_id, sender_name, sender_role, message, trigger_bot_reply } = req.body;
@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
 
     const role = sender_role || "client";
 
-    // 1. Create and save user/admin message in DB
+    // 1. Create and save user/admin message in memory & Supabase (background)
     const savedMsg = await MessageModel.create({
       wedding_id,
       sender_id,
@@ -50,7 +50,7 @@ router.post("/", async (req, res) => {
       message: message.trim(),
     });
 
-    // Broadcast new message over Socket.IO to wedding room
+    // Broadcast new message over Socket.IO to wedding room immediately
     const io = req.app.get("io");
     if (io) {
       io.to(`wedding_${wedding_id}`).emit("new_message", savedMsg);
@@ -61,10 +61,19 @@ router.post("/", async (req, res) => {
     // 2. If message is from client/user or trigger_bot_reply requested, generate Concierge Bot reply
     if (role !== "admin" || trigger_bot_reply) {
       try {
-        const [wedding, guests] = await Promise.all([
-          WeddingModel.getById(wedding_id).catch(() => null),
-          GuestModel.getByWeddingId(wedding_id).catch(() => []),
-        ]);
+        let wedding = (store && Array.isArray(store.weddings))
+          ? store.weddings.find((w) => w.id === wedding_id)
+          : null;
+        let guests = (store && Array.isArray(store.guests))
+          ? store.guests.filter((g) => g.wedding_id === wedding_id)
+          : [];
+
+        if (!wedding) {
+          wedding = await Promise.race([
+            WeddingModel.getById(wedding_id),
+            new Promise((r) => setTimeout(() => r(null), 400)),
+          ]).catch(() => null);
+        }
 
         const botReplyText = ConciergeBotService.generateReply({
           wedding,
@@ -126,6 +135,12 @@ router.put("/read/:weddingId", async (req, res) => {
     const { weddingId } = req.params;
     const { readerRole = "client" } = req.body;
     await MessageModel.markAsRead(weddingId, readerRole);
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`wedding_${weddingId}`).emit("messages_read", { wedding_id: weddingId, reader_role: readerRole });
+    }
+
     res.json({ success: true, message: "Messages marked as read" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -133,4 +148,3 @@ router.put("/read/:weddingId", async (req, res) => {
 });
 
 export default router;
-

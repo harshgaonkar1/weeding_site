@@ -2,6 +2,7 @@ import { MessageModel } from "../models/messageModel.js";
 import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
 import { ConciergeBotService } from "../services/conciergeBotService.js";
+import { store } from "../Db_connection/queries.js";
 
 /**
  * Initialize Socket.IO event listeners for Real-Time Wedding Chat & Bot Concierge
@@ -38,7 +39,7 @@ export const initializeChatSocket = (io) => {
         const role = sender_role || "client";
         const room = `wedding_${wedding_id}`;
 
-        // 1. Save user/admin message in DB (Supabase + memory/pool)
+        // 1. Instantly save in-memory & background sync to Supabase (0ms)
         const savedMsg = await MessageModel.create({
           wedding_id,
           sender_id,
@@ -55,13 +56,23 @@ export const initializeChatSocket = (io) => {
         // 3. Automated Concierge Bot response if message is from client/user or trigger_bot_reply is set
         if (role !== "admin" || trigger_bot_reply) {
           try {
-            // Short typing delay so the conversation feels authentic
+            // Natural 350ms delay for authentic conversation feel
             setTimeout(async () => {
               try {
-                const [wedding, guests] = await Promise.all([
-                  WeddingModel.getById(wedding_id).catch(() => null),
-                  GuestModel.getByWeddingId(wedding_id).catch(() => []),
-                ]);
+                // Fast in-memory lookup (<1ms)
+                let wedding = (store && Array.isArray(store.weddings))
+                  ? store.weddings.find((w) => w.id === wedding_id)
+                  : null;
+                let guests = (store && Array.isArray(store.guests))
+                  ? store.guests.filter((g) => g.wedding_id === wedding_id)
+                  : [];
+
+                if (!wedding) {
+                  wedding = await Promise.race([
+                    WeddingModel.getById(wedding_id),
+                    new Promise((r) => setTimeout(() => r(null), 400)),
+                  ]).catch(() => null);
+                }
 
                 const botReplyText = ConciergeBotService.generateReply({
                   wedding,
@@ -84,7 +95,7 @@ export const initializeChatSocket = (io) => {
               } catch (botErr) {
                 console.warn("Notice: Concierge bot socket reply note:", botErr.message);
               }
-            }, 400);
+            }, 350);
           } catch (e) {}
         }
       } catch (err) {
@@ -115,4 +126,3 @@ export const initializeChatSocket = (io) => {
 };
 
 export default initializeChatSocket;
-

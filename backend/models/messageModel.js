@@ -140,31 +140,24 @@ export const MessageModel = {
       saveMessagesToFile();
     }
 
-    // 2. Persist into Supabase database table with safety timeout
+    // 2. Persist into Supabase database in background (non-blocking for 0ms instant response)
     if (supabase) {
-      try {
-        const { error: supaErr } = await Promise.race([
-          supabase.from("wedding_messages").insert(newMsg),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase timeout")), 4000)),
-        ]);
-        if (supaErr) {
-          console.warn("Supabase wedding_messages insert note:", supaErr.message);
-        } else {
-          console.log(`✅ Message ${newMsg.id} saved to Supabase wedding_messages`);
+      setImmediate(async () => {
+        try {
+          const { error: supaErr } = await Promise.race([
+            supabase.from("wedding_messages").upsert(newMsg),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase timeout")), 3000)),
+          ]);
+          if (supaErr) {
+            console.warn("Supabase wedding_messages insert note:", supaErr.message);
+          } else {
+            console.log(`✅ Message ${newMsg.id} saved to Supabase wedding_messages`);
+          }
+        } catch (e) {
+          console.warn("Notice: Supabase wedding_messages insert note:", e.message);
         }
-      } catch (e) {
-        console.warn("Notice: Supabase wedding_messages insert note:", e.message);
-      }
+      });
     }
-
-    // 3. Persist through query engine
-    try {
-      await pool.query(
-        `INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [id, wedding_id, newMsg.sender_id, newMsg.sender_name, newMsg.sender_role, newMsg.message, false, created_at]
-      );
-    } catch (e) {}
 
     return newMsg;
   },

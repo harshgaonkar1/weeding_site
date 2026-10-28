@@ -86,15 +86,29 @@ export default function ChatBotModal({
     try {
       const data = await api.fetchMessages(wId);
       if (data && Array.isArray(data)) {
-        const seen = new Set();
-        const unique = [];
-        data.forEach((m) => {
-          if (m && m.id && !seen.has(m.id)) {
-            seen.add(m.id);
-            unique.push(m);
-          }
+        setMessages((prev) => {
+          // Keep any optimistic unsent messages currently in local state
+          const optimistic = prev.filter((m) => m.id && m.id.startsWith("msg_temp_"));
+          const seen = new Set();
+          const unique = [];
+
+          // Add database messages first
+          data.forEach((m) => {
+            if (m && m.id && !seen.has(m.id)) {
+              seen.add(m.id);
+              unique.push(m);
+            }
+          });
+
+          // Append any optimistic messages that haven't been confirmed yet
+          optimistic.forEach((opt) => {
+            if (!unique.some((u) => u.message === opt.message && u.sender_role === opt.sender_role)) {
+              unique.push(opt);
+            }
+          });
+
+          return unique;
         });
-        setMessages(unique);
       }
       // Mark messages as read for this role
       const myRole = isAdmin ? "admin" : "client";
@@ -109,7 +123,7 @@ export default function ChatBotModal({
   useEffect(() => {
     if (!isOpen || !activeWeddingId) return;
 
-    // 1. Initial fetch from database to display all message history
+    // 1. Initial fetch from database to display all past message history
     loadMessages(activeWeddingId);
 
     // 2. Connect to Socket.IO and join wedding room
@@ -118,20 +132,43 @@ export default function ChatBotModal({
 
     joinWeddingChat(activeWeddingId);
 
-    const onConnect = () => setIsSocketLive(true);
+    const onConnect = () => {
+      setIsSocketLive(true);
+      joinWeddingChat(activeWeddingId);
+    };
     const onDisconnect = () => setIsSocketLive(false);
 
-    // Incoming Live Message Handler
+    // Incoming Live Message Handler (0ms instant streaming)
     const onNewMessage = (newMsg) => {
       if (!newMsg || newMsg.wedding_id !== activeWeddingId) return;
 
       setMessages((prev) => {
+        // If identical id already present, keep
         if (prev.some((m) => m.id === newMsg.id)) return prev;
+
+        // If this confirms an optimistic temporary message, swap the temp ID with real ID
+        const optIdx = prev.findIndex(
+          (m) =>
+            m.id &&
+            m.id.startsWith("msg_temp_") &&
+            m.sender_role === newMsg.sender_role &&
+            m.message === newMsg.message
+        );
+
+        if (optIdx !== -1) {
+          const next = [...prev];
+          next[optIdx] = newMsg;
+          return next;
+        }
+
         return [...prev, newMsg];
       });
 
       // Clear typing indicator once a message arrives
       setRemoteTypingUser(null);
+      if (newMsg.sender_role === "bot") {
+        setIsSending(false);
+      }
 
       // Auto mark as read if message is from the other party
       const myRole = isAdmin ? "admin" : "client";
@@ -163,10 +200,10 @@ export default function ChatBotModal({
     socket.on("messages_read", onMessagesRead);
     socket.on("user_typing", onUserTyping);
 
-    // Backup background refresh every 20 seconds (secondary safeguard)
+    // Fast fallback sync every 8 seconds
     const backupInterval = setInterval(() => {
       loadMessages(activeWeddingId);
-    }, 20000);
+    }, 8000);
 
     return () => {
       leaveWeddingChat(activeWeddingId);
@@ -179,7 +216,7 @@ export default function ChatBotModal({
     };
   }, [isOpen, activeWeddingId]);
 
-  // Scroll to bottom on message change or typing
+  // Smooth scroll to bottom on message change or typing
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -232,40 +269,49 @@ export default function ChatBotModal({
     // Clear typing status
     emitTyping(activeWeddingId, myName, false);
 
-    const messagePayload = {
+    // 1. OPTIMISTIC INSTANT UI UPDATE (0ms latency!)
+    // Appears on the user's screen in 0 milliseconds
+    const tempId = `msg_temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const optimisticMsg = {
+      id: tempId,
       wedding_id: activeWeddingId,
       sender_id: user?.id || (isAdmin ? "user_admin_01" : "client_user"),
       sender_name: myName,
       sender_role: myRole,
       message: textToSend,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    const messagePayload = {
+      ...optimisticMsg,
       trigger_bot_reply: !isAdmin,
     };
 
     try {
-      // 1. Try sending via live Socket.IO
-      const sentViaSocket = sendSocketMessage(messagePayload);
+      // 2. Broadcast via live Socket.IO (instant transmission)
+      sendSocketMessage(messagePayload);
 
-      // 2. If socket is disconnected, fallback to REST API
-      if (!sentViaSocket) {
-        const result = await api.sendMessage(messagePayload);
-        if (result?.data) {
+      // 3. Dual-channel background persistence via REST API
+      api.sendMessage(messagePayload).then((result) => {
+        if (result?.bot_reply) {
           setMessages((prev) => {
-            const next = [...prev];
-            if (!next.some((m) => m.id === result.data.id)) {
-              next.push(result.data);
-            }
-            if (result.bot_reply && !next.some((m) => m.id === result.bot_reply.id)) {
-              next.push(result.bot_reply);
-            }
-            return next;
+            if (prev.some((m) => m.id === result.bot_reply.id)) return prev;
+            return [...prev, result.bot_reply];
           });
+          setIsSending(false);
         }
-      }
+      }).catch(() => {});
     } catch (e) {
       console.error("Error sending message:", e);
     } finally {
       isSendingRef.current = false;
-      setIsSending(false);
+      // If admin, finish sending immediately; if client, keep bot typing indicator until bot replies
+      if (isAdmin) {
+        setIsSending(false);
+      }
     }
   };
 
@@ -300,7 +346,7 @@ export default function ChatBotModal({
                       ? "bg-emerald-500/20 text-[#84e030] border border-emerald-500/30"
                       : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                   }`}
-                  title={isSocketLive ? "Live Socket.IO Connected" : "Connecting to Socket.IO..."}
+                  title={isSocketLive ? "Live Socket.IO Connected (Instant)" : "Connecting to Live Stream..."}
                 >
                   <span className="relative flex h-1.5 w-1.5">
                     {isSocketLive && (
@@ -312,7 +358,7 @@ export default function ChatBotModal({
                       }`}
                     ></span>
                   </span>
-                  <span>{isSocketLive ? "Live" : "Syncing"}</span>
+                  <span>{isSocketLive ? "Live (0ms)" : "Syncing"}</span>
                 </div>
               </div>
 
@@ -517,7 +563,7 @@ export default function ChatBotModal({
 
             <button
               type="button"
-              disabled={!inputText.trim() || isSending}
+              disabled={!inputText.trim()}
               onClick={() => handleSendMessage()}
               className="bg-[#0f2922] hover:bg-[#163a30] text-white p-2.5 rounded-2xl font-bold flex items-center justify-center disabled:opacity-40 cursor-pointer transition-all shadow-xs shrink-0"
               title="Send Message (Enter)"
