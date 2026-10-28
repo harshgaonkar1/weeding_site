@@ -147,7 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_guest_call_logs_called_at ON guest_call_logs (cal
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS wedding_messages (
   id VARCHAR(64) PRIMARY KEY,
-  wedding_id VARCHAR(64) NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
+  wedding_id VARCHAR(64) NOT NULL,
   sender_id VARCHAR(64) NOT NULL,
   sender_name VARCHAR(255) NOT NULL,
   sender_role VARCHAR(50) NOT NULL, -- 'admin', 'client', or 'bot'

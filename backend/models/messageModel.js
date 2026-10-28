@@ -8,17 +8,7 @@ export const MessageModel = {
   async getByWeddingId(weddingId) {
     if (!weddingId) return [];
 
-    // If the wedding card does not exist, all its messages are deleted
-    if (store && Array.isArray(store.weddings) && store.weddings.length > 0) {
-      const exists = store.weddings.some((w) => w.id === weddingId);
-      if (!exists) {
-        if (store.messages && store.messages.some((m) => m.wedding_id === weddingId)) {
-          store.messages = store.messages.filter((m) => m.wedding_id !== weddingId);
-          saveMessagesToFile();
-        }
-        return [];
-      }
-    }
+    // Fetch from Supabase, pool, and store
 
     let supabaseData = null;
     if (supabase) {
@@ -140,7 +130,7 @@ export const MessageModel = {
       saveMessagesToFile();
     }
 
-    // 2. Persist into Supabase database in background (non-blocking for 0ms instant response)
+    // 2. Persist into Supabase database in background
     if (supabase) {
       setImmediate(async () => {
         try {
@@ -158,6 +148,15 @@ export const MessageModel = {
         }
       });
     }
+
+    // 3. Persist through PostgreSQL/MySQL pool engine non-blocking
+    try {
+      pool.query(
+        `INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [id, wedding_id, newMsg.sender_id, newMsg.sender_name, newMsg.sender_role, newMsg.message, false, created_at]
+      ).catch(() => {});
+    } catch (e) {}
 
     return newMsg;
   },
