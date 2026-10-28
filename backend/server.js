@@ -46,8 +46,11 @@ const io = new SocketIOServer(server, {
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-user-role"],
   },
-  pingTimeout: 30000,
-  pingInterval: 15000,
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ["polling", "websocket"],
+  allowUpgrades: true,
+  allowEIO3: true,
 });
 
 // Attach io instance to express app so routes can broadcast messages

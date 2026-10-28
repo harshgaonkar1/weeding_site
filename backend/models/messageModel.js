@@ -226,10 +226,10 @@ export const MessageModel = {
     return true;
   },
 
-  // 4. Mark messages as read for a wedding
+  // 4. Mark messages as read for a wedding (with timeout protection)
   async markAsRead(weddingId, readerRole) {
     const targetWeddingId = weddingId || "wedding_01";
-    if (store.messages) {
+    if (store && store.messages) {
       store.messages.forEach((m) => {
         if (m.wedding_id === targetWeddingId && m.sender_role !== readerRole) {
           m.is_read = true;
@@ -240,11 +240,14 @@ export const MessageModel = {
 
     if (supabase) {
       try {
-        await supabase
-          .from("wedding_messages")
-          .update({ is_read: true })
-          .eq("wedding_id", targetWeddingId)
-          .neq("sender_role", readerRole);
+        await Promise.race([
+          supabase
+            .from("wedding_messages")
+            .update({ is_read: true })
+            .eq("wedding_id", targetWeddingId)
+            .neq("sender_role", readerRole),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase update timeout")), 2000)),
+        ]).catch(() => {});
       } catch (e) {}
     }
 

@@ -1479,11 +1479,11 @@ function syncAllGuestsToDatabase() {
   async markMessagesRead(weddingId, readerRole = "client") {
     if (!weddingId) return;
     try {
-      await fetch(`${API_BASE_URL}/messages/read/${weddingId}`, {
+      fetch(`${API_BASE_URL}/messages/read/${encodeURIComponent(weddingId)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ readerRole }),
-      });
+      }).catch(() => {});
     } catch (e) {}
 
     try {

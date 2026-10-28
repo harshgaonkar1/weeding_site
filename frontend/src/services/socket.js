@@ -16,8 +16,8 @@ export const getSocket = () => {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 500,
       reconnectionDelayMax: 2000,
-      timeout: 10000,
-      transports: ["websocket", "polling"],
+      timeout: 15000,
+      transports: ["polling", "websocket"],
       withCredentials: true,
     });
 
