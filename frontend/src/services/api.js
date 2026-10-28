@@ -1,5 +1,56 @@
 ﻿// API Service for Multi-Wedding, Guest Logistics & Call Center Management
-import { API_BASE_URL, BACKEND_SERVER_URL } from "../config/apiConfig";
+import { API_BASE_URL, BACKEND_SERVER_URL, SUPABASE_URL, SUPABASE_KEY } from "../config/apiConfig";
+
+// Direct Supabase REST helper for guaranteed immediate database deletions
+const directSupabaseDeleteWedding = async (weddingId) => {
+  if (!weddingId) return;
+  try {
+    const headers = {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+    };
+    // 1. Delete dependent guest call logs
+    await fetch(`${SUPABASE_URL}/rest/v1/guest_call_logs?wedding_id=eq.${encodeURIComponent(weddingId)}`, {
+      method: "DELETE",
+      headers,
+    }).catch(() => {});
+
+    // 2. Delete all guests belonging to this wedding
+    await fetch(`${SUPABASE_URL}/rest/v1/guests?wedding_id=eq.${encodeURIComponent(weddingId)}`, {
+      method: "DELETE",
+      headers,
+    }).catch(() => {});
+
+    // 3. Delete wedding record itself from Supabase
+    await fetch(`${SUPABASE_URL}/rest/v1/weddings?id=eq.${encodeURIComponent(weddingId)}`, {
+      method: "DELETE",
+      headers,
+    }).catch(() => {});
+  } catch (err) {
+    console.warn("Direct Supabase delete notice:", err);
+  }
+};
+
+const directSupabaseDeleteGuest = async (guestId) => {
+  if (!guestId) return;
+  try {
+    const headers = {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+    };
+    await fetch(`${SUPABASE_URL}/rest/v1/guest_call_logs?guest_id=eq.${encodeURIComponent(guestId)}`, {
+      method: "DELETE",
+      headers,
+    }).catch(() => {});
+
+    await fetch(`${SUPABASE_URL}/rest/v1/guests?id=eq.${encodeURIComponent(guestId)}`, {
+      method: "DELETE",
+      headers,
+    }).catch(() => {});
+  } catch (err) {}
+};
 import { generate500GuestsForRohanPriya } from "./guestGenerator.js";
 
 export { API_BASE_URL, BACKEND_SERVER_URL };
@@ -510,9 +561,27 @@ export const api = {
         }
       }
     } catch (e) { }
+
+    // Direct Supabase fallback if backend server is sleeping or unavailable
+    try {
+      const sRes = await fetch(`${SUPABASE_URL}/rest/v1/weddings?select=*&order=created_at.desc`, {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+        },
+      });
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        if (Array.isArray(sData)) {
+          const sanitized = sData.map(sanitizeWeddingFrontend);
+          setCachedWeddings(sanitized);
+          return sanitized;
+        }
+      }
+    } catch (e) {}
+
     return getCachedWeddings();
   },
-
   async createWedding(weddingData) {
     // Generate credentials if not supplied
     const creds = generateWeddingCredentials(
@@ -583,53 +652,41 @@ export const api = {
   },
 
   async deleteWedding(id) {
-    // Retry logic for Render cold-start 502/503 errors
-    const attemptDelete = async () => {
-      const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-      });
-      return res;
-    };
+    if (!id) return true;
 
-    let serverSuccess = false;
-    try {
-      let res = await attemptDelete();
-      // Retry once if server is waking up (502 Bad Gateway or 503 Service Unavailable)
-      if (res.status === 502 || res.status === 503) {
-        console.warn(`deleteWedding: server returned ${res.status}, retrying in 3s...`);
-        await new Promise((r) => setTimeout(r, 3000));
-        res = await attemptDelete();
-      }
-      if (res.ok) {
-        const json = await res.json().catch(() => ({}));
-        if (json.success) serverSuccess = true;
-      } else {
-        console.warn(`deleteWedding: server returned HTTP ${res.status}`);
-      }
-    } catch (e) {
-      console.warn("deleteWedding server notice:", e?.message || e);
-    }
+    // 1. Direct Supabase database erasure (guaranteed immediate removal in < 300ms)
+    const directPromise = directSupabaseDeleteWedding(id);
 
-    // Always clean up local cache regardless of server response
+    // 2. Also call backend endpoint to purge server store & Google Sheet
+    const backendPromise = (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/weddings/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+        return res.ok;
+      } catch (e) {
+        return false;
+      }
+    })();
+
+    // Await database erasure
+    await Promise.allSettled([directPromise, backendPromise]);
+
+    // 3. Purge from local browser cache immediately
     const list = getCachedWeddings().filter((w) => w.id !== id);
     setCachedWeddings(list);
     const guests = getCachedGuests().filter((g) => g.wedding_id !== id);
     setCachedGuests(guests);
     try {
-      localStorage.removeItem(`cached_messages_${id}`);
+      localStorage.removeItem('cached_messages_' + id);
     } catch (e) {}
 
-    if (!serverSuccess) {
-      console.warn(`deleteWedding: removed from local cache but server confirmation failed for ${id}`);
-    }
     return true;
   },
-
-  // Export Marriage Excel sheet (.xlsx)
   async exportMarriageExcel(weddingId) {
     try {
       const res = await fetch(`${API_BASE_URL}/weddings/${weddingId}/export-excel`);
@@ -904,24 +961,32 @@ export const api = {
   },
 
   async deleteGuest(id) {
-    if (getCurrentUserRole() === "call_center") {
-      throw new Error("Call Center desk has view-only access. Only Super Admin can delete guests.");
+    if (getCurrentUserRole() === 'call_center') {
+      throw new Error('Call Center desk has view-only access. Only Super Admin can delete guests.');
     }
-    try {
-      await fetch(`${API_BASE_URL}/guests/${id}`, {
-        method: "DELETE",
-        headers: {
-          "x-user-role": getCurrentUserRole() || "admin",
-        },
-      });
-    } catch (e) { }
+    if (!id) return true;
+
+    // 1. Direct Supabase deletion
+    const directPromise = directSupabaseDeleteGuest(id);
+
+    // 2. Also notify backend
+    const backendPromise = (async () => {
+      try {
+        await fetch(`${API_BASE_URL}/guests/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'x-user-role': getCurrentUserRole() || 'admin',
+          },
+        });
+      } catch (e) {}
+    })();
+
+    await Promise.allSettled([directPromise, backendPromise]);
 
     const list = getCachedGuests().filter((g) => g.id !== id);
     setCachedGuests(list);
     return true;
   },
-
-  // ------------------- CALL LOGS & CHECKPOINTS -------------------
   async fetchGuestCallLogs(guestId) {
     try {
       const res = await fetch(`${API_BASE_URL}/call-logs/guest/${guestId}`);

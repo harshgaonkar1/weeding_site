@@ -101,7 +101,7 @@ export const query = async (text, params = []) => {
     store.guests = store.guests.filter((g) => g.wedding_id !== id);
     store.guest_call_logs = store.guest_call_logs.filter((c) => c.wedding_id !== id);
     store.messages = (store.messages || []).filter((m) => m.wedding_id !== id);
-    saveMessagesToFile();
+    // skip disk write during delete
 
     if (supabase) {
       try {
@@ -126,7 +126,7 @@ export const query = async (text, params = []) => {
     const weddingId = params[0];
     const initialLen = (store.messages || []).length;
     store.messages = (store.messages || []).filter((m) => m.wedding_id !== weddingId);
-    saveMessagesToFile();
+    // skip disk write during delete
 
     if (supabase) {
       try {

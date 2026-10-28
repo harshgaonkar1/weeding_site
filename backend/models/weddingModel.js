@@ -376,7 +376,7 @@ export const WeddingModel = {
       store.guests = (store.guests || []).filter((g) => g.wedding_id !== id);
       store.guest_call_logs = (store.guest_call_logs || []).filter((c) => c.wedding_id !== id);
       store.messages = (store.messages || []).filter((m) => m.wedding_id !== id);
-      saveMessagesToFile();
+      // skip writing to disk on deletion to prevent file watchers restart
     }
     return deleted;
   },
