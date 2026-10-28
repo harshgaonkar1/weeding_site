@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import {
   Download,
   RefreshCw,
@@ -253,29 +253,27 @@ export default function Hero() {
       showToast("Only Admin can delete Marriage Cards", "error");
       return;
     }
+    const delId = deletingWedding.id;
     try {
       setIsDeletingWedding(true);
-      const delId = deletingWedding.id;
 
-      // 1. Optimistically remove from state
+      // 1. Optimistically remove wedding & its guests from local state immediately
       setWeddings((prev) => prev.filter((w) => w.id !== delId));
+      setGuests((prev) => prev.filter((g) => g.wedding_id !== delId));
 
-      // 2. Perform delete in backend & cache
+      // 2. Perform delete - cleans cache + syncs backend (graceful even if offline)
       await api.deleteWedding(delId);
       showToast("Marriage card removed");
 
+      // 3. Navigate away if we were viewing the deleted wedding
       if (selectedWedding?.id === delId) {
         setSelectedWedding(null);
         setActiveTab("weddings");
       }
       setDeletingWedding(null);
-
-      // 3. Refresh weddings, guaranteeing the deleted wedding remains removed
-      const refreshed = await api.fetchWeddings();
-      setWeddings((refreshed || []).filter((w) => w.id !== delId));
-      await loadGuests();
     } catch (err) {
       showToast("Failed to delete marriage card", "error");
+      setDeletingWedding(null);
     } finally {
       setIsDeletingWedding(false);
     }
