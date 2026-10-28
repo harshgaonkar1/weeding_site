@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "msg_1793189578393_95d326",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "client_user",
+    "sender_name": "Test Client",
+    "sender_role": "client",
+    "message": "Hello world test",
+    "is_read": false,
+    "created_at": "2026-10-28T12:12:58.397Z"
+  }
+]

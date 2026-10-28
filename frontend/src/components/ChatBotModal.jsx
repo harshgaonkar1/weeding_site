@@ -22,6 +22,7 @@ import {
   joinWeddingChat,
   leaveWeddingChat,
   sendSocketMessage,
+  fetchSocketMessages,
   markSocketMessagesRead,
   emitTyping,
 } from "../services/socket";
@@ -74,11 +75,18 @@ export default function ChatBotModal({
     }
   }, [selectedWedding?.id, user?.wedding_id, weddings]);
 
-  // Load message history from DB
+  // Load message history from DB (prefers Socket.IO, falls back to REST)
   const loadMessages = async (wId = activeWeddingId) => {
     const targetWId = wId || activeWeddingId || "wedding_01";
     try {
-      const data = await api.fetchMessages(targetWId);
+      // 1. Try fetching via live Socket.IO connection first (instant, 0ms, no CORS/502)
+      let data = await fetchSocketMessages(targetWId, 1500);
+
+      // 2. If socket hasn't delivered yet, fetch via REST API
+      if (!data || !Array.isArray(data)) {
+        data = await api.fetchMessages(targetWId);
+      }
+
       if (data && Array.isArray(data)) {
         setMessages((prev) => {
           // Keep any optimistic unsent messages currently in local state
@@ -104,7 +112,7 @@ export default function ChatBotModal({
           return unique;
         });
       }
-      // Mark messages as read via Socket.IO only (no HTTP call to avoid 502/CORS on cold-start)
+      // Mark messages as read via Socket.IO only (no HTTP call to avoid 502/CORS)
       const myRole = isAdmin ? "admin" : "client";
       markSocketMessagesRead(targetWId, myRole);
     } catch (e) {
@@ -196,11 +204,6 @@ export default function ChatBotModal({
     socket.on("messages_read", onMessagesRead);
     socket.on("user_typing", onUserTyping);
 
-    // Fast fallback sync every 8 seconds
-    const backupInterval = setInterval(() => {
-      loadMessages(targetWId);
-    }, 8000);
-
     return () => {
       clearTimeout(initialLoadTimer);
       leaveWeddingChat(targetWId);
@@ -209,7 +212,6 @@ export default function ChatBotModal({
       socket.off("new_message", onNewMessage);
       socket.off("messages_read", onMessagesRead);
       socket.off("user_typing", onUserTyping);
-      clearInterval(backupInterval);
     };
   }, [isOpen, activeWeddingId]);
 
@@ -295,19 +297,28 @@ export default function ChatBotModal({
     };
 
     try {
-      // 2. Broadcast via live Socket.IO (instant transmission)
-      sendSocketMessage(messagePayload);
-
-      // 3. Dual-channel background persistence via REST API
-      api.sendMessage(messagePayload).then((result) => {
-        if (result?.bot_reply) {
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === result.bot_reply.id)) return prev;
-            return [...prev, result.bot_reply];
-          });
-          setIsSending(false);
+      // 2. Transmit via live Socket.IO (0ms instant transmission, no CORS, saves to Supabase on server)
+      const sentViaSocket = sendSocketMessage(messagePayload, (response) => {
+        if (response?.data?.id) {
+          // Swap temp ID with persistent ID from server
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempId ? response.data : m))
+          );
         }
-      }).catch(() => {});
+      });
+
+      // 3. Fall back to REST API only if live Socket is offline/disconnected
+      if (!sentViaSocket) {
+        api.sendMessage(messagePayload).then((result) => {
+          if (result?.bot_reply) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === result.bot_reply.id)) return prev;
+              return [...prev, result.bot_reply];
+            });
+            setIsSending(false);
+          }
+        }).catch(() => {});
+      }
     } catch (e) {
       console.error("Error sending message:", e);
     } finally {

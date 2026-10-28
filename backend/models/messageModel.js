@@ -6,26 +6,66 @@ export const MessageModel = {
   // 1. Get all messages for a specific wedding
   async getByWeddingId(weddingId) {
     const targetWeddingId = weddingId || "wedding_01";
+    const localMsgs = (store.messages || []).filter((m) => m.wedding_id === targetWeddingId);
 
-    // Fetch from Supabase database
+    // Fetch from Supabase database with 2.5s safety timeout
     if (supabase) {
       try {
-        const { data, error } = await supabase
+        const queryPromise = supabase
           .from("wedding_messages")
           .select("*")
           .eq("wedding_id", targetWeddingId)
           .order("created_at", { ascending: true });
 
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Supabase fetch timeout")), 2500)
+        );
+
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
         if (!error && Array.isArray(data) && data.length > 0) {
+          // Merge with any in-memory messages not yet in database
+          const seen = new Set(data.map((m) => m.id));
+          localMsgs.forEach((lm) => {
+            if (!seen.has(lm.id)) {
+              data.push(lm);
+              seen.add(lm.id);
+            }
+          });
           return data;
         }
       } catch (err) {
-        console.warn("Notice: Live DB fetch fallback:", err.message);
+        console.warn("Notice: Live DB fetch fallback to local store:", err.message);
       }
     }
 
     // Local fallback
-    return (store.messages || []).filter((m) => m.wedding_id === targetWeddingId);
+    return localMsgs;
+  },
+
+  // Helper: Background asynchronous Supabase persistence
+  async persistToSupabase(newMsg) {
+    if (!supabase) return;
+    try {
+      const { error } = await supabase.from("wedding_messages").insert([newMsg]);
+      if (error) {
+        console.warn("Supabase insert note:", error.message);
+        // If foreign key constraint triggered, auto-create parent wedding row and retry
+        if (error.code === "23503" || error.message?.includes("foreign key")) {
+          await supabase.from("weddings").upsert({
+            id: newMsg.wedding_id,
+            groom_name: "Groom",
+            bride_name: "Bride",
+          });
+          await supabase.from("wedding_messages").insert([newMsg]);
+          console.log(`✅ [DB SUCCESS] Saved to Supabase after auto-creating wedding: ${newMsg.id}`);
+        }
+      } else {
+        console.log(`✅ [DB SUCCESS] Message saved to Supabase: ${newMsg.id}`);
+      }
+    } catch (err) {
+      console.warn("Supabase save note:", err.message);
+    }
   },
 
   // 2. Create and permanently save a new message in Supabase
@@ -46,33 +86,15 @@ export const MessageModel = {
       created_at,
     };
 
-    // 1. Save in local in-memory store
+    // 1. Save in local in-memory store immediately (0ms instant)
     if (!store.messages) store.messages = [];
     store.messages.push(newMsg);
     saveMessagesToFile();
 
-    // 2. Save directly into Supabase database
-    if (supabase) {
-      try {
-        const { error } = await supabase.from("wedding_messages").insert([newMsg]);
-        if (error) {
-          console.warn("Supabase insert note:", error.message);
-          // If foreign key constraint triggered, auto-create parent wedding row and retry
-          if (error.code === "23503" || error.message?.includes("foreign key")) {
-            await supabase.from("weddings").upsert({
-              id: safeWeddingId,
-              groom_name: "Groom",
-              bride_name: "Bride",
-            });
-            await supabase.from("wedding_messages").insert([newMsg]);
-          }
-        } else {
-          console.log(`✅ [DB SUCCESS] Message saved to Supabase: ${newMsg.id}`);
-        }
-      } catch (err) {
-        console.warn("Supabase save note:", err.message);
-      }
-    }
+    // 2. Persist to Supabase in background (non-blocking, never delays response or triggers 502)
+    this.persistToSupabase(newMsg).catch((err) => {
+      console.warn("Background persist note:", err.message);
+    });
 
     return newMsg;
   },

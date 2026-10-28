@@ -27,6 +27,21 @@ export const initializeChatSocket = (io) => {
       socket.leave(room);
     });
 
+    // Fetch messages via Socket.IO (0ms roundtrip, avoids HTTP preflight & 502)
+    socket.on("get_messages", async (weddingId, callback) => {
+      try {
+        const safeWeddingId = weddingId || "wedding_01";
+        const messages = await MessageModel.getByWeddingId(safeWeddingId);
+        if (typeof callback === "function") {
+          callback({ success: true, data: messages });
+        }
+      } catch (err) {
+        if (typeof callback === "function") {
+          callback({ success: false, data: [] });
+        }
+      }
+    });
+
     // Send a message via Socket.IO
     socket.on("send_message", async (data, callback) => {
       try {

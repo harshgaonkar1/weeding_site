@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { MessageSquare, Bot, Sparkles, Send, Bell } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
-import { getSocket, joinWeddingChat, leaveWeddingChat } from "../services/socket";
+import { getSocket, joinWeddingChat, leaveWeddingChat, fetchSocketMessages } from "../services/socket";
 
 export default function SidebarChatWidget({
   onOpenChat,
@@ -26,7 +26,10 @@ export default function SidebarChatWidget({
 
     const checkMessages = async () => {
       try {
-        const msgs = await api.fetchMessages(weddingId);
+        let msgs = await fetchSocketMessages(weddingId, 1500);
+        if (!msgs || !Array.isArray(msgs)) {
+          msgs = await api.fetchMessages(weddingId);
+        }
         if (isMounted) {
           if (msgs && msgs.length > 0) {
             const last = msgs[msgs.length - 1];

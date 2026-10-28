@@ -67,15 +67,36 @@ export const leaveWeddingChat = (weddingId) => {
 };
 
 /**
- * Send a message via Socket.IO - buffers automatically even if connecting
+ * Send a message via Socket.IO - returns true if sent via socket
  */
 export const sendSocketMessage = (messageData, callback) => {
   const s = getSocket();
-  if (s) {
+  if (s && s.connected) {
     s.emit("send_message", messageData, callback);
     return true;
   }
   return false;
+};
+
+/**
+ * Fetch message history via active Socket.IO connection (no HTTP fetch)
+ */
+export const fetchSocketMessages = (weddingId, timeoutMs = 3000) => {
+  return new Promise((resolve) => {
+    const s = getSocket();
+    if (!s || !s.connected) {
+      return resolve(null);
+    }
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    s.emit("get_messages", weddingId, (response) => {
+      clearTimeout(timer);
+      if (response && response.success && Array.isArray(response.data)) {
+        resolve(response.data);
+      } else {
+        resolve(null);
+      }
+    });
+  });
 };
 
 /**
