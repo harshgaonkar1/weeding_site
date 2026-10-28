@@ -49,9 +49,9 @@ export default function ChatBotModal({
 }) {
   const { user, isAdmin, isMarriageClient } = useAuth();
 
-  // Active wedding context for conversation
+  // Active wedding context for conversation (guaranteed valid ID fallback)
   const [activeWeddingId, setActiveWeddingId] = useState(
-    selectedWedding?.id || user?.wedding_id || (weddings && weddings[0]?.id) || null
+    selectedWedding?.id || user?.wedding_id || (weddings && weddings[0]?.id) || "wedding_01"
   );
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
@@ -66,25 +66,19 @@ export default function ChatBotModal({
 
   // Sync active wedding ID when selectedWedding or weddings change
   useEffect(() => {
-    if (selectedWedding?.id) {
+    const validWedding = selectedWedding?.id || user?.wedding_id || (weddings && weddings.length > 0 && weddings[0]?.id);
+    if (validWedding && (!activeWeddingId || activeWeddingId === "wedding_01")) {
+      setActiveWeddingId(validWedding);
+    } else if (selectedWedding?.id && activeWeddingId !== selectedWedding.id) {
       setActiveWeddingId(selectedWedding.id);
-    } else if (user?.wedding_id) {
-      setActiveWeddingId(user.wedding_id);
-    } else if (weddings && weddings.length > 0 && (!activeWeddingId || !weddings.some((w) => w.id === activeWeddingId))) {
-      setActiveWeddingId(weddings[0].id);
-    } else if (!weddings || weddings.length === 0) {
-      setActiveWeddingId(null);
     }
   }, [selectedWedding?.id, user?.wedding_id, weddings]);
 
   // Load message history from DB
   const loadMessages = async (wId = activeWeddingId) => {
-    if (!wId) {
-      setMessages([]);
-      return;
-    }
+    const targetWId = wId || activeWeddingId || "wedding_01";
     try {
-      const data = await api.fetchMessages(wId);
+      const data = await api.fetchMessages(targetWId);
       if (data && Array.isArray(data)) {
         setMessages((prev) => {
           // Keep any optimistic unsent messages currently in local state
@@ -112,8 +106,8 @@ export default function ChatBotModal({
       }
       // Mark messages as read for this role
       const myRole = isAdmin ? "admin" : "client";
-      api.markMessagesRead(wId, myRole);
-      markSocketMessagesRead(wId, myRole);
+      api.markMessagesRead(targetWId, myRole);
+      markSocketMessagesRead(targetWId, myRole);
     } catch (e) {
       console.error("Error loading chat messages:", e);
     }
@@ -121,26 +115,27 @@ export default function ChatBotModal({
 
   // Socket.IO Real-Time Connection & Live Listener
   useEffect(() => {
-    if (!isOpen || !activeWeddingId) return;
+    if (!isOpen) return;
+    const targetWId = activeWeddingId || selectedWedding?.id || user?.wedding_id || "wedding_01";
 
     // 1. Initial fetch from database to display all past message history
-    loadMessages(activeWeddingId);
+    loadMessages(targetWId);
 
     // 2. Connect to Socket.IO and join wedding room
     const socket = getSocket();
     setIsSocketLive(Boolean(socket?.connected));
 
-    joinWeddingChat(activeWeddingId);
+    joinWeddingChat(targetWId);
 
     const onConnect = () => {
       setIsSocketLive(true);
-      joinWeddingChat(activeWeddingId);
+      joinWeddingChat(targetWId);
     };
     const onDisconnect = () => setIsSocketLive(false);
 
     // Incoming Live Message Handler (0ms instant streaming)
     const onNewMessage = (newMsg) => {
-      if (!newMsg || newMsg.wedding_id !== activeWeddingId) return;
+      if (!newMsg || (newMsg.wedding_id !== targetWId && newMsg.wedding_id !== activeWeddingId)) return;
 
       setMessages((prev) => {
         // If identical id already present, keep
@@ -173,13 +168,13 @@ export default function ChatBotModal({
       // Auto mark as read if message is from the other party
       const myRole = isAdmin ? "admin" : "client";
       if (newMsg.sender_role !== myRole) {
-        markSocketMessagesRead(activeWeddingId, myRole);
+        markSocketMessagesRead(targetWId, myRole);
       }
     };
 
     // Live Read Receipts
     const onMessagesRead = ({ wedding_id, reader_role }) => {
-      if (wedding_id !== activeWeddingId) return;
+      if (wedding_id !== targetWId) return;
       setMessages((prev) =>
         prev.map((m) => (m.sender_role !== reader_role ? { ...m, is_read: true } : m))
       );
@@ -202,11 +197,11 @@ export default function ChatBotModal({
 
     // Fast fallback sync every 8 seconds
     const backupInterval = setInterval(() => {
-      loadMessages(activeWeddingId);
+      loadMessages(targetWId);
     }, 8000);
 
     return () => {
-      leaveWeddingChat(activeWeddingId);
+      leaveWeddingChat(targetWId);
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("new_message", onNewMessage);
@@ -261,20 +256,27 @@ export default function ChatBotModal({
     setIsSending(true);
     setInputText("");
 
+    const targetWeddingId =
+      activeWeddingId ||
+      selectedWedding?.id ||
+      user?.wedding_id ||
+      (weddings && weddings[0]?.id) ||
+      "wedding_01";
+
     const myRole = isAdmin ? "admin" : "client";
     const myName = isAdmin
       ? user?.name || "Manish (Admin)"
       : user?.name || `${currentWedding.groom_name} & ${currentWedding.bride_name}`;
 
     // Clear typing status
-    emitTyping(activeWeddingId, myName, false);
+    emitTyping(targetWeddingId, myName, false);
 
     // 1. OPTIMISTIC INSTANT UI UPDATE (0ms latency!)
     // Appears on the user's screen in 0 milliseconds
     const tempId = `msg_temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const optimisticMsg = {
       id: tempId,
-      wedding_id: activeWeddingId,
+      wedding_id: targetWeddingId,
       sender_id: user?.id || (isAdmin ? "user_admin_01" : "client_user"),
       sender_name: myName,
       sender_role: myRole,

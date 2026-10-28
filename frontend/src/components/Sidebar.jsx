@@ -364,7 +364,7 @@ export default function Sidebar({
         {/* Live Chatbot / Direct Messenger Widget on Sidebar (Only for User & Admin) */}
         <SidebarChatWidget
           onOpenChat={onOpenChat}
-          selectedWedding={selectedWedding}
+          selectedWedding={selectedWedding || (weddings && weddings[0])}
         />
       </div>
 

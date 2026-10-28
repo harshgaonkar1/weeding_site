@@ -31,17 +31,18 @@ export const initializeChatSocket = (io) => {
     socket.on("send_message", async (data, callback) => {
       try {
         const { wedding_id, sender_id, sender_name, sender_role, message, trigger_bot_reply } = data || {};
-        if (!wedding_id || !message || !message.trim()) {
-          if (typeof callback === "function") callback({ error: "wedding_id and message are required" });
+        const safeWeddingId = wedding_id || "wedding_01";
+        if (!message || !message.trim()) {
+          if (typeof callback === "function") callback({ error: "message is required" });
           return;
         }
 
         const role = sender_role || "client";
-        const room = `wedding_${wedding_id}`;
+        const room = `wedding_${safeWeddingId}`;
 
-        // 1. Instantly save in-memory & background sync to Supabase (0ms)
+        // 1. Instantly save in-memory & Supabase DB
         const savedMsg = await MessageModel.create({
-          wedding_id,
+          wedding_id: safeWeddingId,
           sender_id,
           sender_name,
           sender_role: role,
@@ -61,15 +62,15 @@ export const initializeChatSocket = (io) => {
               try {
                 // Fast in-memory lookup (<1ms)
                 let wedding = (store && Array.isArray(store.weddings))
-                  ? store.weddings.find((w) => w.id === wedding_id)
+                  ? store.weddings.find((w) => w.id === safeWeddingId)
                   : null;
                 let guests = (store && Array.isArray(store.guests))
-                  ? store.guests.filter((g) => g.wedding_id === wedding_id)
+                  ? store.guests.filter((g) => g.wedding_id === safeWeddingId)
                   : [];
 
                 if (!wedding) {
                   wedding = await Promise.race([
-                    WeddingModel.getById(wedding_id),
+                    WeddingModel.getById(safeWeddingId),
                     new Promise((r) => setTimeout(() => r(null), 400)),
                   ]).catch(() => null);
                 }
@@ -83,7 +84,7 @@ export const initializeChatSocket = (io) => {
 
                 // Save bot response in Supabase DB & local store
                 const savedBotMsg = await MessageModel.create({
-                  wedding_id,
+                  wedding_id: safeWeddingId,
                   sender_id: "emitly_bot",
                   sender_name: "Emitly Bot Concierge",
                   sender_role: "bot",

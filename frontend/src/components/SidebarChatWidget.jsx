@@ -12,7 +12,7 @@ export default function SidebarChatWidget({
   const [unreadCount, setUnreadCount] = useState(0);
   const [latestMessage, setLatestMessage] = useState(null);
 
-  const weddingId = selectedWedding?.id || user?.wedding_id;
+  const weddingId = selectedWedding?.id || user?.wedding_id || "wedding_01";
   const myRole = isAdmin ? "admin" : "client";
 
   // Fetch initial message history from database

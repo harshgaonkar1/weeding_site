@@ -4,8 +4,41 @@ import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
 import { ConciergeBotService } from "../services/conciergeBotService.js";
 import { store } from "../Db_connection/queries.js";
+import { supabase } from "../Db_connection/supabaseClient.js";
 
 const router = express.Router();
+
+// 0. Diagnostic status route to verify database connection and table readiness
+router.get("/debug/status", async (req, res) => {
+  let supaStatus = "not initialized";
+  let supaError = null;
+  let sampleCount = 0;
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from("wedding_messages").select("id, wedding_id, message, created_at").limit(5);
+      if (error) {
+        supaStatus = "error";
+        supaError = error.message;
+      } else {
+        supaStatus = "connected";
+        sampleCount = data ? data.length : 0;
+      }
+    } catch (e) {
+      supaStatus = "exception";
+      supaError = e.message;
+    }
+  }
+
+  res.json({
+    success: true,
+    supabase_configured: Boolean(supabase),
+    supabase_status: supaStatus,
+    supabase_error: supaError,
+    supabase_messages_found: sampleCount,
+    in_memory_messages_count: (store.messages || []).length,
+  });
+});
 
 // 1. Get all messages for a specific wedding
 router.get("/:weddingId", async (req, res) => {
@@ -32,18 +65,19 @@ router.post("/", async (req, res) => {
   try {
     const { wedding_id, sender_id, sender_name, sender_role, message, trigger_bot_reply } = req.body;
 
-    if (!wedding_id || !message || !message.trim()) {
+    const safeWeddingId = wedding_id || "wedding_01";
+    if (!message || !message.trim()) {
       return res.status(400).json({
         success: false,
-        message: "wedding_id and message are required",
+        message: "message is required",
       });
     }
 
     const role = sender_role || "client";
 
-    // 1. Create and save user/admin message in memory & Supabase (background)
+    // 1. Create and save user/admin message in memory & Supabase DB
     const savedMsg = await MessageModel.create({
-      wedding_id,
+      wedding_id: safeWeddingId,
       sender_id,
       sender_name,
       sender_role: role,
@@ -53,7 +87,7 @@ router.post("/", async (req, res) => {
     // Broadcast new message over Socket.IO to wedding room immediately
     const io = req.app.get("io");
     if (io) {
-      io.to(`wedding_${wedding_id}`).emit("new_message", savedMsg);
+      io.to(`wedding_${safeWeddingId}`).emit("new_message", savedMsg);
     }
 
     let savedBotMsg = null;
@@ -62,15 +96,15 @@ router.post("/", async (req, res) => {
     if (role !== "admin" || trigger_bot_reply) {
       try {
         let wedding = (store && Array.isArray(store.weddings))
-          ? store.weddings.find((w) => w.id === wedding_id)
+          ? store.weddings.find((w) => w.id === safeWeddingId)
           : null;
         let guests = (store && Array.isArray(store.guests))
-          ? store.guests.filter((g) => g.wedding_id === wedding_id)
+          ? store.guests.filter((g) => g.wedding_id === safeWeddingId)
           : [];
 
         if (!wedding) {
           wedding = await Promise.race([
-            WeddingModel.getById(wedding_id),
+            WeddingModel.getById(safeWeddingId),
             new Promise((r) => setTimeout(() => r(null), 400)),
           ]).catch(() => null);
         }
@@ -84,7 +118,7 @@ router.post("/", async (req, res) => {
 
         // Save bot reply directly in the database
         savedBotMsg = await MessageModel.create({
-          wedding_id,
+          wedding_id: safeWeddingId,
           sender_id: "emitly_bot",
           sender_name: "Emitly Bot Concierge",
           sender_role: "bot",
@@ -93,7 +127,7 @@ router.post("/", async (req, res) => {
 
         // Broadcast bot reply over Socket.IO to wedding room
         if (io) {
-          io.to(`wedding_${wedding_id}`).emit("new_message", savedBotMsg);
+          io.to(`wedding_${safeWeddingId}`).emit("new_message", savedBotMsg);
         }
       } catch (botErr) {
         console.warn("Notice: Error generating concierge bot reply:", botErr.message);
@@ -103,6 +137,8 @@ router.post("/", async (req, res) => {
     res.status(201).json({
       success: true,
       data: savedMsg,
+      supabase_saved: savedMsg._supabase_status?.success ?? false,
+      supabase_error: savedMsg._supabase_status?.error ?? null,
       bot_reply: savedBotMsg,
     });
   } catch (error) {

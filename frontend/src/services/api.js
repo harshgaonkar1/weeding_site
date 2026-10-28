@@ -1354,19 +1354,10 @@ function syncAllGuestsToDatabase() {
   // DIRECT USER & ADMIN MESSAGING & CHATBOT API
   // ============================================================
   async fetchMessages(weddingId) {
-    if (!weddingId) return [];
-
-    // Check if the wedding card exists in cached weddings
-    const cachedWeddings = getCachedWeddings();
-    if (cachedWeddings && cachedWeddings.length > 0 && !cachedWeddings.some((w) => w.id === weddingId)) {
-      try {
-        localStorage.removeItem(`cached_messages_${weddingId}`);
-      } catch (e) {}
-      return [];
-    }
+    const targetId = weddingId || "wedding_01";
 
     try {
-      const res = await fetch(`${API_BASE_URL}/messages/${weddingId}`);
+      const res = await fetch(`${API_BASE_URL}/messages/${encodeURIComponent(targetId)}`);
       if (res.ok) {
         const json = await res.json();
         if (json.data && Array.isArray(json.data)) {
@@ -1406,13 +1397,14 @@ function syncAllGuestsToDatabase() {
   },
 
   async sendMessage({ wedding_id, sender_id, sender_name, sender_role = "client", message, trigger_bot_reply = false }) {
-    if (!wedding_id || !message) return null;
+    const safeWeddingId = wedding_id || "wedding_01";
+    if (!message || !message.trim()) return null;
     try {
       const res = await fetch(`${API_BASE_URL}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          wedding_id,
+          wedding_id: safeWeddingId,
           sender_id,
           sender_name,
           sender_role,
@@ -1422,10 +1414,15 @@ function syncAllGuestsToDatabase() {
       });
       if (res.ok) {
         const json = await res.json();
+        if (json?.supabase_saved) {
+          console.log("✅ Message confirmed saved in Supabase DB:", json.data?.id);
+        } else if (json?.supabase_error) {
+          console.warn("⚠️ Supabase save notice from backend:", json.supabase_error);
+        }
         if (json?.data) {
           let list = [];
           try {
-            const local = localStorage.getItem(`cached_messages_${wedding_id}`);
+            const local = localStorage.getItem(`cached_messages_${safeWeddingId}`);
             if (local) list = JSON.parse(local);
           } catch (e) {}
 
@@ -1438,7 +1435,7 @@ function syncAllGuestsToDatabase() {
             list.push(json.bot_reply);
           }
           try {
-            localStorage.setItem(`cached_messages_${wedding_id}`, JSON.stringify(list));
+            localStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
           } catch (e) {}
         }
         return json;
@@ -1450,7 +1447,7 @@ function syncAllGuestsToDatabase() {
     // Local fallback
     const newMsg = {
       id: `msg_local_${Date.now()}`,
-      wedding_id,
+      wedding_id: safeWeddingId,
       sender_id: sender_id || "client_user",
       sender_name: sender_name || (sender_role === "admin" ? "Manish (Admin)" : "Wedding Client"),
       sender_role,
@@ -1461,18 +1458,18 @@ function syncAllGuestsToDatabase() {
 
     let list = [];
     try {
-      const local = localStorage.getItem(`cached_messages_${wedding_id}`);
+      const local = localStorage.getItem(`cached_messages_${safeWeddingId}`);
       if (local) list = JSON.parse(local);
     } catch (e) {}
 
     // Avoid duplicate insertions
     const isDuplicate = list.some(
-      (m) => m.wedding_id === wedding_id && m.message === message && Math.abs(new Date(m.created_at) - new Date()) < 2000
+      (m) => m.wedding_id === safeWeddingId && m.message === message && Math.abs(new Date(m.created_at) - new Date()) < 2000
     );
     if (!isDuplicate) {
       list.push(newMsg);
       try {
-        localStorage.setItem(`cached_messages_${wedding_id}`, JSON.stringify(list));
+        localStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
       } catch (e) {}
     }
 
