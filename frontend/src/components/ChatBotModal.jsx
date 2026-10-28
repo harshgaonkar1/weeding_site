@@ -12,9 +12,19 @@ import {
   Heart,
   Plane,
   RefreshCw,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
+import {
+  getSocket,
+  joinWeddingChat,
+  leaveWeddingChat,
+  sendSocketMessage,
+  markSocketMessagesRead,
+  emitTyping,
+} from "../services/socket";
 
 const QUICK_CLIENT_PROMPTS = [
   "Airport shuttle & cab status update?",
@@ -47,9 +57,12 @@ export default function ChatBotModal({
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSocketLive, setIsSocketLive] = useState(false);
+  const [remoteTypingUser, setRemoteTypingUser] = useState(null);
 
   const messagesEndRef = useRef(null);
   const isSendingRef = useRef(false);
+  const typingTimeoutRef = useRef(null);
 
   // Sync active wedding ID when selectedWedding or weddings change
   useEffect(() => {
@@ -64,7 +77,7 @@ export default function ChatBotModal({
     }
   }, [selectedWedding?.id, user?.wedding_id, weddings]);
 
-  // Load messages function
+  // Load message history from DB
   const loadMessages = async (wId = activeWeddingId) => {
     if (!wId) {
       setMessages([]);
@@ -73,7 +86,6 @@ export default function ChatBotModal({
     try {
       const data = await api.fetchMessages(wId);
       if (data && Array.isArray(data)) {
-        // Deduplicate messages by id
         const seen = new Set();
         const unique = [];
         data.forEach((m) => {
@@ -87,29 +99,92 @@ export default function ChatBotModal({
       // Mark messages as read for this role
       const myRole = isAdmin ? "admin" : "client";
       api.markMessagesRead(wId, myRole);
+      markSocketMessagesRead(wId, myRole);
     } catch (e) {
       console.error("Error loading chat messages:", e);
     }
   };
 
-  // Poll for new messages every 3.5 seconds while open
+  // Socket.IO Real-Time Connection & Live Listener
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !activeWeddingId) return;
 
+    // 1. Initial fetch from database to display all message history
     loadMessages(activeWeddingId);
-    const interval = setInterval(() => {
-      loadMessages(activeWeddingId);
-    }, 3500);
 
-    return () => clearInterval(interval);
+    // 2. Connect to Socket.IO and join wedding room
+    const socket = getSocket();
+    setIsSocketLive(Boolean(socket?.connected));
+
+    joinWeddingChat(activeWeddingId);
+
+    const onConnect = () => setIsSocketLive(true);
+    const onDisconnect = () => setIsSocketLive(false);
+
+    // Incoming Live Message Handler
+    const onNewMessage = (newMsg) => {
+      if (!newMsg || newMsg.wedding_id !== activeWeddingId) return;
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMsg.id)) return prev;
+        return [...prev, newMsg];
+      });
+
+      // Clear typing indicator once a message arrives
+      setRemoteTypingUser(null);
+
+      // Auto mark as read if message is from the other party
+      const myRole = isAdmin ? "admin" : "client";
+      if (newMsg.sender_role !== myRole) {
+        markSocketMessagesRead(activeWeddingId, myRole);
+      }
+    };
+
+    // Live Read Receipts
+    const onMessagesRead = ({ wedding_id, reader_role }) => {
+      if (wedding_id !== activeWeddingId) return;
+      setMessages((prev) =>
+        prev.map((m) => (m.sender_role !== reader_role ? { ...m, is_read: true } : m))
+      );
+    };
+
+    // Remote Typing Indicator
+    const onUserTyping = ({ user_name, is_typing }) => {
+      if (is_typing) {
+        setRemoteTypingUser(user_name);
+      } else {
+        setRemoteTypingUser(null);
+      }
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("new_message", onNewMessage);
+    socket.on("messages_read", onMessagesRead);
+    socket.on("user_typing", onUserTyping);
+
+    // Backup background refresh every 20 seconds (secondary safeguard)
+    const backupInterval = setInterval(() => {
+      loadMessages(activeWeddingId);
+    }, 20000);
+
+    return () => {
+      leaveWeddingChat(activeWeddingId);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("new_message", onNewMessage);
+      socket.off("messages_read", onMessagesRead);
+      socket.off("user_typing", onUserTyping);
+      clearInterval(backupInterval);
+    };
   }, [isOpen, activeWeddingId]);
 
-  // Scroll to bottom on message change
+  // Scroll to bottom on message change or typing
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isOpen, isSending]);
+  }, [messages, isOpen, isSending, remoteTypingUser]);
 
   if (!isOpen) return null;
 
@@ -122,8 +197,24 @@ export default function ChatBotModal({
       bride_name: user?.name?.split("&")[1]?.trim() || "Bride",
     };
 
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputText(val);
+
+    // Emit live typing indicator
+    const myName = isAdmin
+      ? user?.name || "Admin"
+      : user?.name || `${currentWedding.groom_name} & ${currentWedding.bride_name}`;
+
+    emitTyping(activeWeddingId, myName, val.length > 0);
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      emitTyping(activeWeddingId, myName, false);
+    }, 2000);
+  };
+
   const handleSendMessage = async (customText = null) => {
-    // Prevent double submission
     if (isSendingRef.current) return;
 
     const textToSend = (customText || inputText).trim();
@@ -138,30 +229,38 @@ export default function ChatBotModal({
       ? user?.name || "Manish (Admin)"
       : user?.name || `${currentWedding.groom_name} & ${currentWedding.bride_name}`;
 
-    try {
-      // Send message to API which saves it to DB and returns Concierge Bot response for clients
-      const result = await api.sendMessage({
-        wedding_id: activeWeddingId,
-        sender_id: user?.id,
-        sender_name: myName,
-        sender_role: myRole,
-        message: textToSend,
-        trigger_bot_reply: !isAdmin,
-      });
+    // Clear typing status
+    emitTyping(activeWeddingId, myName, false);
 
-      if (result?.data) {
-        setMessages((prev) => {
-          const next = [...prev];
-          if (!next.some((m) => m.id === result.data.id)) {
-            next.push(result.data);
-          }
-          if (result.bot_reply && !next.some((m) => m.id === result.bot_reply.id)) {
-            next.push(result.bot_reply);
-          }
-          return next;
-        });
+    const messagePayload = {
+      wedding_id: activeWeddingId,
+      sender_id: user?.id || (isAdmin ? "user_admin_01" : "client_user"),
+      sender_name: myName,
+      sender_role: myRole,
+      message: textToSend,
+      trigger_bot_reply: !isAdmin,
+    };
+
+    try {
+      // 1. Try sending via live Socket.IO
+      const sentViaSocket = sendSocketMessage(messagePayload);
+
+      // 2. If socket is disconnected, fallback to REST API
+      if (!sentViaSocket) {
+        const result = await api.sendMessage(messagePayload);
+        if (result?.data) {
+          setMessages((prev) => {
+            const next = [...prev];
+            if (!next.some((m) => m.id === result.data.id)) {
+              next.push(result.data);
+            }
+            if (result.bot_reply && !next.some((m) => m.id === result.bot_reply.id)) {
+              next.push(result.bot_reply);
+            }
+            return next;
+          });
+        }
       }
-      await loadMessages(activeWeddingId);
     } catch (e) {
       console.error("Error sending message:", e);
     } finally {
@@ -194,17 +293,34 @@ export default function ChatBotModal({
                     ? `Chat with ${currentWedding.groom_name} & ${currentWedding.bride_name}`
                     : "Wedding Desk & Admin Chat"}
                 </h3>
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#84e030] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#84e030]"></span>
-                </span>
+                {/* Live Socket Status Badge */}
+                <div
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    isSocketLive
+                      ? "bg-emerald-500/20 text-[#84e030] border border-emerald-500/30"
+                      : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                  }`}
+                  title={isSocketLive ? "Live Socket.IO Connected" : "Connecting to Socket.IO..."}
+                >
+                  <span className="relative flex h-1.5 w-1.5">
+                    {isSocketLive && (
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#84e030] opacity-75"></span>
+                    )}
+                    <span
+                      className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
+                        isSocketLive ? "bg-[#84e030]" : "bg-amber-400"
+                      }`}
+                    ></span>
+                  </span>
+                  <span>{isSocketLive ? "Live" : "Syncing"}</span>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 text-[11px] text-emerald-200/90 truncate">
                 <span>
                   {isAdmin
                     ? "Direct communication channel with wedding client"
-                    : "Chatting with Super Admin Manish"}
+                    : "Live chat with Super Admin Manish & Bot Concierge"}
                 </span>
               </div>
             </div>
@@ -235,7 +351,7 @@ export default function ChatBotModal({
                 setIsRefreshing(true);
                 loadMessages(activeWeddingId).finally(() => setIsRefreshing(false));
               }}
-              title="Refresh messages"
+              title="Refresh messages from database"
               className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -277,10 +393,10 @@ export default function ChatBotModal({
               </div>
               <div>
                 <h4 className="text-sm font-bold text-slate-800">
-                  Start Conversation
+                  Live Conversation History
                 </h4>
                 <p className="text-xs text-slate-500 max-w-xs mt-1">
-                  Send a message to discuss airport transfers, guest dietary preferences, room allocations, or RSVP updates.
+                  Send a message to discuss airport transfers, guest dietary preferences, room allocations, or RSVP updates. All chats are saved in database.
                 </p>
               </div>
             </div>
@@ -343,7 +459,13 @@ export default function ChatBotModal({
                               })
                             : ""}
                         </span>
-                        {isMe && <CheckCheck className="w-3 h-3 text-[#84e030]" />}
+                        {isMe && (
+                          <CheckCheck
+                            className={`w-3 h-3 ${
+                              msg.is_read ? "text-[#84e030]" : "text-emerald-200/60"
+                            }`}
+                          />
+                        )}
                       </div>
                     </div>
                   )}
@@ -352,6 +474,19 @@ export default function ChatBotModal({
             })
           )}
 
+          {/* Remote user typing indicator */}
+          {remoteTypingUser && (
+            <div className="flex items-center gap-2 text-xs text-slate-500 italic px-2 py-1 bg-slate-100/80 rounded-xl max-w-fit">
+              <span className="inline-flex gap-1 items-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse delay-75"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse delay-150"></span>
+              </span>
+              <span>{remoteTypingUser} is typing...</span>
+            </div>
+          )}
+
+          {/* Bot is thinking / generating response */}
           {isSending && !isAdmin && (
             <div className="flex flex-col items-start my-1 animate-pulse">
               <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl px-3.5 py-2 text-xs text-emerald-800 flex items-center gap-2 shadow-2xs">
@@ -370,7 +505,7 @@ export default function ChatBotModal({
             <textarea
               rows={1}
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder={
                 isAdmin

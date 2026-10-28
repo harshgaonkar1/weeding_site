@@ -1,4 +1,7 @@
 ﻿import express from "express";
+import http from "http";
+import { Server as SocketIOServer } from "socket.io";
+import { initializeChatSocket } from "./socket/chatSocket.js";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
@@ -33,6 +36,23 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Initialize HTTP server and Socket.IO for Live Real-Time Chatbot
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: (origin, callback) => callback(null, true),
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-user-role"],
+  },
+  pingTimeout: 30000,
+  pingInterval: 15000,
+});
+
+// Attach io instance to express app so routes can broadcast messages
+app.set("io", io);
+initializeChatSocket(io);
 
 // Initialize exports folder
 const exportDir = getExportDir();
@@ -122,8 +142,8 @@ process.on("uncaughtException", (error) => {
   console.error("❌ Uncaught Exception:", error);
 });
 
-// Start Server
-app.listen(PORT, async () => {
-  console.log(`🚀 Backend Server started and listening on port ${PORT}`);
+// Start Server with Socket.IO Enabled
+server.listen(PORT, async () => {
+  console.log(`🚀 Backend Server & Live Socket.IO Chat started on port ${PORT}`);
   await testConnection();
 });

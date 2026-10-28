@@ -425,7 +425,12 @@ export const WeddingModel = {
               console.warn('Supabase guests delete notice for ' + id + ':', e.message);
             }
 
-            // d. Delete wedding record itself (parent table)
+            // d. Delete wedding messages (child table of weddings)
+            try {
+              await supabase.from('wedding_messages').delete().eq('wedding_id', id);
+            } catch (e) {}
+
+            // e. Delete wedding record itself (parent table)
             const { error: weddingDelErr } = await supabase.from('weddings').delete().eq('id', id);
             if (weddingDelErr) {
               console.warn('Supabase wedding delete error for ' + id + ':', weddingDelErr.message);

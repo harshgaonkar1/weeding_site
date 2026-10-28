@@ -50,6 +50,12 @@ router.post("/", async (req, res) => {
       message: message.trim(),
     });
 
+    // Broadcast new message over Socket.IO to wedding room
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`wedding_${wedding_id}`).emit("new_message", savedMsg);
+    }
+
     let savedBotMsg = null;
 
     // 2. If message is from client/user or trigger_bot_reply requested, generate Concierge Bot reply
@@ -75,6 +81,11 @@ router.post("/", async (req, res) => {
           sender_role: "bot",
           message: botReplyText,
         });
+
+        // Broadcast bot reply over Socket.IO to wedding room
+        if (io) {
+          io.to(`wedding_${wedding_id}`).emit("new_message", savedBotMsg);
+        }
       } catch (botErr) {
         console.warn("Notice: Error generating concierge bot reply:", botErr.message);
       }

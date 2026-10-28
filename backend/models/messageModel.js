@@ -143,10 +143,15 @@ export const MessageModel = {
     // 2. Persist into Supabase database table with safety timeout
     if (supabase) {
       try {
-        await Promise.race([
-          supabase.from("wedding_messages").upsert(newMsg),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase timeout")), 2500)),
-        ]).catch(() => {});
+        const { error: supaErr } = await Promise.race([
+          supabase.from("wedding_messages").insert(newMsg),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase timeout")), 4000)),
+        ]);
+        if (supaErr) {
+          console.warn("Supabase wedding_messages insert note:", supaErr.message);
+        } else {
+          console.log(`✅ Message ${newMsg.id} saved to Supabase wedding_messages`);
+        }
       } catch (e) {
         console.warn("Notice: Supabase wedding_messages insert note:", e.message);
       }
