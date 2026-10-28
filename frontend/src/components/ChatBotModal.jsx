@@ -104,9 +104,8 @@ export default function ChatBotModal({
           return unique;
         });
       }
-      // Mark messages as read for this role
+      // Mark messages as read via Socket.IO only (no HTTP call to avoid 502/CORS on cold-start)
       const myRole = isAdmin ? "admin" : "client";
-      api.markMessagesRead(targetWId, myRole);
       markSocketMessagesRead(targetWId, myRole);
     } catch (e) {
       console.error("Error loading chat messages:", e);
@@ -118,14 +117,16 @@ export default function ChatBotModal({
     if (!isOpen) return;
     const targetWId = activeWeddingId || selectedWedding?.id || user?.wedding_id || "wedding_01";
 
-    // 1. Initial fetch from database to display all past message history
-    loadMessages(targetWId);
-
-    // 2. Connect to Socket.IO and join wedding room
+    // 1. Connect to Socket.IO and join wedding room immediately
     const socket = getSocket();
     setIsSocketLive(Boolean(socket?.connected));
-
     joinWeddingChat(targetWId);
+
+    // 2. Delay initial DB fetch by 1.5s so Render's cold-starting server has time to boot
+    //    (Socket.IO connects fast via polling, but HTTP routes need the server fully ready)
+    const initialLoadTimer = setTimeout(() => {
+      loadMessages(targetWId);
+    }, 1500);
 
     const onConnect = () => {
       setIsSocketLive(true);
@@ -201,6 +202,7 @@ export default function ChatBotModal({
     }, 8000);
 
     return () => {
+      clearTimeout(initialLoadTimer);
       leaveWeddingChat(targetWId);
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);

@@ -1399,7 +1399,9 @@ function syncAllGuestsToDatabase() {
   async sendMessage({ wedding_id, sender_id, sender_name, sender_role = "client", message, trigger_bot_reply = false }) {
     const safeWeddingId = wedding_id || "wedding_01";
     if (!message || !message.trim()) return null;
-    try {
+
+    // Helper: attempt a single POST to save message in backend DB
+    const attempt = async () => {
       const res = await fetch(`${API_BASE_URL}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1412,6 +1414,18 @@ function syncAllGuestsToDatabase() {
           trigger_bot_reply,
         }),
       });
+      return res;
+    };
+
+    try {
+      let res = await attempt();
+
+      // If server returned 502 (cold-start), wait 3 seconds and retry once
+      if (!res.ok && res.status === 502) {
+        await new Promise((r) => setTimeout(r, 3000));
+        res = await attempt();
+      }
+
       if (res.ok) {
         const json = await res.json();
         if (json?.supabase_saved) {
@@ -1478,14 +1492,8 @@ function syncAllGuestsToDatabase() {
 
   async markMessagesRead(weddingId, readerRole = "client") {
     if (!weddingId) return;
-    try {
-      fetch(`${API_BASE_URL}/messages/read/${encodeURIComponent(weddingId)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ readerRole }),
-      }).catch(() => {});
-    } catch (e) {}
-
+    // Only update local cache — HTTP call is skipped to avoid CORS/502 on cold-start.
+    // Socket.IO "mark_read" event handles the live broadcast (called separately in ChatBotModal).
     try {
       const local = localStorage.getItem(`cached_messages_${weddingId}`);
       if (local) {
