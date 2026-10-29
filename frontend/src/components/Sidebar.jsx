@@ -362,10 +362,12 @@ export default function Sidebar({
         </nav>
 
         {/* Live Chatbot / Direct Messenger Widget on Sidebar (Only for User & Admin) */}
-        <SidebarChatWidget
-          onOpenChat={onOpenChat}
-          selectedWedding={selectedWedding || (weddings && weddings[0])}
-        />
+        {(isAdmin || isMarriageClient) && (
+          <SidebarChatWidget
+            onOpenChat={onOpenChat}
+            selectedWedding={selectedWedding || (weddings && weddings[0])}
+          />
+        )}
       </div>
 
       {/* Bottom Profile Footer */}

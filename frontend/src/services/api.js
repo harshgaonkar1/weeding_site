@@ -1357,7 +1357,15 @@ function syncAllGuestsToDatabase() {
     const targetId = weddingId || "wedding_01";
 
     try {
-      const res = await fetch(`${API_BASE_URL}/messages/${encodeURIComponent(targetId)}`);
+      const token = localStorage.getItem("manish_auth_token") || "";
+      const headers = { Accept: "application/json" };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/messages/${encodeURIComponent(targetId)}`, {
+        headers,
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.data && Array.isArray(json.data)) {
@@ -1374,7 +1382,7 @@ function syncAllGuestsToDatabase() {
         }
       }
     } catch (e) {
-      console.warn("Messages API unreachable, loading cached messages:", e.message);
+      console.warn("Messages API notice:", e.message);
     }
 
     try {

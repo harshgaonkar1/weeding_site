@@ -15,8 +15,14 @@ export default function SidebarChatWidget({
   const weddingId = selectedWedding?.id || user?.wedding_id || "wedding_01";
   const myRole = isAdmin ? "admin" : "client";
 
-  // Fetch initial message history from database
+  // Fetch initial message history from database (no polling interval spam; live updates handled by Socket.IO)
   useEffect(() => {
+    if (!isAdmin && !isMarriageClient) {
+      setLatestMessage(null);
+      setUnreadCount(0);
+      return;
+    }
+
     if (!weddingId) {
       setLatestMessage(null);
       setUnreadCount(0);
@@ -43,6 +49,7 @@ export default function SidebarChatWidget({
       } catch (e) {}
     };
 
+    // Load once on mount or when wedding/role changes
     checkMessages();
 
     // Socket.IO passive listeners for live updates if socket is connected
@@ -66,17 +73,13 @@ export default function SidebarChatWidget({
     socket.on("new_message", handleNewMessage);
     socket.on("messages_read", handleMessagesRead);
 
-    // Periodic backup sync every 30s
-    const interval = setInterval(checkMessages, 30000);
-
     return () => {
       isMounted = false;
       socket.off("message", handleNewMessage);
       socket.off("new_message", handleNewMessage);
       socket.off("messages_read", handleMessagesRead);
-      clearInterval(interval);
     };
-  }, [weddingId, myRole]);
+  }, [weddingId, myRole, isAdmin, isMarriageClient]);
 
   // Only for user (marriage client) and admin
   if (!isAdmin && !isMarriageClient) return null;
