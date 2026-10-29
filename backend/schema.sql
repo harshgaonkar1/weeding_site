@@ -109,6 +109,9 @@ CREATE TABLE IF NOT EXISTS guests (
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure column exists if table was already created earlier
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS relation VARCHAR(100) DEFAULT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_guests_wedding_id ON guests (wedding_id);
 CREATE INDEX IF NOT EXISTS idx_guests_guest_name ON guests (guest_name);
 CREATE INDEX IF NOT EXISTS idx_guests_side ON guests (side);
