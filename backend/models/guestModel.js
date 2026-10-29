@@ -151,8 +151,10 @@ export const GuestModel = {
 
         const { data, error } = await query;
         if (data && !error) {
-          // Sanitize any previously corrupted records where last_call_summary === guest_name
+          // Sanitize any previously corrupted records and preserve relation
           const sanitized = data.map((g) => {
+            const memoryGuest = (store.guests || []).find((mg) => mg.id === g.id);
+            const relation = g.relation !== undefined && g.relation !== null ? g.relation : (memoryGuest?.relation || null);
             let fixed = false;
             let callSummary = g.last_call_summary;
             let callStatus = g.call_status;
@@ -179,13 +181,15 @@ export const GuestModel = {
               }
             }
 
+            const updatedRow = {
+              ...g,
+              relation,
+              last_call_summary: callSummary,
+              call_status: callStatus,
+              call_count: callCount,
+            };
+
             if (fixed) {
-              const updatedRow = {
-                ...g,
-                last_call_summary: callSummary,
-                call_status: callStatus,
-                call_count: callCount,
-              };
               // Asynchronously heal the record in Supabase
               supabase
                 .from("guests")
@@ -197,9 +201,8 @@ export const GuestModel = {
                 .eq("id", g.id)
                 .then(() => {})
                 .catch(() => {});
-              return updatedRow;
             }
-            return g;
+            return updatedRow;
           });
 
           // Keep in-memory store in sync
@@ -219,6 +222,7 @@ export const GuestModel = {
               (g) =>
                 (g.guest_name && g.guest_name.toLowerCase().includes(q)) ||
                 (g.contact && g.contact.toLowerCase().includes(q)) ||
+                (g.relation && g.relation.toLowerCase().includes(q)) ||
                 (g.arrival_flight_train_no && g.arrival_flight_train_no.toLowerCase().includes(q)) ||
                 (g.departure_flight_train_no && g.departure_flight_train_no.toLowerCase().includes(q)) ||
                 (g.arrival_location && g.arrival_location.toLowerCase().includes(q)) ||
@@ -299,6 +303,7 @@ export const GuestModel = {
       query += ` AND (
         guest_name ILIKE $${pIdx} OR 
         contact ILIKE $${pIdx} OR 
+        relation ILIKE $${pIdx} OR 
         arrival_flight_train_no ILIKE $${pIdx} OR 
         departure_flight_train_no ILIKE $${pIdx} OR 
         arrival_location ILIKE $${pIdx} OR 
@@ -345,6 +350,7 @@ export const GuestModel = {
       "arrival_date",
       "departure_date",
       "side",
+      "relation",
       "call_count",
       "last_called_at",
     ];
@@ -359,15 +365,19 @@ export const GuestModel = {
 
   // 2. Get guest by ID
   async getById(id) {
+    const memoryGuest = (store.guests || []).find((g) => g.id === id);
     if (supabase) {
       try {
         const { data } = await supabase.from("guests").select("*").eq("id", id).single();
-        if (data) return data;
+        if (data) {
+          const relation = data.relation !== undefined && data.relation !== null ? data.relation : (memoryGuest?.relation || null);
+          return { ...data, relation };
+        }
       } catch (e) {}
     }
 
     const { rows } = await pool.query("SELECT * FROM guests WHERE id = $1", [id]);
-    return rows[0] || null;
+    return rows[0] || memoryGuest || null;
   },
 
   // 3. Create a new guest
@@ -408,6 +418,7 @@ export const GuestModel = {
       guest_name: (data.guest_name || "").trim(),
       contact: data.contact || null,
       side: data.side || "Groom",
+      relation: data.relation !== undefined && data.relation ? String(data.relation).trim() : null,
       rsvp_status: data.rsvp_status || "Confirmed",
       id_card_received: data.id_card_received || "No",
       arrival_date: data.arrival_date || null,
@@ -434,7 +445,12 @@ export const GuestModel = {
 
     if (supabase) {
       try {
-        await supabase.from("guests").upsert(newGuestRecord);
+        const supaPayload = { ...newGuestRecord };
+        const { error: supaErr } = await supabase.from("guests").upsert(supaPayload);
+        if (supaErr && (supaErr.message?.includes("relation") || supaErr.code === "PGRST204")) {
+          delete supaPayload.relation;
+          await supabase.from("guests").upsert(supaPayload);
+        }
       } catch (err) {
         console.warn("Supabase guest create notice:", err.message);
       }
@@ -442,11 +458,11 @@ export const GuestModel = {
 
     const query = `
       INSERT INTO guests (
-        id, wedding_id, sr_no, guest_name, contact, side, rsvp_status, id_card_received,
+        id, wedding_id, sr_no, guest_name, contact, side, relation, rsvp_status, id_card_received,
         arrival_date, arrival_time, arrival_location, arrival_flight_train_no,
         departure_date, departure_time, departure_location, departure_flight_train_no,
         id_card_copy, special_request, call_count, call_status, last_called_at, last_call_summary
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
     `;
 
     const values = [
@@ -456,6 +472,7 @@ export const GuestModel = {
       newGuestRecord.guest_name,
       newGuestRecord.contact,
       newGuestRecord.side,
+      newGuestRecord.relation,
       newGuestRecord.rsvp_status,
       newGuestRecord.id_card_received,
       newGuestRecord.arrival_date,
@@ -512,6 +529,7 @@ export const GuestModel = {
         guest_name: data.guest_name.trim(),
         contact: data.contact || null,
         side: data.side || "Groom",
+        relation: data.relation !== undefined && data.relation ? String(data.relation).trim() : null,
         rsvp_status: data.rsvp_status || "Confirmed",
         id_card_received: data.id_card_received || "No",
         arrival_date: data.arrival_date || null,
@@ -532,17 +550,22 @@ export const GuestModel = {
 
       if (supabase) {
         try {
-          await supabase.from("guests").upsert(newGuest);
+          const supaPayload = { ...newGuest };
+          const { error: supaErr } = await supabase.from("guests").upsert(supaPayload);
+          if (supaErr && (supaErr.message?.includes("relation") || supaErr.code === "PGRST204")) {
+            delete supaPayload.relation;
+            await supabase.from("guests").upsert(supaPayload);
+          }
         } catch (e) {}
       }
 
       await pool.query(
         `INSERT INTO guests (
-          id, wedding_id, sr_no, guest_name, contact, side, rsvp_status, id_card_received,
+          id, wedding_id, sr_no, guest_name, contact, side, relation, rsvp_status, id_card_received,
           arrival_date, arrival_time, arrival_location, arrival_flight_train_no,
           departure_date, departure_time, departure_location, departure_flight_train_no,
           id_card_copy, special_request, call_count, call_status, last_called_at, last_call_summary
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
         [
           id,
           weddingId,
@@ -550,6 +573,7 @@ export const GuestModel = {
           newGuest.guest_name,
           newGuest.contact,
           newGuest.side,
+          newGuest.relation,
           newGuest.rsvp_status,
           newGuest.id_card_received,
           newGuest.arrival_date,
@@ -586,6 +610,7 @@ export const GuestModel = {
       guest_name: data.guest_name !== undefined ? String(data.guest_name).trim() : existing.guest_name,
       contact: data.contact !== undefined ? (data.contact ? String(data.contact).trim() : null) : existing.contact,
       side: data.side !== undefined && data.side ? String(data.side) : (existing.side || "Groom"),
+      relation: data.relation !== undefined ? (data.relation ? String(data.relation).trim() : null) : (existing.relation || null),
       rsvp_status: data.rsvp_status !== undefined && data.rsvp_status ? String(data.rsvp_status) : (existing.rsvp_status || "Confirmed"),
       id_card_received: data.id_card_received !== undefined && data.id_card_received ? String(data.id_card_received) : (existing.id_card_received || "No"),
       arrival_date: data.arrival_date !== undefined ? (data.arrival_date || null) : existing.arrival_date,
@@ -622,13 +647,24 @@ export const GuestModel = {
 
     if (supabase) {
       try {
+        const supaPayload = { ...cleanRecord };
         const { data: supaUpdated, error: supaError } = await supabase
           .from("guests")
-          .update(cleanRecord)
+          .update(supaPayload)
           .eq("id", id)
           .select();
 
-        if (supaError) {
+        if (supaError && (supaError.message?.includes("relation") || supaError.code === "PGRST204")) {
+          delete supaPayload.relation;
+          const { data: retryUpdated } = await supabase
+            .from("guests")
+            .update(supaPayload)
+            .eq("id", id)
+            .select();
+          if (retryUpdated && retryUpdated.length > 0) {
+            updatedResult = { ...retryUpdated[0], relation: cleanRecord.relation };
+          }
+        } else if (supaError) {
           console.error("❌ Supabase guest update error:", supaError.message, supaError.details || "");
         } else if (supaUpdated && supaUpdated.length > 0) {
           updatedResult = supaUpdated[0];
@@ -655,24 +691,25 @@ export const GuestModel = {
           guest_name = $3,
           contact = $4,
           side = $5,
-          rsvp_status = $6,
-          id_card_received = $7,
-          arrival_date = $8,
-          arrival_time = $9,
-          arrival_location = $10,
-          arrival_flight_train_no = $11,
-          departure_date = $12,
-          departure_time = $13,
-          departure_location = $14,
-          departure_flight_train_no = $15,
-          id_card_copy = $16,
-          special_request = $17,
-          call_count = $18,
-          call_status = $19,
-          last_called_at = $20,
-          last_call_summary = $21,
+          relation = $6,
+          rsvp_status = $7,
+          id_card_received = $8,
+          arrival_date = $9,
+          arrival_time = $10,
+          arrival_location = $11,
+          arrival_flight_train_no = $12,
+          departure_date = $13,
+          departure_time = $14,
+          departure_location = $15,
+          departure_flight_train_no = $16,
+          id_card_copy = $17,
+          special_request = $18,
+          call_count = $19,
+          call_status = $20,
+          last_called_at = $21,
+          last_call_summary = $22,
           updated_at = NOW()
-        WHERE id = $22
+        WHERE id = $23
       `;
 
       const values = [
@@ -681,6 +718,7 @@ export const GuestModel = {
         cleanRecord.guest_name,
         cleanRecord.contact,
         cleanRecord.side,
+        cleanRecord.relation,
         cleanRecord.rsvp_status,
         cleanRecord.id_card_received,
         cleanRecord.arrival_date,

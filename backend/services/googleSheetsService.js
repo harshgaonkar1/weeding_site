@@ -27,6 +27,7 @@ export const GOOGLE_SHEET_HEADERS = [
   "Guest Name",
   "Contact",
   "Side",
+  "Relation",
   "RSVP Status",
   "ID Card Received",
   "Arrival Date",
@@ -592,6 +593,7 @@ export const GoogleSheetsService = {
       guest_name: guestName,
       contact: contact,
       side: side,
+      relation: getVal("relation", "relationship", "relation_to_couple", "relation_to_bride_groom", "guest_relation") || null,
       rsvp_status: rsvp,
       id_card_received: idCard,
       arrival_date: getVal("arrival_date", "arrival"),
@@ -819,6 +821,7 @@ export const GoogleSheetsService = {
       g.guest_name || "",
       g.contact || "",
       g.side || "Groom",
+      g.relation || "",
       g.rsvp_status || "Confirmed",
       g.id_card_received || "No",
       g.arrival_date || "",
@@ -842,8 +845,8 @@ export const GoogleSheetsService = {
         const sheets = google.sheets({ version: "v4", auth });
         const tabTitle = await this.resolveSheetTab(sheets, sheetId, targetSheetUrl, weddingId);
 
-        // 1. Clear rows A2:R1000 so any deleted guest rows are completely removed
-        const clearRange = tabTitle ? `'${tabTitle}'!A2:R1000` : "A2:R1000";
+        // 1. Clear rows A2:S1000 so any deleted guest rows are completely removed
+        const clearRange = tabTitle ? `'${tabTitle}'!A2:S1000` : "A2:S1000";
         try {
           await sheets.spreadsheets.values.clear({
             spreadsheetId: sheetId,
@@ -851,8 +854,8 @@ export const GoogleSheetsService = {
           });
         } catch (clearErr) {}
 
-        // 2. Ensure header row A1:R1 is intact
-        const headerRange = tabTitle ? `'${tabTitle}'!A1:R1` : "A1:R1";
+        // 2. Ensure header row A1:S1 is intact
+        const headerRange = tabTitle ? `'${tabTitle}'!A1:S1` : "A1:S1";
         await sheets.spreadsheets.values.update({
           spreadsheetId: sheetId,
           range: headerRange,
@@ -865,8 +868,8 @@ export const GoogleSheetsService = {
         // 3. Write active guests
         if (rows.length > 0) {
           const writeRange = tabTitle
-            ? `'${tabTitle}'!A2:R${rows.length + 1}`
-            : "A2:R" + (rows.length + 1);
+            ? `'${tabTitle}'!A2:S${rows.length + 1}`
+            : "A2:S" + (rows.length + 1);
 
           await sheets.spreadsheets.values.update({
             spreadsheetId: sheetId,

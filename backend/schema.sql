@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS guests (
   guest_name VARCHAR(255) NOT NULL,
   contact VARCHAR(255) DEFAULT NULL,
   side VARCHAR(50) DEFAULT 'Groom', -- 'Bride', 'Groom', or 'Both'
+  relation VARCHAR(100) DEFAULT NULL, -- Relation to Bride or Groom (e.g. Sister, Friend, Cousin, Colleague)
   rsvp_status VARCHAR(50) DEFAULT 'Confirmed',
   id_card_received VARCHAR(10) DEFAULT 'No',
   
@@ -111,6 +112,7 @@ CREATE TABLE IF NOT EXISTS guests (
 CREATE INDEX IF NOT EXISTS idx_guests_wedding_id ON guests (wedding_id);
 CREATE INDEX IF NOT EXISTS idx_guests_guest_name ON guests (guest_name);
 CREATE INDEX IF NOT EXISTS idx_guests_side ON guests (side);
+CREATE INDEX IF NOT EXISTS idx_guests_relation ON guests (relation);
 CREATE INDEX IF NOT EXISTS idx_guests_rsvp_status ON guests (rsvp_status);
 CREATE INDEX IF NOT EXISTS idx_guests_call_status ON guests (call_status);
 CREATE INDEX IF NOT EXISTS idx_guests_call_count ON guests (call_count);

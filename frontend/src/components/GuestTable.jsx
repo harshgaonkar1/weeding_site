@@ -15,6 +15,7 @@ import {
   MapPin,
   Calendar,
   Plane,
+  Heart,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -124,6 +125,13 @@ export default function GuestTable({
                       ) : (
                         <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-200/60">
                           🤵 Groom
+                        </span>
+                      )}
+
+                      {guest.relation && (
+                        <span className="text-[10px] font-semibold text-emerald-900 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/70 inline-flex items-center gap-1">
+                          <Heart className="w-2.5 h-2.5 text-rose-500 fill-rose-500/20 shrink-0" />
+                          <span className="truncate max-w-[120px]">{guest.relation}</span>
                         </span>
                       )}
 
@@ -313,6 +321,12 @@ export default function GuestTable({
               <th className="py-3.5 px-3.5 w-12 text-center">Sr #</th>
               <th className="py-3.5 px-4 min-w-[180px]">Guest & Contact</th>
               <th className="py-3.5 px-3 w-28">Side</th>
+              <th className="py-3.5 px-3 min-w-[140px]">
+                <div className="flex items-center gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/20" />
+                  <span>Relation</span>
+                </div>
+              </th>
               <th className="py-3.5 px-3 w-28">RSVP</th>
               <th className="py-3.5 px-4 min-w-[210px] bg-[#f2faf4]/80 text-[#165a2b]">
                 <div className="flex items-center gap-1.5">
@@ -443,6 +457,22 @@ export default function GuestTable({
                     >
                       {side === "bride" ? "👰 Bride" : "🤵 Groom"}
                     </span>
+                  </td>
+
+                  {/* Relation */}
+                  <td className="py-3.5 px-3">
+                    {guest.relation ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50/90 text-emerald-900 border border-emerald-200 shadow-2xs group-hover:scale-102 transition-transform">
+                        <Heart className="w-3 h-3 text-rose-500 fill-rose-500/20 shrink-0" />
+                        <span className="truncate max-w-[130px]" title={guest.relation}>
+                          {guest.relation}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 italic">
+                        —
+                      </span>
+                    )}
                   </td>
 
                   {/* RSVP */}

@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // Database Queries & Execution Engine
 // ------------------------------------------------------------
 // Centralizes all database queries, query execution, and data operations
@@ -289,6 +289,14 @@ export const query = async (text, params = []) => {
   }
 
   if (lowerSql.startsWith("insert into guests")) {
+    const hasRelation = lowerSql.includes("relation");
+    let pOffset = 0;
+    let guestRelation = null;
+    if (hasRelation) {
+      guestRelation = params[6] || null;
+      pOffset = 1;
+    }
+
     const newGuest = {
       id: params[0],
       wedding_id: params[1] || "wedding_01",
@@ -296,22 +304,23 @@ export const query = async (text, params = []) => {
       guest_name: params[3],
       contact: params[4] || null,
       side: params[5] || "Groom",
-      rsvp_status: params[6] || "Confirmed",
-      id_card_received: params[7] || "No",
-      arrival_date: params[8] || null,
-      arrival_time: params[9] || null,
-      arrival_location: params[10] || null,
-      arrival_flight_train_no: params[11] || null,
-      departure_date: params[12] || null,
-      departure_time: params[13] || null,
-      departure_location: params[14] || null,
-      departure_flight_train_no: params[15] || null,
-      id_card_copy: params[16] || null,
-      special_request: params[17] || null,
-      call_count: Number(params[18]) || 0,
-      call_status: params[19] || "Not Called",
-      last_called_at: params[20] || null,
-      last_call_summary: params[21] || null,
+      relation: guestRelation,
+      rsvp_status: params[6 + pOffset] || "Confirmed",
+      id_card_received: params[7 + pOffset] || "No",
+      arrival_date: params[8 + pOffset] || null,
+      arrival_time: params[9 + pOffset] || null,
+      arrival_location: params[10 + pOffset] || null,
+      arrival_flight_train_no: params[11 + pOffset] || null,
+      departure_date: params[12 + pOffset] || null,
+      departure_time: params[13 + pOffset] || null,
+      departure_location: params[14 + pOffset] || null,
+      departure_flight_train_no: params[15 + pOffset] || null,
+      id_card_copy: params[16 + pOffset] || null,
+      special_request: params[17 + pOffset] || null,
+      call_count: Number(params[18 + pOffset]) || 0,
+      call_status: params[19 + pOffset] || "Not Called",
+      last_called_at: params[20 + pOffset] || null,
+      last_call_summary: params[21 + pOffset] || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -323,7 +332,12 @@ export const query = async (text, params = []) => {
     }
     if (supabase) {
       try {
-        await supabase.from("guests").upsert(newGuest);
+        const supaPayload = { ...newGuest };
+        const { error: supaErr } = await supabase.from("guests").upsert(supaPayload);
+        if (supaErr && (supaErr.message?.includes("relation") || supaErr.code === "PGRST204")) {
+          delete supaPayload.relation;
+          await supabase.from("guests").upsert(supaPayload);
+        }
       } catch (err) {
         console.warn("Supabase guest insert notice:", err.message);
       }
@@ -476,29 +490,35 @@ export const query = async (text, params = []) => {
       updated_at: new Date().toISOString(),
     };
 
-    // 1. FULL GUEST RECORD UPDATE (from GuestModel.update: wedding_id = $1, sr_no = $2, guest_name = $3 ... WHERE id = $22)
+    // 1. FULL GUEST RECORD UPDATE (from GuestModel.update: wedding_id = $1, sr_no = $2, guest_name = $3 ... WHERE id = $22/23)
     if (lowerSql.includes("wedding_id = $1") || params.length >= 22) {
+      const hasRelation = lowerSql.includes("relation = $");
+      let pOffset = 0;
+      if (hasRelation) {
+        pOffset = 1;
+      }
       if (params[0] !== undefined) updatedObj.wedding_id = params[0];
       if (params[1] !== undefined && params[1] !== "") updatedObj.sr_no = Number(params[1]) || 1;
       if (params[2] !== undefined) updatedObj.guest_name = params[2];
       if (params[3] !== undefined) updatedObj.contact = params[3];
       if (params[4] !== undefined) updatedObj.side = params[4];
-      if (params[5] !== undefined) updatedObj.rsvp_status = params[5];
-      if (params[6] !== undefined) updatedObj.id_card_received = params[6];
-      if (params[7] !== undefined) updatedObj.arrival_date = params[7];
-      if (params[8] !== undefined) updatedObj.arrival_time = params[8];
-      if (params[9] !== undefined) updatedObj.arrival_location = params[9];
-      if (params[10] !== undefined) updatedObj.arrival_flight_train_no = params[10];
-      if (params[11] !== undefined) updatedObj.departure_date = params[11];
-      if (params[12] !== undefined) updatedObj.departure_time = params[12];
-      if (params[13] !== undefined) updatedObj.departure_location = params[13];
-      if (params[14] !== undefined) updatedObj.departure_flight_train_no = params[14];
-      if (params[15] !== undefined) updatedObj.id_card_copy = params[15];
-      if (params[16] !== undefined) updatedObj.special_request = params[16];
-      if (params[17] !== undefined && params[17] !== "") updatedObj.call_count = Number(params[17]) || 0;
-      if (params[18] !== undefined) updatedObj.call_status = params[18];
-      if (params[19] !== undefined) updatedObj.last_called_at = params[19] || null;
-      if (params[20] !== undefined) updatedObj.last_call_summary = params[20];
+      if (hasRelation && params[5] !== undefined) updatedObj.relation = params[5];
+      if (params[5 + pOffset] !== undefined) updatedObj.rsvp_status = params[5 + pOffset];
+      if (params[6 + pOffset] !== undefined) updatedObj.id_card_received = params[6 + pOffset];
+      if (params[7 + pOffset] !== undefined) updatedObj.arrival_date = params[7 + pOffset];
+      if (params[8 + pOffset] !== undefined) updatedObj.arrival_time = params[8 + pOffset];
+      if (params[9 + pOffset] !== undefined) updatedObj.arrival_location = params[9 + pOffset];
+      if (params[10 + pOffset] !== undefined) updatedObj.arrival_flight_train_no = params[10 + pOffset];
+      if (params[11 + pOffset] !== undefined) updatedObj.departure_date = params[11 + pOffset];
+      if (params[12 + pOffset] !== undefined) updatedObj.departure_time = params[12 + pOffset];
+      if (params[13 + pOffset] !== undefined) updatedObj.departure_location = params[13 + pOffset];
+      if (params[14 + pOffset] !== undefined) updatedObj.departure_flight_train_no = params[14 + pOffset];
+      if (params[15 + pOffset] !== undefined) updatedObj.id_card_copy = params[15 + pOffset];
+      if (params[16 + pOffset] !== undefined) updatedObj.special_request = params[16 + pOffset];
+      if (params[17 + pOffset] !== undefined && params[17 + pOffset] !== "") updatedObj.call_count = Number(params[17 + pOffset]) || 0;
+      if (params[18 + pOffset] !== undefined) updatedObj.call_status = params[18 + pOffset];
+      if (params[19 + pOffset] !== undefined) updatedObj.last_called_at = params[19 + pOffset] || null;
+      if (params[20 + pOffset] !== undefined) updatedObj.last_call_summary = params[20 + pOffset];
     } else if (lowerSql.includes("last_called_at = $3, last_call_summary = $4")) {
       // 2. Call log delete / sync (CallLogModel.delete: call_count = $1, call_status = $2, last_called_at = $3, last_call_summary = $4 WHERE id = $5)
       if (params[0] !== undefined) updatedObj.call_count = Number(params[0]) || 0;
@@ -545,7 +565,11 @@ export const query = async (text, params = []) => {
       try {
         const supaPayload = { ...updatedObj };
         delete supaPayload.id;
-        await supabase.from("guests").update(supaPayload).eq("id", id);
+        const { error: supaErr } = await supabase.from("guests").update(supaPayload).eq("id", id);
+        if (supaErr && (supaErr.message?.includes("relation") || supaErr.code === "PGRST204")) {
+          delete supaPayload.relation;
+          await supabase.from("guests").update(supaPayload).eq("id", id);
+        }
       } catch (err) {
         console.warn("Supabase guest update notice:", err.message);
       }

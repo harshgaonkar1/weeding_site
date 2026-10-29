@@ -126,6 +126,23 @@ export default function GuestDetailsDrawer({
               )}
             </div>
 
+            {/* Relation Badge */}
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                Relation to {guestSide === "bride" ? "Bride" : "Groom"}
+              </span>
+              {guest.relation ? (
+                <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-900 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold shadow-2xs">
+                  <Heart className="w-3 h-3 text-rose-500 fill-rose-500/20 shrink-0" />
+                  <span>{guest.relation}</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-xs font-medium">
+                  Not specified
+                </span>
+              )}
+            </div>
+
             {/* RSVP Status */}
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">

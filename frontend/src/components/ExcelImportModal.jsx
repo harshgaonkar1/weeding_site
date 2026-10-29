@@ -90,12 +90,14 @@ function normalizeGuestRow(raw) {
   const departure_date = findVal(["departuredate", "depdate", "departure", "checkout"]) || "";
   const departure_flight_train_no = findVal(["departureflight", "depflight", "depflightno"]) || "";
   const departure_location = findVal(["departureloc", "deploc"]) || "";
+  const relation = findVal(["relation", "relationship", "relationtowedding", "relationtocouple"]) || "";
   const special_request = findVal(["special", "request", "diet", "meal", "food", "remark", "note"]) || "";
 
   return {
     guest_name,
     contact,
     side,
+    relation,
     rsvp_status,
     id_card_received: "Yes",
     arrival_date,
@@ -188,10 +190,10 @@ export default function ExcelImportModal({
   // Download Sample Template
   const handleDownloadTemplate = () => {
     const csvContent =
-      "Guest Name,Contact,Side,RSVP Status,Arrival Date,Arrival Flight/Train,Arrival Location,Departure Date,Departure Flight/Train,Special Request\n" +
-      "Manish Sharma,+91 98765 43210,Groom,Confirmed,08-11-2026,AI-682,Mumbai Int Airport (T2),11-11-2026,AI-894,Vegetarian meal and airport shuttle\n" +
-      "Sophia Rodriguez,+1 (555) 234-8901,Bride,Confirmed,09-11-2026,6E-241,Goa Airport,12-11-2026,6E-244,Sea facing room preference\n" +
-      "Rajesh Patel,+91 98220 11223,Groom,Pending,08-11-2026,Vande Bharat 22221,Mumbai Central,11-11-2026,Tejas Exp 12952,Jain food preference";
+      "Guest Name,Contact,Side,Relation,RSVP Status,Arrival Date,Arrival Flight/Train,Arrival Location,Departure Date,Departure Flight/Train,Special Request\n" +
+      "Manish Sharma,+91 98765 43210,Groom,Groom's Brother,Confirmed,08-11-2026,AI-682,Mumbai Int Airport (T2),11-11-2026,AI-894,Vegetarian meal and airport shuttle\n" +
+      "Sophia Rodriguez,+1 (555) 234-8901,Bride,Bride's Sister,Confirmed,09-11-2026,6E-241,Goa Airport,12-11-2026,6E-244,Sea facing room preference\n" +
+      "Rajesh Patel,+91 98220 11223,Groom,Friend,Pending,08-11-2026,Vande Bharat 22221,Mumbai Central,11-11-2026,Tejas Exp 12952,Jain food preference";
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);

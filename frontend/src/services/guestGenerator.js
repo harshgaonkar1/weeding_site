@@ -67,6 +67,32 @@ const SPECIAL_REQUESTS = [
   "",
 ];
 
+const RELATIONS_BRIDE = [
+  "Bride's Sister",
+  "Bride's Brother",
+  "Bride's Cousin",
+  "Bride's Best Friend",
+  "Bride's Childhood Friend",
+  "Bride's Colleague",
+  "Bride's Aunt",
+  "Bride's Uncle",
+  "Bride's College Mate",
+  "Bride's Family Relative",
+];
+
+const RELATIONS_GROOM = [
+  "Groom's Brother",
+  "Groom's Sister",
+  "Groom's Cousin",
+  "Groom's Best Friend",
+  "Groom's College Mate",
+  "Groom's Colleague",
+  "Groom's Uncle",
+  "Groom's Aunt",
+  "Groom's Childhood Friend",
+  "Groom's Family Relative",
+];
+
 export function generate500GuestsForRohanPriya() {
   const guests = [];
   const weddingId = "wedding_02";
@@ -80,6 +106,8 @@ export function generate500GuestsForRohanPriya() {
 
     const isBride = i % 2 === 0;
     const side = isBride ? "Bride" : "Groom";
+    const relationsList = isBride ? RELATIONS_BRIDE : RELATIONS_GROOM;
+    const relation = relationsList[(i * 3 + 5) % relationsList.length];
 
     // RSVP Distribution: ~76% Confirmed, ~17% Pending, ~7% Declined
     let rsvpStatus = "Confirmed";
@@ -142,6 +170,7 @@ export function generate500GuestsForRohanPriya() {
       guest_name: fullName,
       contact: contact,
       side: side,
+      relation: relation,
       rsvp_status: rsvpStatus,
       id_card_received: idCardReceived,
       arrival_date: arrivalDate,
