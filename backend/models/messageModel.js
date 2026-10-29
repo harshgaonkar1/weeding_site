@@ -71,7 +71,7 @@ export const MessageModel = {
   // 2. Create and permanently save a new message in Supabase
   async create({ wedding_id, sender_id, sender_name, sender_role, message }) {
     const safeWeddingId = wedding_id || "wedding_01";
-    const id = `msg_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+    const id = `msg_${crypto.randomUUID()}`;
     const created_at = new Date().toISOString();
     const role = sender_role || "client";
 

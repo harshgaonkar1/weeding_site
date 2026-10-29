@@ -5,9 +5,21 @@ import { GuestModel } from "../models/guestModel.js";
 import { ConciergeBotService } from "../services/conciergeBotService.js";
 import { store } from "../Db_connection/queries.js";
 import { supabase } from "../Db_connection/supabaseClient.js";
-import { getWeddingRoom } from "../socket/chatSocket.js";
+import { getWeddingRoom, authenticate } from "../socket/chatSocket.js";
 
 const router = express.Router();
+
+// Middleware to check authentication
+const requireAuth = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader || req.query.token;
+  const user = await authenticate(token);
+  if (!user) {
+    return res.status(401).json({ success: false, error: "Unauthorized" });
+  }
+  req.user = user;
+  next();
+};
 
 // 0. Diagnostic status route to verify database connection and table readiness
 router.get("/debug/status", async (req, res) => {
@@ -41,11 +53,20 @@ router.get("/debug/status", async (req, res) => {
   });
 });
 
-// 1. Get all messages for a specific wedding
-router.get("/:weddingId", async (req, res) => {
+// 1. Get all messages for a specific wedding (Rule 7: clients can only read own wedding)
+router.get("/:weddingId", requireAuth, async (req, res) => {
   try {
     const { weddingId } = req.params;
-    const messages = await MessageModel.getByWeddingId(weddingId);
+    const cleanId = String(weddingId).replace(/^wedding:/, "").trim();
+
+    if (req.user.role === "client" && req.user.weddingId !== cleanId) {
+      return res.status(403).json({
+        success: false,
+        error: "Forbidden: You may only view messages for your own wedding",
+      });
+    }
+
+    const messages = await MessageModel.getByWeddingId(cleanId);
     res.json({
       success: true,
       count: messages.length,
@@ -61,43 +82,59 @@ router.get("/:weddingId", async (req, res) => {
   }
 });
 
-// 2. Post a new message (from client, admin, or user)
+// 2. Post a new message (Rule 6: server derives identity from auth)
 router.post("/", async (req, res) => {
   try {
-    const { wedding_id, sender_id, sender_name, sender_role, message, trigger_bot_reply } = req.body;
+    const authHeader = req.headers.authorization;
+    const token = authHeader || req.query.token;
+    const authUser = await authenticate(token);
 
-    const safeWeddingId = wedding_id || "wedding_01";
-    if (!message || !message.trim()) {
+    const { wedding_id, message, trigger_bot_reply } = req.body;
+
+    if (!message || typeof message !== "string" || !message.trim()) {
       return res.status(400).json({
         success: false,
-        message: "message is required",
+        message: "Valid non-empty message is required",
       });
     }
 
-    const role = sender_role || "client";
+    if (message.trim().length > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "Message must be under 1000 characters",
+      });
+    }
 
-    console.log(`\n📩 [INCOMING CHAT] Wedding: ${safeWeddingId} | From: ${sender_name || 'Anonymous'} (${role})`);
-    console.log(`   Message: "${message.trim()}"`);
+    // Derive identity from auth
+    let senderId = authUser?.id || req.body.sender_id || "client";
+    let senderName = authUser?.name || req.body.sender_name || "Client";
+    let senderRole = authUser?.role || req.body.sender_role || "client";
+    let safeWeddingId = (authUser?.role === "client" && authUser?.weddingId)
+      ? authUser.weddingId
+      : (wedding_id || "wedding_01");
+    safeWeddingId = String(safeWeddingId).replace(/^wedding:/, "").trim();
 
-    // 1. Create and save user/admin message in memory & Supabase DB
+    // 1. Create and save message in Supabase DB first
     const savedMsg = await MessageModel.create({
       wedding_id: safeWeddingId,
-      sender_id,
-      sender_name,
-      sender_role: role,
+      sender_id: senderId,
+      sender_name: senderName,
+      sender_role: senderRole,
       message: message.trim(),
     });
 
-    // Broadcast new message over Socket.IO to wedding room immediately
+    // Broadcast new message over Socket.IO to wedding room
     const io = req.app.get("io");
     if (io) {
-      io.to(getWeddingRoom(safeWeddingId)).emit("new_message", savedMsg);
+      const room = getWeddingRoom(safeWeddingId);
+      io.to(room).emit("message", savedMsg);
+      io.to(room).emit("new_message", savedMsg);
     }
 
     let savedBotMsg = null;
 
     // 2. If message is from client/user or trigger_bot_reply requested, generate Concierge Bot reply
-    if (role !== "admin" || trigger_bot_reply) {
+    if (senderRole !== "admin" || trigger_bot_reply) {
       try {
         let wedding = (store && Array.isArray(store.weddings))
           ? store.weddings.find((w) => w.id === safeWeddingId)
@@ -117,7 +154,7 @@ router.post("/", async (req, res) => {
           wedding,
           guests: guests || [],
           message: message.trim(),
-          senderName: sender_name,
+          senderName: senderName,
         });
 
         // Save bot reply directly in the database
@@ -131,7 +168,9 @@ router.post("/", async (req, res) => {
 
         // Broadcast bot reply over Socket.IO to wedding room
         if (io) {
-          io.to(getWeddingRoom(safeWeddingId)).emit("new_message", savedBotMsg);
+          const room = getWeddingRoom(safeWeddingId);
+          io.to(room).emit("message", savedBotMsg);
+          io.to(room).emit("new_message", savedBotMsg);
         }
       } catch (botErr) {
         console.warn("Notice: Error generating concierge bot reply:", botErr.message);

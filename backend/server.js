@@ -1,7 +1,8 @@
 import express from "express";
 import http from "http";
 import { Server as SocketIOServer } from "socket.io";
-import { initializeChatSocket } from "./socket/chatSocket.js";
+import { initializeChatSocket, authenticate } from "./socket/chatSocket.js";
+import { supabase } from "./Db_connection/supabaseClient.js";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
@@ -128,6 +129,52 @@ app.use("/api/guests", guestRoutes);
 app.use("/api/call-logs", callLogRoutes);
 app.use("/api/sheets", googleSheetsRoutes);
 app.use("/api/messages", messageRoutes);
+
+// Auth middleware for REST history endpoints (Rule 6 & 7)
+const requireAuth = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader || req.query.token;
+  const user = await authenticate(token);
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  req.user = user;
+  next();
+};
+
+// Chat history for one wedding (oldest first)
+// Scoped: clients can only read their own wedding_id, admins can read any
+app.get(
+  ["/weddings/:weddingId/messages", "/api/weddings/:weddingId/messages"],
+  requireAuth,
+  async (req, res) => {
+    const rawId = req.params.weddingId || "";
+    const cleanWeddingId = rawId.replace(/^wedding:/, "").trim();
+
+    // Rule 7: Clients may only read their own wedding's room
+    if (req.user.role === "client" && req.user.weddingId !== cleanWeddingId) {
+      return res.status(403).json({ error: "Forbidden: You may only view your own wedding messages" });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    const { data, error } = await supabase
+      .from("wedding_messages")
+      .select("*")
+      .eq("wedding_id", cleanWeddingId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("Failed to load messages:", error.message);
+      return res.status(500).json({ error: "Failed to load messages" });
+    }
+
+    res.json((data || []).reverse());
+  }
+);
 
 // Global Error Handler with guaranteed CORS headers
 app.use((err, req, res, next) => {

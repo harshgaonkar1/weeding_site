@@ -24,11 +24,11 @@ dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL || "https://xzhhxgvtmevjzsowzyvg.supabase.co";
 const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_KEY ||
   "sb_secret_r5q8zQ_U_MZSXpNl9JSeKA_leatzfk-";
 
 let supabase = null;

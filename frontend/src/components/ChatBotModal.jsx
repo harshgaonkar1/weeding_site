@@ -16,15 +16,13 @@ import {
   WifiOff,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../services/api";
+import { api, BACKEND_SERVER_URL } from "../services/api";
 import {
-  getSocket,
+  socket,
   joinWeddingChat,
   leaveWeddingChat,
-  sendSocketMessage,
-  fetchSocketMessages,
-  markSocketMessagesRead,
   emitTyping,
+  markSocketMessagesRead,
 } from "../services/socket";
 
 const QUICK_CLIENT_PROMPTS = [
@@ -48,7 +46,7 @@ export default function ChatBotModal({
   weddings = [],
   onSelectWedding,
 }) {
-  const { user, isAdmin, isMarriageClient } = useAuth();
+  const { user, token, isAdmin, isMarriageClient } = useAuth();
 
   // Active wedding context for conversation (guaranteed valid ID fallback)
   const [activeWeddingId, setActiveWeddingId] = useState(
@@ -75,145 +73,102 @@ export default function ChatBotModal({
     }
   }, [selectedWedding?.id, user?.wedding_id, weddings]);
 
-  // Load message history from DB (prefers Socket.IO, falls back to REST)
+  // Load message history from REST endpoint: /weddings/:weddingId/messages (oldest first)
   const loadMessages = async (wId = activeWeddingId) => {
     const targetWId = wId || activeWeddingId || "wedding_01";
+    const cleanWId = String(targetWId).replace(/^wedding:/, "");
+    setIsRefreshing(true);
     try {
-      // 1. Try fetching via live Socket.IO connection first (instant, 0ms, no CORS/502)
-      let data = await fetchSocketMessages(targetWId, 1500);
+      const res = await fetch(`${BACKEND_SERVER_URL}/weddings/${encodeURIComponent(cleanWId)}/messages`, {
+        headers: {
+          Authorization: `Bearer ${token || localStorage.getItem("manish_auth_token") || ""}`,
+        },
+      });
 
-      // 2. If socket hasn't delivered yet, fetch via REST API
-      if (!data || !Array.isArray(data)) {
-        data = await api.fetchMessages(targetWId);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setMessages(data);
+          return;
+        }
       }
 
-      if (data && Array.isArray(data)) {
-        setMessages((prev) => {
-          // Keep any optimistic unsent messages currently in local state
-          const optimistic = prev.filter((m) => m.id && m.id.startsWith("msg_temp_"));
-          const seen = new Set();
-          const unique = [];
-
-          // Add database messages first
-          data.forEach((m) => {
-            if (m && m.id && !seen.has(m.id)) {
-              seen.add(m.id);
-              unique.push(m);
-            }
-          });
-
-          // Append any optimistic messages that haven't been confirmed yet
-          optimistic.forEach((opt) => {
-            if (!unique.some((u) => u.message === opt.message && u.sender_role === opt.sender_role)) {
-              unique.push(opt);
-            }
-          });
-
-          return unique;
-        });
+      // Fallback via api service if needed
+      const fallbackData = await api.fetchMessages(cleanWId);
+      if (Array.isArray(fallbackData)) {
+        setMessages(fallbackData);
       }
-      // Mark messages as read via Socket.IO only (no HTTP call to avoid 502/CORS)
-      const myRole = isAdmin ? "admin" : "client";
-      markSocketMessagesRead(targetWId, myRole);
-    } catch (e) {
-      console.error("Error loading chat messages:", e);
+    } catch (err) {
+      console.warn("REST history fetch notice:", err.message);
+      const fallbackData = await api.fetchMessages(cleanWId);
+      if (Array.isArray(fallbackData)) {
+        setMessages(fallbackData);
+      }
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
-  // Socket.IO Real-Time Connection & Live Listener
+  // Socket.IO Real-Time Connection & Live Listener (Strict Mode Safe - Rule 1 & 2)
   useEffect(() => {
     if (!isOpen) return;
-    const targetWId = activeWeddingId || selectedWedding?.id || user?.wedding_id || "wedding_01";
-
-    // 1. Connect to Socket.IO and join wedding room immediately
-    const socket = getSocket();
-    setIsSocketLive(Boolean(socket?.connected));
-    joinWeddingChat(targetWId);
-
-    // 2. Delay initial DB fetch by 1.5s so Render's cold-starting server has time to boot
-    //    (Socket.IO connects fast via polling, but HTTP routes need the server fully ready)
-    const initialLoadTimer = setTimeout(() => {
-      loadMessages(targetWId);
-    }, 1500);
+    const targetWId = String(activeWeddingId || selectedWedding?.id || user?.wedding_id || "wedding_01").replace(/^wedding:/, "");
+    const authToken = token || localStorage.getItem("manish_auth_token") || "";
 
     const onConnect = () => {
       setIsSocketLive(true);
-      joinWeddingChat(targetWId);
+      if (isAdmin) {
+        socket.emit("join_wedding", targetWId);
+      }
     };
+
     const onDisconnect = () => setIsSocketLive(false);
 
-    // Incoming Live Message Handler (0ms instant streaming)
-    const onNewMessage = (newMsg) => {
-      if (!newMsg || (newMsg.wedding_id !== targetWId && newMsg.wedding_id !== activeWeddingId)) return;
+    // Rule 8: Dedupe incoming messages by id
+    const onMessage = (msg) => {
+      if (!msg || !msg.id) return;
+      setMessages((prev) =>
+        prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
+      );
 
-      setMessages((prev) => {
-        // If identical id already present, keep
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-
-        // If this confirms an optimistic temporary message, swap the temp ID with real ID
-        const optIdx = prev.findIndex(
-          (m) =>
-            m.id &&
-            m.id.startsWith("msg_temp_") &&
-            m.sender_role === newMsg.sender_role &&
-            m.message === newMsg.message
-        );
-
-        if (optIdx !== -1) {
-          const next = [...prev];
-          next[optIdx] = newMsg;
-          return next;
-        }
-
-        return [...prev, newMsg];
-      });
-
-      // Clear typing indicator once a message arrives
       setRemoteTypingUser(null);
-      if (newMsg.sender_role === "bot") {
+      if (msg.sender_role === "bot") {
         setIsSending(false);
       }
-
-      // Auto mark as read if message is from the other party
-      const myRole = isAdmin ? "admin" : "client";
-      if (newMsg.sender_role !== myRole) {
-        markSocketMessagesRead(targetWId, myRole);
-      }
     };
 
-    // Live Read Receipts
-    const onMessagesRead = ({ wedding_id, reader_role }) => {
-      if (wedding_id !== targetWId) return;
-      setMessages((prev) =>
-        prev.map((m) => (m.sender_role !== reader_role ? { ...m, is_read: true } : m))
-      );
-    };
-
-    // Remote Typing Indicator
     const onUserTyping = ({ user_name, is_typing }) => {
-      if (is_typing) {
-        setRemoteTypingUser(user_name);
-      } else {
-        setRemoteTypingUser(null);
-      }
+      setRemoteTypingUser(is_typing ? user_name : null);
     };
 
+    // Attach verified auth token before connect
+    socket.auth = { token: authToken };
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.on("new_message", onNewMessage);
-    socket.on("messages_read", onMessagesRead);
+    socket.on("message", onMessage);
+    socket.on("new_message", onMessage);
     socket.on("user_typing", onUserTyping);
+    socket.connect();
+
+    // Load initial history from REST endpoint
+    loadMessages(targetWId);
+
+    if (socket.connected) {
+      setIsSocketLive(true);
+      if (isAdmin) {
+        socket.emit("join_wedding", targetWId);
+      }
+    }
 
     return () => {
-      clearTimeout(initialLoadTimer);
-      leaveWeddingChat(targetWId);
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
-      socket.off("new_message", onNewMessage);
-      socket.off("messages_read", onMessagesRead);
+      socket.off("message", onMessage);
+      socket.off("new_message", onMessage);
       socket.off("user_typing", onUserTyping);
+      socket.disconnect();
     };
-  }, [isOpen, activeWeddingId]);
+  }, [isOpen, activeWeddingId, token, isAdmin]);
 
   // Smooth scroll to bottom on message change or typing
   useEffect(() => {
@@ -251,14 +206,11 @@ export default function ChatBotModal({
   };
 
   const handleSendMessage = async (customText = null) => {
-    if (isSendingRef.current) return;
-
     const textToSend = (customText || inputText).trim();
     if (!textToSend) return;
 
-    isSendingRef.current = true;
-    setIsSending(true);
     setInputText("");
+    setIsSending(true);
 
     const targetWeddingId =
       activeWeddingId ||
@@ -267,67 +219,27 @@ export default function ChatBotModal({
       (weddings && weddings[0]?.id) ||
       "wedding_01";
 
-    const myRole = isAdmin ? "admin" : "client";
     const myName = isAdmin
-      ? user?.name || "Manish (Admin)"
+      ? user?.name || "Admin"
       : user?.name || `${currentWedding.groom_name} & ${currentWedding.bride_name}`;
 
     // Clear typing status
     emitTyping(targetWeddingId, myName, false);
 
-    // 1. OPTIMISTIC INSTANT UI UPDATE (0ms latency!)
-    // Appears on the user's screen in 0 milliseconds
-    const tempId = `msg_temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const optimisticMsg = {
-      id: tempId,
-      wedding_id: targetWeddingId,
-      sender_id: user?.id || (isAdmin ? "user_admin_01" : "client_user"),
-      sender_name: myName,
-      sender_role: myRole,
-      message: textToSend,
-      is_read: false,
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, optimisticMsg]);
-
-    const messagePayload = {
-      ...optimisticMsg,
-      trigger_bot_reply: !isAdmin,
-    };
-
-    try {
-      // 2. Transmit via live Socket.IO (0ms instant transmission, no CORS, saves to Supabase on server)
-      const sentViaSocket = sendSocketMessage(messagePayload, (response) => {
-        if (response?.data?.id) {
-          // Swap temp ID with persistent ID from server
-          setMessages((prev) =>
-            prev.map((m) => (m.id === tempId ? response.data : m))
-          );
-        }
-      });
-
-      // 3. Fall back to REST API only if live Socket is offline/disconnected
-      if (!sentViaSocket) {
-        api.sendMessage(messagePayload).then((result) => {
-          if (result?.bot_reply) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === result.bot_reply.id)) return prev;
-              return [...prev, result.bot_reply];
-            });
-            setIsSending(false);
-          }
-        }).catch(() => {});
-      }
-    } catch (e) {
-      console.error("Error sending message:", e);
-    } finally {
-      isSendingRef.current = false;
-      // If admin, finish sending immediately; if client, keep bot typing indicator until bot replies
-      if (isAdmin) {
+    // Target Architecture: Emit message over socket, validated & saved DB-first by server
+    socket.emit("message", textToSend, (response) => {
+      if (!isAdmin) {
+        // Keep bot indicator on until bot reply arrives via socket or timeout
+        setTimeout(() => setIsSending(false), 3000);
+      } else {
         setIsSending(false);
       }
-    }
+
+      if (!response?.ok) {
+        console.error("Message send failed:", response?.error);
+        alert(response?.error || "Failed to send message");
+      }
+    });
   };
 
   const handleKeyDown = (e) => {

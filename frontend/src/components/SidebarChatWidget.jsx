@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { MessageSquare, Bot, Sparkles, Send, Bell } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
-import { getSocket, joinWeddingChat, leaveWeddingChat, fetchSocketMessages } from "../services/socket";
+import { socket } from "../services/socket";
 
 export default function SidebarChatWidget({
   onOpenChat,
@@ -23,13 +23,11 @@ export default function SidebarChatWidget({
       return;
     }
     let isMounted = true;
+    const cleanWId = String(weddingId).replace(/^wedding:/, "");
 
     const checkMessages = async () => {
       try {
-        let msgs = await fetchSocketMessages(weddingId, 1500);
-        if (!msgs || !Array.isArray(msgs)) {
-          msgs = await api.fetchMessages(weddingId);
-        }
+        const msgs = await api.fetchMessages(cleanWId);
         if (isMounted) {
           if (msgs && msgs.length > 0) {
             const last = msgs[msgs.length - 1];
@@ -47,12 +45,10 @@ export default function SidebarChatWidget({
 
     checkMessages();
 
-    // Socket.IO live updates for incoming messages & read status
-    const socket = getSocket();
-    joinWeddingChat(weddingId);
-
+    // Socket.IO passive listeners for live updates if socket is connected
     const handleNewMessage = (newMsg) => {
-      if (!isMounted || !newMsg || newMsg.wedding_id !== weddingId) return;
+      if (!isMounted || !newMsg) return;
+      if (newMsg.wedding_id !== cleanWId) return;
       setLatestMessage(newMsg);
       if (newMsg.sender_role !== myRole) {
         setUnreadCount((prev) => prev + 1);
@@ -60,12 +56,13 @@ export default function SidebarChatWidget({
     };
 
     const handleMessagesRead = ({ wedding_id, reader_role }) => {
-      if (!isMounted || wedding_id !== weddingId) return;
+      if (!isMounted || wedding_id !== cleanWId) return;
       if (reader_role === myRole) {
         setUnreadCount(0);
       }
     };
 
+    socket.on("message", handleNewMessage);
     socket.on("new_message", handleNewMessage);
     socket.on("messages_read", handleMessagesRead);
 
@@ -74,7 +71,7 @@ export default function SidebarChatWidget({
 
     return () => {
       isMounted = false;
-      leaveWeddingChat(weddingId);
+      socket.off("message", handleNewMessage);
       socket.off("new_message", handleNewMessage);
       socket.off("messages_read", handleMessagesRead);
       clearInterval(interval);
