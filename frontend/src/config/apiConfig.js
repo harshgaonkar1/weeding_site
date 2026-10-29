@@ -1,8 +1,11 @@
 // Central configuration for Backend & Frontend Connection
 export const API_BASE_URL =
-  import.meta?.env?.VITE_API_BASE_URL || "http://localhost:5000/api";
+  import.meta?.env?.NEXT_PUBLIC_API_BASE_URL ||
+  import.meta?.env?.VITE_API_BASE_URL ||
+  "http://localhost:5000/api";
 
 export const BACKEND_SERVER_URL =
+  import.meta?.env?.NEXT_PUBLIC_BACKEND_URL ||
   import.meta?.env?.VITE_BACKEND_URL ||
   (typeof API_BASE_URL === "string" ? API_BASE_URL.replace(/\/api\/?$/, "") : "") ||
   "http://localhost:5000";

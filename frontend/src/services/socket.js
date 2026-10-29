@@ -2,7 +2,9 @@ import { io } from "socket.io-client";
 import { BACKEND_SERVER_URL } from "../config/apiConfig";
 
 const URL =
+  import.meta.env.NEXT_PUBLIC_SOCKET_URL ||
   import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.NEXT_PUBLIC_BACKEND_URL ||
   import.meta.env.VITE_BACKEND_URL ||
   BACKEND_SERVER_URL ||
   "http://localhost:5000";
