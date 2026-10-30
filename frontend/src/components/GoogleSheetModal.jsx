@@ -130,14 +130,15 @@ export default function GoogleSheetModal({
     setErrorMessage("");
 
     try {
-      const updated = await api.linkGoogleSheet(wedding.id, customSheetUrl.trim());
+      const response = await api.linkGoogleSheet(wedding.id, customSheetUrl.trim());
       wedding.google_sheet_url = customSheetUrl.trim();
       setSyncResult({
-        message: "Google Sheet URL updated & linked successfully!",
+        message: response?.message || "Google Sheet linked & synchronized successfully!",
+        data: response?.syncResult || response?.data,
       });
       setActiveTab("sync");
       if (onSyncSuccess) {
-        onSyncSuccess({ updatedWedding: updated });
+        onSyncSuccess({ updatedWedding: response?.data || wedding, syncResult: response });
       }
     } catch (err) {
       setErrorMessage(err.message || "Failed to update Google Sheet link.");

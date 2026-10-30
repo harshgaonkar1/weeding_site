@@ -598,6 +598,126 @@ export const GuestModel = {
     return createdGuests;
   },
 
+  // 3c. Bulk upsert multiple guests (High-performance sync)
+  async bulkUpsert(weddingId, records = []) {
+    if (!records || records.length === 0) return [];
+
+    const now = new Date().toISOString();
+    const sanitized = records.map((r, idx) => {
+      const id = r.id || `guest_${crypto.randomUUID().slice(0, 8)}`;
+      return {
+        id,
+        wedding_id: weddingId,
+        sr_no: r.sr_no && !isNaN(Number(r.sr_no)) ? Number(r.sr_no) : idx + 1,
+        guest_name: String(r.guest_name || "Guest").trim(),
+        contact: r.contact ? String(r.contact).trim() : null,
+        side: r.side || "Groom",
+        relation: r.relation ? String(r.relation).trim() : null,
+        rsvp_status: r.rsvp_status || "Confirmed",
+        id_card_received: r.id_card_received || "No",
+        arrival_date: r.arrival_date || null,
+        arrival_time: r.arrival_time || null,
+        arrival_location: r.arrival_location || null,
+        arrival_flight_train_no: r.arrival_flight_train_no || null,
+        departure_date: r.departure_date || null,
+        departure_time: r.departure_time || null,
+        departure_location: r.departure_location || null,
+        departure_flight_train_no: r.departure_flight_train_no || null,
+        id_card_copy: r.id_card_copy || null,
+        special_request: r.special_request || null,
+        call_count: r.call_count !== undefined && !isNaN(Number(r.call_count)) ? Number(r.call_count) : 0,
+        call_status: r.call_status || "Not Called",
+        last_called_at: r.last_called_at || null,
+        last_call_summary: r.last_call_summary || null,
+        created_at: r.created_at || now,
+        updated_at: now,
+      };
+    });
+
+    // 1. Supabase batch upsert (chunks of 100 for optimal network performance)
+    if (supabase) {
+      const CHUNK_SIZE = 100;
+      for (let i = 0; i < sanitized.length; i += CHUNK_SIZE) {
+        const chunk = sanitized.slice(i, i + CHUNK_SIZE);
+        try {
+          const { error } = await supabase.from("guests").upsert(chunk, { onConflict: "id" });
+          if (error && (error.message?.includes("relation") || error.code === "PGRST204")) {
+            const strippedChunk = chunk.map(({ relation, ...rest }) => rest);
+            await supabase.from("guests").upsert(strippedChunk, { onConflict: "id" });
+          }
+        } catch (supaErr) {
+          console.warn("Supabase bulkUpsert chunk notice:", supaErr.message);
+        }
+      }
+    }
+
+    // 2. Synchronize store.guests in memory
+    for (const g of sanitized) {
+      const existIdx = (store.guests || []).findIndex((mg) => mg.id === g.id);
+      if (existIdx >= 0) {
+        store.guests[existIdx] = { ...store.guests[existIdx], ...g };
+      } else {
+        store.guests.push(g);
+      }
+    }
+
+    return sanitized;
+  },
+
+  // 3d. Find guest by sr_no
+  async findBySrNo(weddingId, srNo) {
+    if (!weddingId || !srNo) return null;
+    const targetSr = Number(srNo);
+    if (supabase) {
+      try {
+        const { data } = await supabase
+          .from("guests")
+          .select("*")
+          .eq("wedding_id", weddingId)
+          .eq("sr_no", targetSr)
+          .maybeSingle();
+        if (data) return data;
+      } catch (e) {}
+    }
+    const fromStore = (store.guests || []).find(
+      (g) => g.wedding_id === weddingId && Number(g.sr_no) === targetSr
+    );
+    if (fromStore) return fromStore;
+
+    const { rows } = await pool.query(
+      "SELECT * FROM guests WHERE wedding_id = $1 AND sr_no = $2",
+      [weddingId, targetSr]
+    );
+    return rows[0] || null;
+  },
+
+  // 3e. Find guest by name
+  async findByName(weddingId, guestName) {
+    if (!weddingId || !guestName) return null;
+    const clean = String(guestName).trim().toLowerCase();
+    if (supabase) {
+      try {
+        const { data } = await supabase
+          .from("guests")
+          .select("*")
+          .eq("wedding_id", weddingId)
+          .ilike("guest_name", clean)
+          .maybeSingle();
+        if (data) return data;
+      } catch (e) {}
+    }
+    const fromStore = (store.guests || []).find(
+      (g) => g.wedding_id === weddingId && String(g.guest_name || "").trim().toLowerCase() === clean
+    );
+    if (fromStore) return fromStore;
+
+    const { rows } = await pool.query(
+      "SELECT * FROM guests WHERE wedding_id = $1 AND LOWER(TRIM(guest_name)) = LOWER(TRIM($2))",
+      [weddingId, clean]
+    );
+    return rows[0] || null;
+  },
+
   // 4. Update an existing guest
   async update(id, data) {
     const existing = await this.getById(id);

@@ -611,24 +611,16 @@ export const GoogleSheetsService = {
     };
   },
 
-  // 7. Upsert guest record into MySQL
+  // 7. Upsert guest record into MySQL / Supabase
   async upsertGuest(weddingId, guestData) {
     let existing = null;
 
     if (guestData.sr_no) {
-      const { rows: bySr } = await pool.query(
-        "SELECT * FROM guests WHERE wedding_id = $1 AND sr_no = $2",
-        [weddingId, guestData.sr_no]
-      );
-      if (bySr.length > 0) existing = bySr[0];
+      existing = await GuestModel.findBySrNo(weddingId, guestData.sr_no);
     }
 
     if (!existing && guestData.guest_name) {
-      const { rows: byName } = await pool.query(
-        "SELECT * FROM guests WHERE wedding_id = $1 AND LOWER(TRIM(guest_name)) = LOWER(TRIM($2))",
-        [weddingId, guestData.guest_name]
-      );
-      if (byName.length > 0) existing = byName[0];
+      existing = await GuestModel.findByName(weddingId, guestData.guest_name);
     }
 
     if (existing) {
@@ -709,7 +701,7 @@ export const GoogleSheetsService = {
       try {
         const sheets = google.sheets({ version: "v4", auth });
         const tabTitle = await this.resolveSheetTab(sheets, sheetId, sheetUrlOrId, weddingId);
-        const fetchRange = tabTitle ? `'${tabTitle}'!A1:R500` : "A1:R500";
+        const fetchRange = tabTitle ? `'${tabTitle}'!A1:Z1000` : "A1:Z1000";
 
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: sheetId,
@@ -718,12 +710,14 @@ export const GoogleSheetsService = {
 
         const values = res.data.values;
         if (values && values.length >= 2) {
-          const headers = values[0].map((h) => String(h).toLowerCase().trim().replace(/[^a-z0-9]/g, "_"));
+          const rawHeaders = values[0];
+          const headers = rawHeaders.map((h) => String(h || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "_"));
           for (let i = 1; i < values.length; i++) {
             const rowValues = values[i];
+            if (!rowValues || rowValues.length === 0 || rowValues.every((v) => !v || String(v).trim() === "")) continue;
             const rowObj = {};
             headers.forEach((header, index) => {
-              rowObj[header] = rowValues[index] !== undefined ? rowValues[index] : "";
+              rowObj[header] = rowValues[index] !== undefined && rowValues[index] !== null ? String(rowValues[index]).trim() : "";
             });
             rows.push(rowObj);
           }
@@ -767,20 +761,62 @@ export const GoogleSheetsService = {
 
     if (!rows || rows.length === 0) {
       throw new Error(
-        `Unable to read rows from Google Sheet. If using a custom sheet, please ensure it is shared as "Anyone with the link can view", or paste your Service Account JSON in 'backend/google-credentials.json'.`
+        `Unable to read rows from Google Sheet. Please ensure the Google Sheet is shared with '${this.getGoogleAuthClientEmail ? await this.getGoogleAuthClientEmail() : "service account"}' as Editor, or set share settings to "Anyone with the link can view".`
       );
+    }
+
+    // Fetch all current guests for this wedding in 1 call to index existing guests
+    const currentGuests = await GuestModel.getAll({ weddingId });
+    const bySr = new Map();
+    const byName = new Map();
+    for (const g of currentGuests) {
+      if (g.sr_no) bySr.set(Number(g.sr_no), g);
+      if (g.guest_name) byName.set(String(g.guest_name).trim().toLowerCase(), g);
     }
 
     let createdCount = 0;
     let updatedCount = 0;
+    const recordsToUpsert = [];
 
     for (let i = 0; i < rows.length; i++) {
       const normalized = this.normalizeRowToGuest(rows[i], weddingId, i + 1);
       if (!normalized.guest_name || normalized.guest_name.trim() === "") continue;
+      // Skip repeated header rows
+      if (normalized.guest_name.toLowerCase() === "guest name" || normalized.guest_name.toLowerCase() === "guest_name") continue;
 
-      const result = await this.upsertGuest(weddingId, normalized);
-      if (result.action === "created") createdCount++;
-      else if (result.action === "updated") updatedCount++;
+      let existing = null;
+      if (normalized.sr_no && bySr.has(Number(normalized.sr_no))) {
+        existing = bySr.get(Number(normalized.sr_no));
+      } else if (normalized.guest_name && byName.has(normalized.guest_name.trim().toLowerCase())) {
+        existing = byName.get(normalized.guest_name.trim().toLowerCase());
+      }
+
+      if (existing) {
+        updatedCount++;
+        const record = {
+          ...existing,
+          ...normalized,
+          id: existing.id,
+          wedding_id: weddingId,
+        };
+        recordsToUpsert.push(record);
+      } else {
+        createdCount++;
+        const newId = `guest_${crypto.randomUUID().slice(0, 8)}`;
+        const record = {
+          ...normalized,
+          id: newId,
+          wedding_id: weddingId,
+        };
+        recordsToUpsert.push(record);
+        if (record.sr_no) bySr.set(Number(record.sr_no), record);
+        if (record.guest_name) byName.set(record.guest_name.trim().toLowerCase(), record);
+      }
+    }
+
+    // High performance bulk upsert to Supabase & Store
+    if (recordsToUpsert.length > 0) {
+      await GuestModel.bulkUpsert(weddingId, recordsToUpsert);
     }
 
     // Update wedding last_synced timestamp in DB
@@ -791,7 +827,7 @@ export const GoogleSheetsService = {
 
     return {
       success: true,
-      message: `Successfully synchronized Google Sheet with PostgreSQL / Supabase database!`,
+      message: `Successfully synchronized ${recordsToUpsert.length} guests from Google Sheet with database!`,
       createdCount,
       updatedCount,
       totalRows: rows.length,

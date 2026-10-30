@@ -175,19 +175,34 @@ export const googleSheetsController = {
         return res.status(404).json({ success: false, message: "Wedding not found" });
       }
 
-      // Auto-initialize headers (A1:R1) and push current guests to the linked sheet
+      // When linking, check if the sheet already contains guest rows to sync into the DB
+      let syncResult = null;
       if (extractedId && !extractedId.startsWith("wed_")) {
         try {
-          await GoogleSheetsService.initializeAndPushToSheet(id, extractedId);
-        } catch (initErr) {
-          console.warn("⚠️ Note on auto-populating linked sheet:", initErr.message);
+          syncResult = await GoogleSheetsService.syncFromGoogleSheet(id, extractedId);
+          console.log(`✅ Automatically imported ${syncResult.totalRows} guests from linked Google Sheet!`);
+        } catch (syncErr) {
+          console.warn("⚠️ Note on auto-import from linked sheet (will try initializing):", syncErr.message);
+          try {
+            await GoogleSheetsService.initializeAndPushToSheet(id, extractedId);
+          } catch (initErr) {
+            console.warn("⚠️ Note on auto-populating linked sheet:", initErr.message);
+          }
         }
       }
 
+      const guests = await GuestModel.getAll({ weddingId: id });
+      const stats = await GuestModel.getStatistics(id);
+
       res.status(200).json({
         success: true,
-        message: "Google Sheet linked successfully! Headers and guests synchronized.",
+        message: syncResult
+          ? `Google Sheet linked & synchronized successfully! (${syncResult.totalRows} guests loaded)`
+          : "Google Sheet linked successfully! Headers and guests synchronized.",
         data: updated,
+        syncResult,
+        guests,
+        stats,
       });
     } catch (error) {
       console.error("Error linking Google Sheet:", error);

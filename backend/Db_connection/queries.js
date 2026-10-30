@@ -737,6 +737,17 @@ export const query = async (text, params = []) => {
         list = list.filter((g) => g.wedding_id === wId);
       }
     }
+
+    if (lowerSql.includes("sr_no = $") && params.length >= 2) {
+      const targetSr = Number(params[1]);
+      list = list.filter((g) => Number(g.sr_no) === targetSr);
+    }
+
+    if (lowerSql.includes("guest_name") && params.length >= 2) {
+      const targetName = String(params[1] || "").toLowerCase().trim();
+      list = list.filter((g) => String(g.guest_name || "").toLowerCase().trim() === targetName);
+    }
+
     return formatResult(list);
   }
 

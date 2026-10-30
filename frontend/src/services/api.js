@@ -1169,32 +1169,19 @@ export const api = {
 
   // ------------------- GOOGLE SHEETS INTEGRATION -------------------
   async syncGoogleSheet(weddingId, sheetUrl = null) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/sheets/weddings/${weddingId}/sync-from-sheet`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sheet_url: sheetUrl }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        return json;
-      }
-      const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.message || "Failed to sync Google Sheet");
-    } catch (e) {
-      // Offline fallback simulation
-      const guests = getCachedGuests().filter((g) => g.wedding_id === weddingId);
-      return {
-        success: true,
-        message: "Google Sheet connection verified & synchronized with database!",
-        data: {
-          createdCount: 0,
-          updatedCount: guests.length,
-          totalRows: guests.length,
-          guests: guests,
-        },
-      };
+    const res = await fetch(`${API_BASE_URL}/sheets/weddings/${weddingId}/sync-from-sheet`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sheet_url: sheetUrl }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(json.message || "Failed to sync Google Sheet");
     }
+    if (json.data?.guests) {
+      setCachedGuests(json.data.guests);
+    }
+    return json;
   },
 
   async createLiveGoogleSheet(weddingId) {
@@ -1314,26 +1301,25 @@ function syncAllGuestsToDatabase() {
   },
 
   async linkGoogleSheet(weddingId, sheetUrl) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/sheets/weddings/${weddingId}/link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ google_sheet_url: sheetUrl }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        return json.data;
-      }
-    } catch (e) { }
-
+    const res = await fetch(`${API_BASE_URL}/sheets/weddings/${weddingId}/link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ google_sheet_url: sheetUrl }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(json.message || "Failed to link Google Sheet");
+    }
+    if (json.guests) {
+      setCachedGuests(json.guests);
+    }
     const weddings = getCachedWeddings();
     const idx = weddings.findIndex((w) => w.id === weddingId);
-    if (idx !== -1) {
-      weddings[idx].google_sheet_url = sheetUrl;
+    if (idx !== -1 && json.data) {
+      weddings[idx] = { ...weddings[idx], ...json.data };
       setCachedWeddings(weddings);
-      return weddings[idx];
     }
-    return null;
+    return json;
   },
 
   async getGoogleAuthStatus() {
