@@ -93,7 +93,7 @@ export default function CircularChatWidget({
   return (
     <aside
       aria-label="Live Chat Assistant"
-      className="fixed bottom-5 right-5 sm:bottom-7 sm:right-7 z-40 flex flex-col items-end select-none group"
+      className="fixed bottom-5 left-5 sm:bottom-7 sm:left-7 z-40 flex flex-col items-start select-none group"
     >
       {/* Floating Unread Preview Speech Bubble (if there are new messages) */}
       {showNotificationBubble && latestMessage && unreadCount > 0 && (
@@ -133,13 +133,13 @@ export default function CircularChatWidget({
           </div>
 
           {/* Little speech tail pointing to the circle */}
-          <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-[#0a1e18] border-r border-b border-emerald-500/40 rotate-45"></div>
+          <div className="absolute -bottom-1.5 left-6 w-3 h-3 bg-[#0a1e18] border-r border-b border-emerald-500/40 rotate-45"></div>
         </div>
       )}
 
       {/* Hover Tooltip pill on desktop when idle */}
       {!showNotificationBubble && (
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none mb-2 mr-1">
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none mb-2 ml-1">
           <div className="bg-[#0f2922] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg border border-emerald-600/50 flex items-center gap-2 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-[#84e030] animate-pulse"></span>
             <span>{isAdmin ? "Client Live Chat" : "Admin & Concierge"}</span>

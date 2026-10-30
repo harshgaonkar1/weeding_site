@@ -15,7 +15,6 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import SidebarChatWidget from "./SidebarChatWidget";
 
 export default function Sidebar({
   totalCount = 2,
@@ -360,14 +359,6 @@ export default function Sidebar({
             </button>
           )}
         </nav>
-
-        {/* Live Chatbot / Direct Messenger Widget on Sidebar (Only for User & Admin) */}
-        {(isAdmin || isMarriageClient) && (
-          <SidebarChatWidget
-            onOpenChat={onOpenChat}
-            selectedWedding={selectedWedding || (weddings && weddings[0])}
-          />
-        )}
       </div>
 
       {/* Bottom Profile Footer */}
