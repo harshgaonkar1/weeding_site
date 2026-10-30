@@ -732,9 +732,11 @@ export const query = async (text, params = []) => {
     // Filter guests
     let list = [...store.guests];
     if (params.length > 0 && lowerSql.includes("wedding_id = $")) {
-      const wId = params[0];
+      const match = lowerSql.match(/wedding_id\s*=\s*\$(\d+)/);
+      const pIdx = match ? parseInt(match[1], 10) - 1 : 0;
+      const wId = params[pIdx];
       if (wId && wId !== "All" && wId !== "all") {
-        list = list.filter((g) => g.wedding_id === wId);
+        list = list.filter((g) => String(g.wedding_id || "").trim() === String(wId).trim());
       }
     }
 

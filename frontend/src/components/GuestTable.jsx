@@ -39,6 +39,7 @@ const getAvatarTheme = (name = "") => {
 
 export default function GuestTable({
   guests = [],
+  loading = false,
   onEditGuest,
   onDeleteGuest,
   onViewGuest,
@@ -65,6 +66,43 @@ export default function GuestTable({
     const start = (currentPage - 1) * pageSize;
     return guests.slice(start, start + pageSize);
   }, [guests, currentPage, pageSize]);
+
+  if (loading && guests.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-8 sm:p-12 text-center my-3 sm:my-4 shadow-2xs animate-fadeIn">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-emerald-500 animate-pulse" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-slate-800">Loading Guests...</h3>
+            <p className="text-xs text-slate-400">Fetching guest entries for this marriage</p>
+          </div>
+          {/* Skeleton rows shimmer */}
+          <div className="w-full max-w-3xl space-y-2.5 pt-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-11 bg-slate-50 border border-slate-100 rounded-xl animate-pulse flex items-center px-4 justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-slate-200" />
+                  <div className="space-y-1 text-left">
+                    <div className="w-28 sm:w-36 h-3 bg-slate-200 rounded" />
+                    <div className="w-16 sm:w-20 h-2 bg-slate-100 rounded" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-14 h-5 bg-slate-200 rounded-full" />
+                  <div className="w-16 h-5 bg-slate-200 rounded-full hidden sm:block" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (guests.length === 0) {
     return (

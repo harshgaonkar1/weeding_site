@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Download,
   RefreshCw,
@@ -143,39 +143,78 @@ export default function Hero() {
     }
   }, [isMarriageClient, user?.wedding_id, user?.role, loadWeddings]);
 
-  // 2. Load Guests & Stats (scoped to selected wedding)
-  const selectedWeddingId = selectedWedding ? selectedWedding.id : "all";
+  // 2. Load Guests & Stats (scoped strictly to selected wedding)
+  const selectedWeddingId = selectedWedding ? selectedWedding.id : null;
+  const activeWeddingRef = useRef(selectedWeddingId);
+
+  useEffect(() => {
+    activeWeddingRef.current = selectedWeddingId;
+  }, [selectedWeddingId]);
 
   const loadGuests = useCallback(async () => {
+    // If no wedding is selected and we are on the weddings dashboard, do not fetch guests
+    if (!selectedWedding && activeTab === "weddings" && !isMarriageClient) {
+      setLoading(false);
+      return;
+    }
+
+    const targetWeddingId = selectedWeddingId || (isMarriageClient ? user?.wedding_id : "all");
+    const requestedId = targetWeddingId;
+
     try {
       setLoading(true);
       const [guestRes, statsRes] = await Promise.all([
         api.fetchGuests({
-          weddingId: selectedWeddingId,
+          weddingId: targetWeddingId,
           side: sideFilter,
           search: searchQuery,
           rsvp: rsvpFilter,
           idCard: idCardFilter,
           callAttempts: callAttemptsFilter,
         }),
-        api.fetchStats(selectedWeddingId),
+        api.fetchStats(targetWeddingId),
       ]);
 
-      setGuests(guestRes.data || []);
-      setStats(statsRes || calculateStatsFromList(guestRes.data || []));
+      // Guard: Only commit results if the user has not switched away to another wedding
+      if (
+        activeWeddingRef.current === requestedId ||
+        (!activeWeddingRef.current && requestedId === "all")
+      ) {
+        setGuests(guestRes.data || []);
+        setStats(statsRes || calculateStatsFromList(guestRes.data || []));
+      }
     } catch (err) {
       console.error("Error loading guests:", err);
     } finally {
-      setLoading(false);
+      if (
+        activeWeddingRef.current === requestedId ||
+        (!activeWeddingRef.current && requestedId === "all")
+      ) {
+        setLoading(false);
+      }
     }
   }, [
+    selectedWedding,
     selectedWeddingId,
+    activeTab,
+    isMarriageClient,
+    user?.wedding_id,
     sideFilter,
     searchQuery,
     rsvpFilter,
     idCardFilter,
     callAttemptsFilter,
   ]);
+
+  // Strict client-side filter: ONLY guests belonging to this wedding can EVER be displayed.
+  // This guarantees that even during state transitions or API re-fetching, guests from another marriage
+  // are never visible for even a single frame!
+  const displayedGuests = useMemo(() => {
+    if (selectedWedding && selectedWedding.id && selectedWedding.id !== "all") {
+      return guests.filter((g) => g.wedding_id === selectedWedding.id);
+    }
+    return guests;
+  }, [guests, selectedWedding]);
 
   useEffect(() => {
     loadWeddings();
@@ -187,10 +226,25 @@ export default function Hero() {
 
   // ------------------- WEDDING ACTIONS -------------------
   const handleSelectWedding = (wedding) => {
-    setSelectedWedding(wedding);
     if (wedding) {
+      activeWeddingRef.current = wedding.id;
+      // Immediately reset guests and stats so no stale data from another marriage flashes
+      setGuests([]);
+      setStats({});
+      setLoading(true);
+      // Reset search and filter states for clean scoped browsing
+      setSearchQuery("");
+      setSideFilter("All");
+      setRsvpFilter("All");
+      setIdCardFilter("All");
+      setCallAttemptsFilter("All");
+      setSelectedWedding(wedding);
       setActiveTab("directory");
     } else {
+      activeWeddingRef.current = null;
+      setSelectedWedding(null);
+      setGuests([]);
+      setStats({});
       setActiveTab("weddings");
     }
   };
@@ -267,8 +321,7 @@ export default function Hero() {
 
       // 3. Navigate away if we were viewing the deleted wedding
       if (selectedWedding?.id === delId) {
-        setSelectedWedding(null);
-        setActiveTab("weddings");
+        handleSelectWedding(null);
       }
       setDeletingWedding(null);
     } catch (err) {
@@ -478,8 +531,8 @@ export default function Hero() {
   }
 
   const nextSrNo =
-    guests.length > 0
-      ? Math.max(...guests.map((g) => Number(g.sr_no) || 0)) + 1
+    displayedGuests.length > 0
+      ? Math.max(...displayedGuests.map((g) => Number(g.sr_no) || 0)) + 1
       : 1;
 
   const totalGlobalGuests = weddings.reduce(
@@ -512,7 +565,7 @@ export default function Hero() {
         <Sidebar
           totalCount={
             selectedWedding
-              ? stats.totalRegistered ?? guests.length
+              ? stats.totalRegistered ?? displayedGuests.length
               : totalGlobalGuests
           }
           totalWeddingsCount={weddings.length}
@@ -668,10 +721,7 @@ export default function Hero() {
                   {!isMarriageClient && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedWedding(null);
-                        setActiveTab("weddings");
-                      }}
+                      onClick={() => handleSelectWedding(null)}
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 mb-1 cursor-pointer transition-all hover:-translate-x-1"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
@@ -686,7 +736,11 @@ export default function Hero() {
                         : "Guest Directory"}
                     </span>
                     <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs shrink-0">
-                      {stats?.totalRegistered ?? guests.length} Guests
+                      {stats?.totalRegistered !== undefined
+                        ? `${stats.totalRegistered} Guests`
+                        : selectedWedding?.total_guests !== undefined
+                        ? `${selectedWedding.total_guests} Guests`
+                        : `${displayedGuests.length} Guests`}
                     </span>
                     {isMarriageClient && (
                       <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 shrink-0">
@@ -780,7 +834,8 @@ export default function Hero() {
 
               {/* Guest Directory Table */}
               <GuestTable
-                guests={guests}
+                guests={displayedGuests}
+                loading={loading}
                 onEditGuest={handleOpenEditGuestModal}
                 onDeleteGuest={(guest) => setDeletingGuest(guest)}
                 onViewGuest={(guest) => setViewingGuest(guest)}
@@ -797,7 +852,7 @@ export default function Hero() {
           {/* ================= VIEW 3: ANALYTICS & TRENDS (BAR GRAPH, LINE GRAPH, LOGISTICS) ================= */}
           {activeTab === "analytics" && (
             <AnalyticsView
-              guests={guests}
+              guests={displayedGuests}
               wedding={selectedWedding || (weddings && weddings[0])}
               weddings={weddings}
               onSelectWedding={handleSelectWedding}
@@ -927,7 +982,7 @@ export default function Hero() {
           setIsWhatsAppModalOpen(false);
           setWhatsAppModalInitialGuest(null);
         }}
-        guests={guests}
+        guests={displayedGuests}
         wedding={selectedWedding}
         initialGuest={whatsAppModalInitialGuest}
       />

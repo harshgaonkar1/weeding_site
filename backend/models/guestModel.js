@@ -205,8 +205,16 @@ export const GuestModel = {
             return updatedRow;
           });
 
-          // Keep in-memory store in sync
-          store.guests = sanitized;
+          // Keep in-memory store in sync without wiping other weddings
+          if (weddingId && weddingId !== "All" && weddingId !== "all") {
+            const fetchedIds = new Set(sanitized.map((g) => g.id));
+            store.guests = [
+              ...sanitized,
+              ...(store.guests || []).filter((g) => !fetchedIds.has(g.id)),
+            ];
+          } else {
+            store.guests = sanitized;
+          }
 
           let list = [...sanitized];
 
