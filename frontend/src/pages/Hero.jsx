@@ -35,6 +35,7 @@ import GoogleSheetModal from "../components/GoogleSheetModal";
 import WhatsAppMessageModal from "../components/WhatsAppMessageModal";
 import AnalyticsView from "../components/AnalyticsView";
 import ChatBotModal from "../components/ChatBotModal";
+import CircularChatWidget from "../components/CircularChatWidget";
 import LoginPage from "./LoginPage";
 import { api, calculateStatsFromList } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -1006,7 +1007,13 @@ export default function Hero() {
         }}
       />
 
-      {/* 11. Live Chat Bot & Direct Messenger Modal (User & Admin Communication) */}
+      {/* 11. Floating Circular Chatbot Section (Opens Wide on Click) */}
+      <CircularChatWidget
+        onOpenChat={() => setIsChatModalOpen(true)}
+        selectedWedding={selectedWedding || (weddings && weddings[0])}
+      />
+
+      {/* 12. Live Chat Bot & Direct Messenger Modal (User & Admin Communication) */}
       <ChatBotModal
         isOpen={isChatModalOpen}
         onClose={() => setIsChatModalOpen(false)}

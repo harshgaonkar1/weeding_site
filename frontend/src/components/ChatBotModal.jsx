@@ -14,6 +14,8 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api, BACKEND_SERVER_URL } from "../services/api";
@@ -58,6 +60,7 @@ export default function ChatBotModal({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSocketLive, setIsSocketLive] = useState(false);
   const [remoteTypingUser, setRemoteTypingUser] = useState(null);
+  const [isWide, setIsWide] = useState(false);
 
   const messagesEndRef = useRef(null);
   const isSendingRef = useRef(false);
@@ -251,7 +254,7 @@ export default function ChatBotModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[700px] animate-scaleUp">
+      <div className={`bg-white rounded-3xl w-full ${isWide ? "max-w-4xl sm:max-w-5xl" : "max-w-2xl sm:max-w-3xl"} shadow-2xl border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[740px] transition-all duration-300 animate-scaleUp`}>
         {/* Header */}
         <div className="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-[#0f2922] to-[#184236] text-white flex items-center justify-between border-b border-emerald-900/40 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -317,6 +320,16 @@ export default function ChatBotModal({
                 ))}
               </select>
             )}
+
+            {/* Toggle Wide View */}
+            <button
+              type="button"
+              onClick={() => setIsWide(!isWide)}
+              title={isWide ? "Switch to standard width" : "Open extra wide view"}
+              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer hidden sm:flex"
+            >
+              {isWide ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
 
             <button
               type="button"
