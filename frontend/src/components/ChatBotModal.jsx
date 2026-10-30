@@ -14,8 +14,6 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
-  Maximize2,
-  Minimize2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api, BACKEND_SERVER_URL } from "../services/api";
@@ -60,7 +58,6 @@ export default function ChatBotModal({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSocketLive, setIsSocketLive] = useState(false);
   const [remoteTypingUser, setRemoteTypingUser] = useState(null);
-  const [isWide, setIsWide] = useState(false);
 
   const messagesEndRef = useRef(null);
   const isSendingRef = useRef(false);
@@ -254,7 +251,7 @@ export default function ChatBotModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-      <div className={`bg-white rounded-3xl w-full ${isWide ? "max-w-4xl sm:max-w-5xl" : "max-w-2xl sm:max-w-3xl"} shadow-2xl border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[740px] transition-all duration-300 animate-scaleUp`}>
+      <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[700px] animate-scaleUp">
         {/* Header */}
         <div className="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-[#0f2922] to-[#184236] text-white flex items-center justify-between border-b border-emerald-900/40 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -271,11 +268,10 @@ export default function ChatBotModal({
                 </h3>
                 {/* Live Socket Status Badge */}
                 <div
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    isSocketLive
-                      ? "bg-emerald-500/20 text-[#84e030] border border-emerald-500/30"
-                      : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                  }`}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${isSocketLive
+                    ? "bg-emerald-500/20 text-[#84e030] border border-emerald-500/30"
+                    : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    }`}
                   title={isSocketLive ? "Live Socket.IO Connected (Instant)" : "Connecting to Live Stream..."}
                 >
                   <span className="relative flex h-1.5 w-1.5">
@@ -283,12 +279,11 @@ export default function ChatBotModal({
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#84e030] opacity-75"></span>
                     )}
                     <span
-                      className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
-                        isSocketLive ? "bg-[#84e030]" : "bg-amber-400"
-                      }`}
+                      className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isSocketLive ? "bg-[#84e030]" : "bg-amber-400"
+                        }`}
                     ></span>
                   </span>
-                  <span>{isSocketLive ? "Live (0ms)" : "Syncing"}</span>
+                  <span>{isSocketLive ? "Live" : "Syncing"}</span>
                 </div>
               </div>
 
@@ -320,16 +315,6 @@ export default function ChatBotModal({
                 ))}
               </select>
             )}
-
-            {/* Toggle Wide View */}
-            <button
-              type="button"
-              onClick={() => setIsWide(!isWide)}
-              title={isWide ? "Switch to standard width" : "Open extra wide view"}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer hidden sm:flex"
-            >
-              {isWide ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            </button>
 
             <button
               type="button"
@@ -397,9 +382,8 @@ export default function ChatBotModal({
               return (
                 <div
                   key={msg.id || index}
-                  className={`flex flex-col ${
-                    isBot ? "items-center" : isMe ? "items-end" : "items-start"
-                  }`}
+                  className={`flex flex-col ${isBot ? "items-center" : isMe ? "items-end" : "items-start"
+                    }`}
                 >
                   {/* Sender Name & Role Pill */}
                   {!isBot && (
@@ -424,32 +408,29 @@ export default function ChatBotModal({
                     </div>
                   ) : (
                     <div
-                      className={`max-w-[82%] sm:max-w-[75%] rounded-2xl px-3.5 py-2.5 text-xs shadow-2xs leading-relaxed ${
-                        isMe
-                          ? "bg-[#0f2922] text-white rounded-br-xs"
-                          : "bg-white text-slate-800 border border-slate-200/90 rounded-bl-xs"
-                      }`}
+                      className={`max-w-[82%] sm:max-w-[75%] rounded-2xl px-3.5 py-2.5 text-xs shadow-2xs leading-relaxed ${isMe
+                        ? "bg-[#0f2922] text-white rounded-br-xs"
+                        : "bg-white text-slate-800 border border-slate-200/90 rounded-bl-xs"
+                        }`}
                     >
                       <p className="whitespace-pre-line">{msg.message}</p>
 
                       <div
-                        className={`flex items-center justify-end gap-1 mt-1 text-[9.5px] ${
-                          isMe ? "text-emerald-200/70" : "text-slate-400"
-                        }`}
+                        className={`flex items-center justify-end gap-1 mt-1 text-[9.5px] ${isMe ? "text-emerald-200/70" : "text-slate-400"
+                          }`}
                       >
                         <span>
                           {msg.created_at
                             ? new Date(msg.created_at).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
                             : ""}
                         </span>
                         {isMe && (
                           <CheckCheck
-                            className={`w-3 h-3 ${
-                              msg.is_read ? "text-[#84e030]" : "text-emerald-200/60"
-                            }`}
+                            className={`w-3 h-3 ${msg.is_read ? "text-[#84e030]" : "text-emerald-200/60"
+                              }`}
                           />
                         )}
                       </div>
@@ -468,7 +449,7 @@ export default function ChatBotModal({
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse delay-75"></span>
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse delay-150"></span>
               </span>
-              <span>{remoteTypingUser} is typing...</span>
+              <span>...</span>
             </div>
           )}
 
