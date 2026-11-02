@@ -122,9 +122,9 @@ export default function Header({
           {canEditGuests && (
             <button
               onClick={onOpenAddModal}
-              className="bg-[#0f2922] hover:bg-[#163a30] active:scale-95 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer btn-interactive"
+              className="bg-[#5c1322] hover:bg-[#480e1b] active:scale-95 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer btn-interactive"
             >
-              <Plus className="w-3.5 h-3.5 text-[#84e030]" />
+              <Plus className="w-3.5 h-3.5 text-[#eedfc8]" />
               <span className="text-[11px]">Guest</span>
             </button>
           )}
@@ -137,7 +137,7 @@ export default function Header({
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-1 bg-white hover:bg-slate-50 border border-slate-200 p-1.5 rounded-xl cursor-pointer shadow-2xs"
               >
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#0f2922] to-emerald-700 flex items-center justify-center text-white font-bold text-[10px] shrink-0">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#4a0e17] via-[#5c1322] to-[#8f273c] flex items-center justify-center text-white font-bold text-[10px] shrink-0">
                   {user.avatar ? (
                     <img
                       src={user.avatar}
@@ -163,16 +163,16 @@ export default function Header({
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 md:gap-3.5 w-full">
         {/* Search Bar */}
         <div className="relative w-full md:w-80 group">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none group-focus-within:text-emerald-600 transition-colors" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none group-focus-within:text-[#5c1322] transition-colors" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search guests, phone, logistics..."
-            className="w-full bg-[#f8fafc] border border-slate-200/90 rounded-xl pl-9 pr-10 md:pr-12 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#84e030]/60 focus:bg-white transition-all shadow-2xs group-hover:border-slate-300 font-medium"
+            className="w-full bg-[#f8fafc] border border-slate-200/90 rounded-xl pl-9 pr-10 md:pr-12 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#722233]/40 focus:border-[#722233] focus:bg-white transition-all shadow-2xs group-hover:border-slate-300 font-medium"
           />
-          <kbd className="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 bg-white border border-slate-200 text-slate-400 text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-2xs pointer-events-none group-focus-within:border-emerald-300 group-focus-within:text-emerald-600 transition-colors">
+          <kbd className="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 bg-white border border-slate-200 text-slate-400 text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-2xs pointer-events-none group-focus-within:border-[#e3d3be] group-focus-within:text-[#5c1322] transition-colors">
             ⌘K
           </kbd>
         </div>
@@ -205,7 +205,7 @@ export default function Header({
                   : "text-slate-500 hover:text-slate-900 hover:bg-white/60"
               }`}
             >
-              <PhoneCall className={`w-3.5 h-3.5 ${isCallCenter ? "text-emerald-600" : "text-slate-400"}`} />
+              <PhoneCall className={`w-3.5 h-3.5 ${isCallCenter ? "text-[#5c1322]" : "text-slate-400"}`} />
               <span>Call Center</span>
             </button>
 
@@ -219,7 +219,7 @@ export default function Header({
                   : "text-slate-500 hover:text-slate-900 hover:bg-white/60"
               }`}
             >
-              <Heart className={`w-3.5 h-3.5 ${isMarriageClient ? "text-rose-500" : "text-slate-400"}`} />
+              <Heart className={`w-3.5 h-3.5 ${isMarriageClient ? "text-[#8f273c]" : "text-slate-400"}`} />
               <span>User View</span>
             </button>
           </div>
@@ -228,9 +228,9 @@ export default function Header({
           {canEditGuests && (
             <button
               onClick={onOpenAddModal}
-              className="hidden md:flex bg-[#0f2922] hover:bg-[#163a30] active:scale-98 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold items-center gap-1.5 shadow-2xs transition-all cursor-pointer btn-interactive"
+              className="hidden md:flex bg-[#5c1322] hover:bg-[#480e1b] active:scale-98 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold items-center gap-1.5 shadow-2xs transition-all cursor-pointer btn-interactive"
             >
-              <Plus className="w-3.5 h-3.5 text-[#84e030]" />
+              <Plus className="w-3.5 h-3.5 text-[#eedfc8]" />
               <span>Add Guest</span>
             </button>
           )}
@@ -244,7 +244,7 @@ export default function Header({
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200/90 py-1.5 pl-2 pr-2.5 rounded-xl cursor-pointer transition-all hover:shadow-xs shadow-2xs select-none"
             >
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#0f2922] to-emerald-700 flex items-center justify-center text-white font-bold text-[10px] shrink-0 shadow-2xs">
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#4a0e17] via-[#5c1322] to-[#8f273c] flex items-center justify-center text-white font-bold text-[10px] shrink-0 shadow-2xs">
                 {user.avatar ? (
                   <img
                     src={user.avatar}
@@ -311,9 +311,9 @@ export default function Header({
         ) : (
           <button
             onClick={() => setIsLoginModalOpen(true)}
-            className="bg-[#0f2922] hover:bg-[#163a30] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            className="bg-[#5c1322] hover:bg-[#480e1b] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
           >
-            <LogIn className="w-3.5 h-3.5 text-[#84e030]" />
+            <LogIn className="w-3.5 h-3.5 text-[#eedfc8]" />
             <span>Sign In</span>
           </button>
         )}

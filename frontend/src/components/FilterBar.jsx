@@ -25,7 +25,7 @@ export default function FilterBar({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter by name, phone, notes..."
-          className="w-full bg-[#f8fafc] border border-slate-200 rounded-xl pl-8 pr-3 py-2 sm:py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#84e030] focus:bg-white transition-all"
+          className="w-full bg-[#f8fafc] border border-slate-200 rounded-xl pl-8 pr-3 py-2 sm:py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#722233]/40 focus:border-[#722233] focus:bg-white transition-all"
         />
       </div>
 
@@ -36,7 +36,7 @@ export default function FilterBar({
           <select
             value={callAttemptsFilter}
             onChange={(e) => setCallAttemptsFilter(e.target.value)}
-            className="w-full sm:w-auto bg-white border border-emerald-300 rounded-xl px-2.5 py-2 sm:py-1.5 text-xs font-semibold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-[#84e030] cursor-pointer"
+            className="w-full sm:w-auto bg-[#faf7f2] border border-[#e3d3be] rounded-xl px-2.5 py-2 sm:py-1.5 text-xs font-semibold text-[#5c1322] focus:outline-none focus:ring-2 focus:ring-[#722233]/40 cursor-pointer"
           >
             <option value="All">📞 All Calls</option>
             <option value="0">⚪ 0 Calls</option>
@@ -50,7 +50,7 @@ export default function FilterBar({
         <select
           value={sideFilter}
           onChange={(e) => setSideFilter(e.target.value)}
-          className="w-full sm:w-auto bg-white border border-slate-200 rounded-xl px-2.5 py-2 sm:py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#84e030] cursor-pointer"
+          className="w-full sm:w-auto bg-white border border-slate-200 rounded-xl px-2.5 py-2 sm:py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#722233]/40 cursor-pointer"
         >
           <option value="All">All Sides</option>
           <option value="Groom">🤵 Groom Side</option>
@@ -61,7 +61,7 @@ export default function FilterBar({
         <select
           value={rsvpFilter}
           onChange={(e) => setRsvpFilter(e.target.value)}
-          className={`${!isViewOnly ? "col-span-2 sm:col-span-1" : ""} w-full sm:w-auto bg-white border border-slate-200 rounded-xl px-2.5 py-2 sm:py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#84e030] cursor-pointer`}
+          className={`${!isViewOnly ? "col-span-2 sm:col-span-1" : ""} w-full sm:w-auto bg-white border border-slate-200 rounded-xl px-2.5 py-2 sm:py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#722233]/40 cursor-pointer`}
         >
           <option value="All">All RSVPs</option>
           <option value="Confirmed">✓ Confirmed</option>

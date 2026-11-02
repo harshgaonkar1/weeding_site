@@ -242,7 +242,7 @@ export default function LoginPage({ initialTab = "admin" }) {
 
       {/* 3. Ambient Glowing Animated Orbs */}
       <div
-        className="absolute top-1/4 -left-20 w-96 h-96 bg-[#84e030]/15 rounded-full blur-3xl pointer-events-none animate-floatSlow"
+        className="absolute top-1/4 -left-20 w-96 h-96 bg-[#eedfc8]/15 rounded-full blur-3xl pointer-events-none animate-floatSlow"
         style={{
           transform:
             mousePos.x !== null
@@ -270,14 +270,14 @@ export default function LoginPage({ initialTab = "admin" }) {
       <div className="w-full max-w-md relative z-10 space-y-6">
         {/* Header Title */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[#84e030] text-xs font-bold tracking-wide backdrop-blur-md shadow-xs mb-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eedfc8]/10 border border-[#eedfc8]/25 text-[#eedfc8] text-xs font-bold tracking-wide backdrop-blur-md shadow-xs mb-1">
             <Sparkles className="w-3.5 h-3.5 animate-pulse" />
             <span>Wedding Logistics Portal</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-sans">
             Welcome Back
           </h1>
-          <p className="text-xs sm:text-sm text-emerald-200/70 font-medium">
+          <p className="text-xs sm:text-sm text-[#eedfc8]/80 font-medium">
             Sign in to access your guest & travel desk
           </p>
         </div>
@@ -412,7 +412,7 @@ export default function LoginPage({ initialTab = "admin" }) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#0f2922] hover:bg-[#163a30] active:scale-98 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all disabled:opacity-50 mt-2 btn-interactive"
+                className="w-full bg-[#5c1322] hover:bg-[#480e1b] active:scale-98 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all disabled:opacity-50 mt-2 btn-interactive"
               >
                 {isLoading ? (
                   <span>Signing In...</span>
@@ -423,7 +423,7 @@ export default function LoginPage({ initialTab = "admin" }) {
                         ? "View Marriage Details"
                         : "Sign In"}
                     </span>
-                    <ArrowRight className="w-4 h-4 text-[#84e030]" />
+                    <ArrowRight className="w-4 h-4 text-[#eedfc8]" />
                   </>
                 )}
               </button>
@@ -432,7 +432,7 @@ export default function LoginPage({ initialTab = "admin" }) {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-emerald-100/50">
+        <p className="text-center text-xs text-[#eedfc8]/60">
           Wedding Logistics & Guest Management Portal
         </p>
       </div>

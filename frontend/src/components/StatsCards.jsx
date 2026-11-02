@@ -86,9 +86,9 @@ export default function StatsCards({ stats }) {
         <button
           type="button"
           onClick={toggleAll}
-          className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white hover:bg-emerald-50/70 border border-slate-200/80 px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs"
+          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#5c1322] hover:text-[#3b0b14] bg-[#faf7f2] hover:bg-[#eedfc8]/50 border border-[#e3d3be] px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs"
         >
-          <ChevronsUpDown className="w-3 h-3 text-emerald-600" />
+          <ChevronsUpDown className="w-3 h-3 text-[#722233]" />
           <span>{isAllExpanded ? "Collapse All" : "Expand All"}</span>
         </button>
       </div>
@@ -123,7 +123,7 @@ export default function StatsCards({ stats }) {
             >
               <ChevronDown
                 className={`w-4 h-4 transition-transform duration-200 ${
-                  expandedCards.total ? "rotate-180 text-emerald-700" : "group-hover:translate-y-0.5"
+                  expandedCards.total ? "rotate-180 text-[#5c1322]" : "group-hover:translate-y-0.5"
                 }`}
               />
             </button>

@@ -70,10 +70,10 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
         )}
 
         {/* Top Header Banner */}
-        <div className="bg-gradient-to-br from-[#0f2922] via-[#163a30] to-[#1c4d25] p-4 sm:p-6 text-white text-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-36 h-36 bg-[#84e030]/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-gradient-to-br from-[#3b0b14] via-[#5c1322] to-[#7d1f33] p-4 sm:p-6 text-white text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-36 h-36 bg-[#eedfc8]/10 rounded-full blur-2xl pointer-events-none" />
           
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#84e030]/20 border border-[#84e030]/40 flex items-center justify-center text-[#84e030] mb-3 shadow-sm">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#eedfc8]/20 border border-[#eedfc8]/40 flex items-center justify-center text-[#eedfc8] mb-3 shadow-sm">
             {activeTab === "admin" ? (
               <ShieldCheck className="w-6 h-6" />
             ) : activeTab === "call_center" ? (
@@ -86,7 +86,7 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
           <h2 className="text-xl font-extrabold tracking-tight">
             Wedding Management Portal
           </h2>
-          <p className="text-xs text-emerald-100/80 mt-1 font-normal">
+          <p className="text-xs text-[#eedfc8]/80 mt-1 font-normal">
             Select your account access type
           </p>
 
@@ -97,8 +97,8 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
               onClick={() => handleTabSwitch("admin")}
               className={`py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                 activeTab === "admin"
-                  ? "bg-white text-[#0f2922] shadow-sm font-bold"
-                  : "text-emerald-100 hover:text-white"
+                  ? "bg-white text-[#4a0e17] shadow-sm font-bold"
+                  : "text-[#eedfc8]/80 hover:text-white"
               }`}
             >
               <span>Admin</span>
@@ -109,8 +109,8 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
               onClick={() => handleTabSwitch("call_center")}
               className={`py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                 activeTab === "call_center"
-                  ? "bg-[#84e030] text-[#0f2922] shadow-sm font-bold"
-                  : "text-emerald-100 hover:text-white"
+                  ? "bg-[#eedfc8] text-[#4a0e17] shadow-sm font-bold"
+                  : "text-[#eedfc8]/80 hover:text-white"
               }`}
             >
               <span>Call Desk</span>
@@ -121,8 +121,8 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
               onClick={() => handleTabSwitch("marriage_client")}
               className={`py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                 activeTab === "marriage_client"
-                  ? "bg-emerald-300 text-[#0f2922] shadow-sm font-bold"
-                  : "text-emerald-100 hover:text-white"
+                  ? "bg-[#f4ebe1] text-[#4a0e17] shadow-sm font-bold"
+                  : "text-[#eedfc8]/80 hover:text-white"
               }`}
             >
               <span>Marriage View</span>
@@ -163,7 +163,7 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
                     setIdentifier("aaditya_ananya");
                     setPassword("Aaditya@2026");
                   }}
-                  className="text-[10.5px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer"
+                  className="text-[10.5px] bg-[#f7f2ea] hover:bg-[#eedfc8]/60 text-[#5c1322] border border-[#e3d3be] px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer"
                 >
                   🏰 Aaditya & Ananya
                 </button>
@@ -197,7 +197,7 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
                       ? "e.g. callcenter@emitly.com or callcenter"
                       : "e.g. admin@emitly.com or admin"
                   }
-                  className="w-full bg-[#f8fafc] border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all shadow-2xs font-medium"
+                  className="w-full bg-[#f8fafc] border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#722233]/40 focus:border-[#722233] focus:bg-white transition-all shadow-2xs font-medium"
                 />
               </div>
             </div>
@@ -229,7 +229,7 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
                       ? "e.g. call123"
                       : "e.g. manish1122"
                   }
-                  className="w-full bg-[#f8fafc] border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all shadow-2xs font-medium"
+                  className="w-full bg-[#f8fafc] border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#722233]/40 focus:border-[#722233] focus:bg-white transition-all shadow-2xs font-medium"
                 />
                 <button
                   type="button"
@@ -256,7 +256,7 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#0f2922] hover:bg-[#163a30] active:scale-98 text-white py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all disabled:opacity-50 btn-interactive mt-2"
+              className="w-full bg-[#5c1322] hover:bg-[#480e1b] active:scale-98 text-white py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all disabled:opacity-50 btn-interactive mt-2"
             >
               {isLoading ? (
                 <span>Signing in...</span>

@@ -189,12 +189,12 @@ export default function CircularChatWidget({
     >
       {/* Floating Unread Preview Speech Bubble (if there are new messages) */}
       {showNotificationBubble && latestMessage && unreadCount > 0 && (
-        <div className="mb-3 max-w-xs sm:max-w-sm bg-[#0a1e18]/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-2xl border border-emerald-500/40 animate-bounce duration-1000 relative">
+        <div className="mb-3 max-w-xs sm:max-w-sm bg-[#380911]/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-2xl border border-[#eedfc8]/40 animate-bounce duration-1000 relative">
           <div className="flex items-center justify-between gap-3 mb-1">
-            <span className="text-[10px] font-extrabold text-[#84e030] uppercase tracking-wider flex items-center gap-1">
+            <span className="text-[10px] font-extrabold text-[#eedfc8] uppercase tracking-wider flex items-center gap-1">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#84e030] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#84e030]"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#eedfc8] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#eedfc8]"></span>
               </span>
               <span>New message from {latestMessage.sender_name?.split(" ")[0]}</span>
             </span>
@@ -208,7 +208,7 @@ export default function CircularChatWidget({
                   localStorage.setItem(lastSeenKey, new Date().toISOString());
                 } catch (err) {}
               }}
-              className="text-emerald-400 hover:text-white transition-colors cursor-pointer p-0.5 rounded-full hover:bg-white/10"
+              className="text-[#eedfc8]/70 hover:text-white transition-colors cursor-pointer p-0.5 rounded-full hover:bg-white/10"
               title="Dismiss preview"
             >
               <X className="w-3.5 h-3.5" />
@@ -216,30 +216,30 @@ export default function CircularChatWidget({
           </div>
           <p
             onClick={handleOpenClick}
-            className="text-xs text-emerald-100/90 italic cursor-pointer line-clamp-2 hover:text-white transition-colors"
+            className="text-xs text-[#f7f2ea]/90 italic cursor-pointer line-clamp-2 hover:text-white transition-colors"
           >
             "{latestMessage.message}"
           </p>
           <div
             onClick={handleOpenClick}
-            className="mt-1.5 pt-1 border-t border-emerald-800/60 flex items-center justify-between text-[10px] font-bold text-[#84e030] cursor-pointer"
+            className="mt-1.5 pt-1 border-t border-[#eedfc8]/20 flex items-center justify-between text-[10px] font-bold text-[#eedfc8] cursor-pointer"
           >
             <span>Click circle to open wide</span>
             <span className="group-hover:translate-x-1 transition-transform">→</span>
           </div>
 
           {/* Little speech tail pointing to the circle */}
-          <div className="absolute -bottom-1.5 left-6 w-3 h-3 bg-[#0a1e18] border-r border-b border-emerald-500/40 rotate-45"></div>
+          <div className="absolute -bottom-1.5 left-6 w-3 h-3 bg-[#380911] border-r border-b border-[#eedfc8]/40 rotate-45"></div>
         </div>
       )}
 
       {/* Hover Tooltip pill on desktop when idle */}
       {!showNotificationBubble && (
         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none mb-2 ml-1">
-          <div className="bg-[#0f2922] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg border border-emerald-600/50 flex items-center gap-2 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#84e030] animate-pulse"></span>
+          <div className="bg-[#4a0e17] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg border border-[#eedfc8]/40 flex items-center gap-2 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#eedfc8] animate-pulse"></span>
             <span>{isAdmin ? "Client Live Chat" : "Admin & Concierge"}</span>
-            <span className="text-[#84e030] text-[10px]">Open wide ↗</span>
+            <span className="text-[#eedfc8] text-[10px]">Open wide ↗</span>
           </div>
         </div>
       )}
@@ -248,28 +248,28 @@ export default function CircularChatWidget({
       <button
         type="button"
         onClick={handleOpenClick}
-        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#0b221c] via-[#0f2922] to-[#1a4a3b] text-[#84e030] shadow-2xl shadow-emerald-950/60 border-2 border-emerald-500/50 hover:border-[#84e030] flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-300 relative group/btn focus:outline-none focus:ring-4 focus:ring-[#84e030]/30"
+        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#3b0b14] via-[#5c1322] to-[#7d1f33] text-[#eedfc8] shadow-2xl shadow-rose-950/60 border-2 border-[#eedfc8]/50 hover:border-[#eedfc8] flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-300 relative group/btn focus:outline-none focus:ring-4 focus:ring-[#722233]/40"
         title={isAdmin ? "Open Client Messenger (Wide View)" : "Chat with Admin Manish (Wide View)"}
         aria-label="Open live chat"
       >
         {/* Glowing pulse ring around circle */}
-        <span className="absolute inset-0 rounded-full bg-[#84e030]/20 animate-ping opacity-25 pointer-events-none"></span>
+        <span className="absolute inset-0 rounded-full bg-[#eedfc8]/20 animate-ping opacity-25 pointer-events-none"></span>
 
         {/* Bot Icon */}
         <div className="relative flex items-center justify-center">
-          <Bot className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.2] text-[#84e030] drop-shadow-sm group-hover/btn:rotate-6 transition-transform" />
+          <Bot className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.2] text-[#eedfc8] drop-shadow-sm group-hover/btn:rotate-6 transition-transform" />
           <Sparkles className="w-3 h-3 text-amber-300 absolute -top-1 -right-1 animate-pulse" />
         </div>
 
         {/* Socket.IO Live Indicator Ping Dot */}
         <span className="absolute bottom-1 right-1 flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#84e030] opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-[#84e030] ring-2 ring-[#0f2922]"></span>
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#eedfc8] opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-[#eedfc8] ring-2 ring-[#4a0e17]"></span>
         </span>
 
         {/* Unread Message Count Badge */}
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 bg-[#84e030] text-[#0f2922] font-black text-[11px] px-2 py-0.5 rounded-full shadow-lg ring-2 ring-[#0f2922] animate-bounce">
+          <span className="absolute -top-1.5 -right-1.5 bg-[#eedfc8] text-[#4a0e17] font-black text-[11px] px-2 py-0.5 rounded-full shadow-lg ring-2 ring-[#4a0e17] animate-bounce">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}

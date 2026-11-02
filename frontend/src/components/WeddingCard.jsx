@@ -22,15 +22,15 @@ export default function WeddingCard({
 }) {
   const themeStyles = {
     emerald: {
-      gradient: "from-emerald-800 via-teal-900 to-slate-900",
-      accent: "bg-[#d4f952] text-[#123118]",
-      border: "border-emerald-100",
-      lightBg: "bg-[#f2faf4]",
-      glow: "rgba(22, 163, 74, 0.2)",
+      gradient: "from-[#4a0e17] via-[#5c1322] to-[#2c050d]",
+      accent: "bg-[#eedfc8] text-[#4a0e17]",
+      border: "border-[#eedfc8]/30",
+      lightBg: "bg-[#fbf7f2]",
+      glow: "rgba(114, 34, 51, 0.25)",
     },
     rose: {
-      gradient: "from-rose-700 via-pink-900 to-slate-900",
-      accent: "bg-rose-200 text-rose-950",
+      gradient: "from-[#5c1322] via-[#7d1f33] to-[#2c050d]",
+      accent: "bg-[#eedfc8] text-[#4a0e17]",
       border: "border-rose-100",
       lightBg: "bg-[#fff1f2]",
       glow: "rgba(225, 29, 72, 0.2)",
@@ -59,12 +59,12 @@ export default function WeddingCard({
   const rsvpPercentage = totalGuests > 0 ? Math.round((confirmedGuests / totalGuests) * 100) : 0;
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 hover:border-emerald-300 card-hover-lift flex flex-col overflow-hidden group relative">
+    <div className="bg-white rounded-3xl border border-slate-200/90 hover:border-[#eedfc8] card-hover-lift flex flex-col overflow-hidden group relative">
       {/* Card Header Cover */}
       <div className={`p-6 bg-gradient-to-br ${theme.gradient} text-white relative overflow-hidden`}>
         {/* Ambient floating glows */}
         <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none animate-floatSlow" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#84e030]/15 rounded-full blur-xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#eedfc8]/15 rounded-full blur-xl pointer-events-none" />
         
         {/* Top Badges & Actions */}
         <div className="flex items-center justify-between relative z-10 mb-4">
@@ -81,10 +81,10 @@ export default function WeddingCard({
                   e.stopPropagation();
                   onOpenGoogleSheet(wedding);
                 }}
-                className="px-2.5 py-1 rounded-full bg-[#84e030]/25 hover:bg-[#84e030]/40 border border-[#84e030]/50 text-white transition-all text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
+                className="px-2.5 py-1 rounded-full bg-[#eedfc8]/20 hover:bg-[#eedfc8]/35 border border-[#eedfc8]/40 text-white transition-all text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
                 title="Live Google Sheet Two-Way Sync"
               >
-                <FileSpreadsheet className="w-3 h-3 text-[#84e030]" />
+                <FileSpreadsheet className="w-3 h-3 text-[#eedfc8]" />
                 <span>Sheet</span>
               </button>
             )}
@@ -137,9 +137,9 @@ export default function WeddingCard({
         {/* Bride & Groom Names */}
         <div className="relative z-10">
           <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2 flex-wrap drop-shadow-xs">
-            <span className="group-hover:text-emerald-100 transition-colors">{wedding.groom_name}</span>
-            <span className="text-[#84e030] text-lg font-serif italic animate-pulse">&</span>
-            <span className="group-hover:text-emerald-100 transition-colors">{wedding.bride_name}</span>
+            <span className="group-hover:text-[#eedfc8] transition-colors">{wedding.groom_name}</span>
+            <span className="text-[#eedfc8] text-lg font-serif italic animate-pulse">&</span>
+            <span className="group-hover:text-[#eedfc8] transition-colors">{wedding.bride_name}</span>
           </h3>
           <p className="text-xs text-white/80 mt-1 line-clamp-1 font-normal">
             {wedding.notes || "Grand Wedding Celebrations & Travel Directory"}
@@ -153,7 +153,7 @@ export default function WeddingCard({
         <div className="space-y-2.5 text-xs text-slate-600">
           {/* Date */}
           <div className="flex items-center gap-2 text-slate-800 font-semibold">
-            <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 rounded-lg bg-[#f7f2ea] text-[#5c1322] flex items-center justify-center shrink-0">
               <Calendar className="w-3.5 h-3.5" />
             </div>
             <span>{wedding.wedding_date || "Wedding Date TBD"}</span>
@@ -172,7 +172,7 @@ export default function WeddingCard({
         </div>
 
         {/* Guest Distribution & Stats */}
-        <div className="bg-[#f8fafc] group-hover:bg-[#f2faf4]/60 border border-slate-200/80 rounded-2xl p-3.5 space-y-3 transition-colors">
+        <div className="bg-[#f8fafc] group-hover:bg-[#fbf7f2]/60 border border-slate-200/80 rounded-2xl p-3.5 space-y-3 transition-colors">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500 font-medium">Guest Capacity</span>
             <span className="font-bold text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200/70 shadow-2xs">
@@ -212,10 +212,10 @@ export default function WeddingCard({
         {/* Action: Open Directory */}
         <button
           onClick={() => onSelect(wedding)}
-          className="w-full bg-[#0f2922] hover:bg-[#163a30] text-white py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer group/btn btn-interactive"
+          className="w-full bg-[#5c1322] hover:bg-[#480e1b] text-white py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer group/btn btn-interactive"
         >
           <span>Manage Guest Directory</span>
-          <ArrowRight className="w-4 h-4 text-[#84e030] group-hover/btn:translate-x-1.5 transition-transform" />
+          <ArrowRight className="w-4 h-4 text-[#eedfc8] group-hover/btn:translate-x-1.5 transition-transform" />
         </button>
       </div>
     </div>
