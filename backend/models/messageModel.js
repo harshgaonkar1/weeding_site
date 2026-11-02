@@ -15,7 +15,7 @@ export const MessageModel = {
 
     const localMsgs = (store.messages || []).filter((m) => idVariants.includes(m.wedding_id));
 
-    // Fetch from Supabase database with 2.5s safety timeout
+    // Fetch from Supabase database with 12s safety timeout
     if (supabase) {
       try {
         const queryPromise = supabase
@@ -25,7 +25,7 @@ export const MessageModel = {
           .order("created_at", { ascending: true });
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Supabase fetch timeout")), 2500)
+          setTimeout(() => reject(new Error("Supabase fetch timeout")), 12000)
         );
 
         const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
@@ -40,6 +40,17 @@ export const MessageModel = {
             }
           });
           data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+          // Sync into local in-memory store so it stays fresh
+          if (!store.messages) store.messages = [];
+          const currentStoreIds = new Set(store.messages.map((m) => m.id));
+          data.forEach((m) => {
+            if (!currentStoreIds.has(m.id)) {
+              store.messages.push(m);
+            }
+          });
+          saveMessagesToFile();
+
           return data;
         }
       } catch (err) {

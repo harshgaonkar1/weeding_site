@@ -58,5 +58,265 @@
     "message": "bro how to getg it done",
     "is_read": true,
     "created_at": "2026-11-02T17:13:40.968Z"
+  },
+  {
+    "id": "msg_46be2066-49f8-4539-9da1-8858fc873ffa",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "test & Jaisleen",
+    "sender_role": "client",
+    "message": "Crazyy pawdu",
+    "is_read": true,
+    "created_at": "2026-10-30T04:29:07.241549+00:00"
+  },
+  {
+    "id": "msg_1b287b31-6a06-4b85-bc73-e458f5743f05",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "Yo boi",
+    "is_read": true,
+    "created_at": "2026-10-30T04:29:18.167312+00:00"
+  },
+  {
+    "id": "msg_7712960c-3575-4a82-8873-c1395fbff408",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "Lets fking goo",
+    "is_read": true,
+    "created_at": "2026-10-30T05:43:20.46347+00:00"
+  },
+  {
+    "id": "msg_9753efde-0346-47cc-bf3c-9c3bc1f6ee8b",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "hey bab",
+    "is_read": true,
+    "created_at": "2026-10-30T10:52:53.366454+00:00"
+  },
+  {
+    "id": "msg_17c82216-f2ae-4034-a9e3-499964a9845d",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "Airport pickup confirmed! Dedicated Innovas are on standby.",
+    "is_read": true,
+    "created_at": "2026-10-30T11:02:12.839271+00:00"
+  },
+  {
+    "id": "msg_35179f47-0619-4091-aef7-191e0d326247",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "Manish plzz call again everyone",
+    "is_read": true,
+    "created_at": "2026-10-30T13:51:32.427474+00:00"
+  },
+  {
+    "id": "msg_a8b00173-b029-4cc2-9aa5-d6ae4c124a61",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "test & Jaisleen",
+    "sender_role": "client",
+    "message": "Okk",
+    "is_read": true,
+    "created_at": "2026-10-30T13:51:53.964063+00:00"
+  },
+  {
+    "id": "msg_d28f57ff-3080-46f3-bf53-f7a94e8850a5",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "Ye boi baba",
+    "is_read": true,
+    "created_at": "2026-10-31T11:15:33.571294+00:00"
+  },
+  {
+    "id": "msg_bfc82417-e2f3-43c8-8a2e-67f4a2e70976",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "Groom lists is added",
+    "is_read": true,
+    "created_at": "2026-10-31T14:04:50.600717+00:00"
+  },
+  {
+    "id": "msg_c3351214-e601-4877-b5fe-7009e41beb6b",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "test & Jaisleen",
+    "sender_role": "client",
+    "message": "Great",
+    "is_read": true,
+    "created_at": "2026-10-31T14:05:26.963313+00:00"
+  },
+  {
+    "id": "msg_d9600448-1e5f-48e5-8e73-f1111fd890ad",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "test & Jaisleen",
+    "sender_role": "client",
+    "message": "I am on Android now",
+    "is_read": true,
+    "created_at": "2026-10-31T14:19:11.301981+00:00"
+  },
+  {
+    "id": "msg_1af7f01e-1249-4938-94e9-22b3a5c548be",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "test & Jaisleen",
+    "sender_role": "client",
+    "message": "Even though I am viewing the messages chat box says 7 messages are unread",
+    "is_read": true,
+    "created_at": "2026-10-31T14:19:41.425627+00:00"
+  },
+  {
+    "id": "msg_5045dac2-2631-4106-9b8a-8e47bf08617c",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "test & Jaisleen",
+    "sender_role": "client",
+    "message": "This is on both ios and android",
+    "is_read": true,
+    "created_at": "2026-10-31T14:19:50.186969+00:00"
+  },
+  {
+    "id": "msg_d3148eeb-36c8-4ad5-a261-8d980e6c5da9",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "test & Jaisleen",
+    "sender_role": "client",
+    "message": "And messages send by me(guest) is popping up as unread message for me",
+    "is_read": true,
+    "created_at": "2026-10-31T14:20:34.660323+00:00"
+  },
+  {
+    "id": "msg_d78f97fe-45e6-43ef-94ab-a72ef39c5dd1",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "karta te hav atta bosson",
+    "is_read": true,
+    "created_at": "2026-11-02T10:21:03.729997+00:00"
+  },
+  {
+    "id": "msg_a273c888-716e-4caa-8ed9-cad200688127",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "Albir & Jaisleen",
+    "sender_role": "client",
+    "message": "zata atta pop up yenna",
+    "is_read": true,
+    "created_at": "2026-11-02T10:21:36.110503+00:00"
+  },
+  {
+    "id": "msg_0514d59d-2f4e-4a0e-be78-e66fdc49849a",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "Albir & Jaisleen",
+    "sender_role": "client",
+    "message": "pop up yenna atta",
+    "is_read": true,
+    "created_at": "2026-11-02T10:22:20.961586+00:00"
+  },
+  {
+    "id": "msg_ee88a380-a380-42b7-a7a2-02994f4fc4e5",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "Albir & Jaisleen",
+    "sender_role": "client",
+    "message": "Bro Chalta",
+    "is_read": true,
+    "created_at": "2026-11-02T10:27:43.652196+00:00"
+  },
+  {
+    "id": "msg_b46d250f-6acf-4665-9a8e-c339fd428ea0",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "Albir & Jaisleen",
+    "sender_role": "client",
+    "message": "Hey",
+    "is_read": true,
+    "created_at": "2026-11-02T10:47:20.511131+00:00"
+  },
+  {
+    "id": "msg_710ebe40-8422-4adc-9292-0a24eb013716",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "yo",
+    "is_read": true,
+    "created_at": "2026-11-02T10:47:29.409546+00:00"
+  },
+  {
+    "id": "msg_504624ac-5f24-48b3-b7b1-04e91cd8621f",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "Albir & Jaisleen",
+    "sender_role": "client",
+    "message": "Chalta re",
+    "is_read": true,
+    "created_at": "2026-11-02T10:47:43.915089+00:00"
+  },
+  {
+    "id": "msg_496cce10-7924-4044-ac36-7d2ed86878db",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "boi",
+    "is_read": true,
+    "created_at": "2026-11-02T10:47:48.519213+00:00"
+  },
+  {
+    "id": "msg_12528af3-79e0-4233-888a-2719a8f68664",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "Albir & Jaisleen",
+    "sender_role": "client",
+    "message": "Yo",
+    "is_read": true,
+    "created_at": "2026-11-02T10:48:05.224345+00:00"
+  },
+  {
+    "id": "msg_d6562981-8f44-4f2e-a5e8-f8db04a46114",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "Albir & Jaisleen",
+    "sender_role": "client",
+    "message": "Jaislemn is coming",
+    "is_read": true,
+    "created_at": "2026-11-02T15:43:57.965+00:00"
+  },
+  {
+    "id": "msg_adc6668d-1ee6-4784-932a-b92a6d7512c4",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "chalta",
+    "is_read": false,
+    "created_at": "2026-11-02T17:23:30.225Z"
+  },
+  {
+    "id": "msg_66d8a243-cd88-4046-8a18-06a4e3df49f0",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "hoi",
+    "is_read": false,
+    "created_at": "2026-11-02T17:24:18.953Z"
   }
 ]

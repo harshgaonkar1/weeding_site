@@ -95,8 +95,9 @@ export default function CircularChatWidget({
     // Initial check
     checkMessages();
 
-    // Background sync check every 6 seconds to catch offline/tab-switched incoming messages
-    const syncInterval = setInterval(checkMessages, 6000);
+    // Background safety sync (30s) + on tab focus
+    const syncInterval = setInterval(checkMessages, 30000);
+    window.addEventListener("focus", checkMessages);
 
     // Socket.IO real-time listener for live instant messages
     const handleNewMessage = (newMsg) => {
@@ -138,6 +139,7 @@ export default function CircularChatWidget({
     return () => {
       isMounted = false;
       clearInterval(syncInterval);
+      window.removeEventListener("focus", checkMessages);
       socket.off("receive_message", handleNewMessage);
       socket.off("message", handleNewMessage);
       socket.off("new_message", handleNewMessage);
