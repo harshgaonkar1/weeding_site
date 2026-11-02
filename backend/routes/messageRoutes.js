@@ -123,12 +123,14 @@ router.post("/", async (req, res) => {
       message: message.trim(),
     });
 
-    // Broadcast new message over Socket.IO to wedding room
+    // Broadcast new message over Socket.IO to wedding room AND admins room
     const io = req.app.get("io");
     if (io) {
       const room = getWeddingRoom(safeWeddingId);
       io.to(room).emit("message", savedMsg);
       io.to(room).emit("new_message", savedMsg);
+      io.to("admins").emit("message", savedMsg);
+      io.to("admins").emit("new_message", savedMsg);
     }
 
     let savedBotMsg = null;
@@ -166,11 +168,13 @@ router.post("/", async (req, res) => {
           message: botReplyText,
         });
 
-        // Broadcast bot reply over Socket.IO to wedding room
+        // Broadcast bot reply over Socket.IO to wedding room AND admins room
         if (io) {
           const room = getWeddingRoom(safeWeddingId);
           io.to(room).emit("message", savedBotMsg);
           io.to(room).emit("new_message", savedBotMsg);
+          io.to("admins").emit("message", savedBotMsg);
+          io.to("admins").emit("new_message", savedBotMsg);
         }
       } catch (botErr) {
         console.warn("Notice: Error generating concierge bot reply:", botErr.message);
@@ -224,6 +228,10 @@ router.put("/read/:weddingId", async (req, res) => {
     const io = req.app.get("io");
     if (io) {
       io.to(getWeddingRoom(safeWeddingId)).emit("messages_read", {
+        wedding_id: safeWeddingId,
+        reader_role: readerRole,
+      });
+      io.to("admins").emit("messages_read", {
         wedding_id: safeWeddingId,
         reader_role: readerRole,
       });

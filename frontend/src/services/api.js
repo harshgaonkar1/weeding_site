@@ -1495,16 +1495,29 @@ function syncAllGuestsToDatabase() {
 
   async markMessagesRead(weddingId, readerRole = "client") {
     if (!weddingId) return;
-    // Only update local cache — HTTP call is skipped to avoid CORS/502 on cold-start.
-    // Socket.IO "mark_read" event handles the live broadcast (called separately in ChatBotModal).
+    const cleanId = String(weddingId).replace(/^wedding:/, "").trim();
+
+    // 1. Dispatch non-blocking HTTP PUT to update DB
     try {
-      const local = localStorage.getItem(`cached_messages_${weddingId}`);
+      const token = localStorage.getItem("manish_auth_token") || "";
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      fetch(`${API_BASE_URL}/messages/read/${encodeURIComponent(cleanId)}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ readerRole }),
+      }).catch(() => {});
+    } catch (e) {}
+
+    // 2. Update local storage cache
+    try {
+      const local = localStorage.getItem(`cached_messages_${cleanId}`);
       if (local) {
         const msgs = JSON.parse(local).map((m) => {
           if (m.sender_role !== readerRole) m.is_read = true;
           return m;
         });
-        localStorage.setItem(`cached_messages_${weddingId}`, JSON.stringify(msgs));
+        localStorage.setItem(`cached_messages_${cleanId}`, JSON.stringify(msgs));
       }
     } catch (e) {}
   },

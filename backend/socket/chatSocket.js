@@ -3,6 +3,7 @@ import { supabase } from "../Db_connection/supabaseClient.js";
 import { UserModel } from "../models/userModel.js";
 import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
+import { MessageModel } from "../models/messageModel.js";
 import { ConciergeBotService } from "../services/conciergeBotService.js";
 
 /**
@@ -95,47 +96,63 @@ export async function authenticate(auth) {
   }
 
   // 3. Client session / mock token: extracts weddingId and verifies against weddings table
-  if (rawToken.includes("client")) {
+  if (
+    rawToken.includes("client") ||
+    (typeof auth === "object" && (auth.role === "client" || auth.role === "marriage_client"))
+  ) {
     let weddingId = null;
-    const match = rawToken.match(/(?:session_client_|mock_client_)(wedding_[a-zA-Z0-9]+|[a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-      weddingId = match[1];
-    }
-    if (!weddingId && typeof auth === "object" && auth.weddingId) {
+    if (typeof auth === "object" && auth.weddingId) {
       weddingId = auth.weddingId;
     }
+    if (!weddingId) {
+      // Strip session_client_ / mock_client_ and trailing timestamp (_<digits>)
+      const match = rawToken.match(/(?:session_client_|mock_client_)(.+?)(?:_\d{10,})?$/);
+      if (match && match[1]) {
+        weddingId = match[1].replace(/_\d{10,}$/, "");
+      }
+    }
+    if (!weddingId) {
+      const match2 = rawToken.match(/(wedding_[a-zA-Z0-9]+)/);
+      if (match2 && match2[1]) {
+        weddingId = match2[1];
+      }
+    }
+    if (!weddingId) {
+      weddingId = "wedding_01";
+    }
 
-    if (weddingId) {
-      const cleanWId = String(weddingId).replace(/^wedding:/, "");
-      let wedding = null;
+    const cleanWId = String(weddingId).replace(/^wedding:/, "").replace(/_\d{10,}$/, "").trim();
+    let wedding = null;
 
-      if (supabase) {
+    if (supabase) {
+      try {
         const { data } = await supabase
           .from("weddings")
           .select("id, groom_name, bride_name, client_username")
           .eq("id", cleanWId)
           .maybeSingle();
         if (data) wedding = data;
-      }
-
-      if (!wedding) {
-        wedding = await WeddingModel.getById(cleanWId);
-      }
-
-      if (wedding) {
-        const clientName =
-          wedding.groom_name && wedding.bride_name
-            ? `${wedding.groom_name} & ${wedding.bride_name}`
-            : wedding.client_username || "Wedding Client";
-
-        return {
-          id: `marriage_${wedding.id}`,
-          name: clientName,
-          role: "client",
-          weddingId: wedding.id,
-        };
-      }
+      } catch (e) {}
     }
+
+    if (!wedding) {
+      try {
+        wedding = await WeddingModel.getById(cleanWId);
+      } catch (e) {}
+    }
+
+    const clientName = wedding
+      ? (wedding.groom_name && wedding.bride_name
+          ? `${wedding.groom_name} & ${wedding.bride_name}`
+          : wedding.client_username || "Wedding Client")
+      : (typeof auth === "object" && (auth.name || auth.userName) ? (auth.name || auth.userName) : "Wedding Client");
+
+    return {
+      id: `marriage_${cleanWId}`,
+      name: clientName,
+      role: "client",
+      weddingId: cleanWId,
+    };
   }
 
   // 4. Direct user ID or wedding ID token lookup
@@ -205,7 +222,7 @@ export const initializeChatSocket = (io) => {
     const user = socket.data.user;
     console.log(`🔌 Socket client connected: ${socket.id} | User: ${user.name} (${user.role})`);
 
-    // Rule 7: Clients are locked to their own wedding room; admins pick one via join_wedding
+    // Rule 7: Clients are locked to their own wedding room
     if (user.role === "client") {
       socket.data.weddingId = user.weddingId;
       const room = `wedding:${user.weddingId}`;
@@ -213,24 +230,30 @@ export const initializeChatSocket = (io) => {
       console.log(`💬 Socket ${socket.id} (client) joined ${room}`);
     }
 
+    // Admins join the "admins" room so they receive ALL live client messages instantly!
+    if (user.role === "admin") {
+      socket.join("admins");
+      console.log(`💬 Socket ${socket.id} (admin) joined admins room`);
+      const defaultWedding = user.weddingId || socket.handshake.auth?.weddingId;
+      if (defaultWedding) {
+        const cleanWId = String(defaultWedding).replace(/^wedding:/, "");
+        socket.data.weddingId = cleanWId;
+        socket.join(`wedding:${cleanWId}`);
+        console.log(`💬 Socket ${socket.id} (admin) also joined wedding:${cleanWId}`);
+      }
+    }
+
     // Admins pick/switch wedding room
     socket.on("join_wedding", (weddingId, ack) => {
-      if (user.role !== "admin") {
-        return ack?.({ ok: false, error: "Forbidden: Clients may only access their own wedding" });
-      }
-
       const cleanId = String(weddingId || "").replace(/^wedding:/, "").trim();
       if (!cleanId) {
         return ack?.({ ok: false, error: "weddingId is required" });
       }
 
-      if (socket.data.weddingId) {
-        socket.leave(`wedding:${socket.data.weddingId}`);
-      }
       socket.data.weddingId = cleanId;
       const room = `wedding:${cleanId}`;
       socket.join(room);
-      console.log(`💬 Socket ${socket.id} (admin) joined ${room}`);
+      console.log(`💬 Socket ${socket.id} (${user.role}) joined ${room}`);
       ack?.({ ok: true, room });
     });
 
@@ -245,10 +268,20 @@ export const initializeChatSocket = (io) => {
 
     // Incoming message handler (Rule 3, 4, 5, 6)
     socket.on("message", async (text, ack) => {
-      const weddingId = socket.data.weddingId;
-      if (!weddingId) {
-        return ack?.({ ok: false, error: "No wedding selected" });
+      let targetWeddingId = socket.data.weddingId;
+      if (typeof text === "object" && text !== null) {
+        if (text.wedding_id || text.weddingId) {
+          targetWeddingId = text.wedding_id || text.weddingId;
+        }
       }
+      if (!targetWeddingId && user.weddingId) {
+        targetWeddingId = user.weddingId;
+      }
+      if (!targetWeddingId) {
+        targetWeddingId = "wedding_01";
+      }
+
+      const cleanWeddingId = String(targetWeddingId).replace(/^wedding:/, "").trim();
 
       // Rule 3: text must be string, non-empty after trim, max 1000 chars
       const rawText = typeof text === "string" ? text : (text?.message || text?.text || "");
@@ -257,43 +290,33 @@ export const initializeChatSocket = (io) => {
       }
 
       const cleanText = rawText.trim();
-      const messageId = `msg_${crypto.randomUUID()}`;
 
-      // Rule 5: Server saves to DB first using service role key
-      if (!supabase) {
-        return ack?.({ ok: false, error: "Database unavailable" });
-      }
+      // Save via MessageModel (handles Supabase DB & memory store)
+      const savedMsg = await MessageModel.create({
+        wedding_id: cleanWeddingId,
+        sender_id: user.id,
+        sender_name: user.name,
+        sender_role: user.role, // 'admin' | 'client'
+        message: cleanText,
+      });
 
-      const { data, error } = await supabase
-        .from("wedding_messages")
-        .insert({
-          id: messageId,
-          wedding_id: weddingId,
-          sender_id: user.id,
-          sender_name: user.name,
-          sender_role: user.role, // 'admin' | 'client'
-          message: cleanText,
-        })
-        .select()
-        .single();
+      // Broadcast immediately to the wedding room
+      const room = `wedding:${cleanWeddingId}`;
+      io.to(room).emit("message", savedMsg);
+      io.to(room).emit("new_message", savedMsg);
 
-      if (error) {
-        console.error("Save message failed:", error.message);
-        return ack?.({ ok: false, error: "Could not save message" });
-      }
+      // ALWAYS broadcast immediately to the admins room so admins receive client messages in real-time!
+      io.to("admins").emit("message", savedMsg);
+      io.to("admins").emit("new_message", savedMsg);
 
-      // Rule 5: Then emit the saved row to the wedding room
-      const room = `wedding:${weddingId}`;
-      io.to(room).emit("message", data);
-      io.to(room).emit("new_message", data); // legacy alias
-      ack?.({ ok: true, data });
+      ack?.({ ok: true, data: savedMsg });
 
       // Automated Concierge Bot response if message is from a client
       if (user.role !== "admin") {
         setTimeout(async () => {
           try {
-            let wedding = await WeddingModel.getById(weddingId);
-            let guests = await GuestModel.getByWeddingId(weddingId).catch(() => []);
+            let wedding = await WeddingModel.getById(cleanWeddingId);
+            let guests = await GuestModel.getByWeddingId(cleanWeddingId).catch(() => []);
 
             const botReplyText = ConciergeBotService.generateReply({
               wedding,
@@ -302,24 +325,18 @@ export const initializeChatSocket = (io) => {
               senderName: user.name,
             });
 
-            const botMsgId = `msg_${crypto.randomUUID()}`;
-            const { data: botData, error: botError } = await supabase
-              .from("wedding_messages")
-              .insert({
-                id: botMsgId,
-                wedding_id: weddingId,
-                sender_id: "emitly_bot",
-                sender_name: "Emitly Bot Concierge",
-                sender_role: "bot",
-                message: botReplyText,
-              })
-              .select()
-              .single();
+            const botMsg = await MessageModel.create({
+              wedding_id: cleanWeddingId,
+              sender_id: "emitly_bot",
+              sender_name: "Emitly Bot Concierge",
+              sender_role: "bot",
+              message: botReplyText,
+            });
 
-            if (!botError && botData) {
-              io.to(room).emit("message", botData);
-              io.to(room).emit("new_message", botData);
-            }
+            io.to(room).emit("message", botMsg);
+            io.to(room).emit("new_message", botMsg);
+            io.to("admins").emit("message", botMsg);
+            io.to("admins").emit("new_message", botMsg);
           } catch (botErr) {
             console.warn("Notice: Concierge bot socket reply note:", botErr.message);
           }
@@ -339,13 +356,13 @@ export const initializeChatSocket = (io) => {
       if (!weddingId) return ack?.({ ok: false });
       const cleanId = String(weddingId).replace(/^wedding:/, "");
       try {
-        await supabase
-          .from("wedding_messages")
-          .update({ is_read: true })
-          .eq("wedding_id", cleanId)
-          .neq("sender_role", user.role);
+        await MessageModel.markAsRead(cleanId, user.role);
 
         io.to(`wedding:${cleanId}`).emit("messages_read", {
+          wedding_id: cleanId,
+          reader_role: user.role,
+        });
+        io.to("admins").emit("messages_read", {
           wedding_id: cleanId,
           reader_role: user.role,
         });

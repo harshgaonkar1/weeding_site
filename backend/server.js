@@ -176,6 +176,49 @@ app.get(
   }
 );
 
+// Mark chat messages as seen / read
+app.put(
+  [
+    "/weddings/:weddingId/messages/read",
+    "/api/weddings/:weddingId/messages/read",
+    "/api/messages/read/:weddingId",
+    "/messages/read/:weddingId",
+  ],
+  async (req, res) => {
+    try {
+      const rawId = req.params.weddingId || "";
+      const cleanWeddingId = rawId.replace(/^wedding:/, "").trim() || "wedding_01";
+      const { readerRole = "client" } = req.body || {};
+
+      res.json({ success: true, message: "Messages marked as read" });
+
+      if (supabase) {
+        supabase
+          .from("wedding_messages")
+          .update({ is_read: true })
+          .eq("wedding_id", cleanWeddingId)
+          .neq("sender_role", readerRole)
+          .then(() => {})
+          .catch(() => {});
+      }
+
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`wedding:${cleanWeddingId}`).emit("messages_read", {
+          wedding_id: cleanWeddingId,
+          reader_role: readerRole,
+        });
+        io.to("admins").emit("messages_read", {
+          wedding_id: cleanWeddingId,
+          reader_role: readerRole,
+        });
+      }
+    } catch (e) {
+      if (!res.headersSent) res.json({ success: true });
+    }
+  }
+);
+
 // Global Error Handler with guaranteed CORS headers
 app.use((err, req, res, next) => {
   const origin = req.headers.origin || "*";

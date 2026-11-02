@@ -1011,6 +1011,7 @@ export default function Hero() {
       <CircularChatWidget
         onOpenChat={() => setIsChatModalOpen(true)}
         selectedWedding={selectedWedding || (weddings && weddings[0])}
+        isChatOpen={isChatModalOpen}
       />
 
       {/* 12. Live Chat Bot & Direct Messenger Modal (User & Admin Communication) */}

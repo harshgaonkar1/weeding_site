@@ -58,7 +58,7 @@ export default function Sidebar({
 
       {/* Sidebar (Desktop Static + Mobile Drawer) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white p-5 flex flex-col justify-between border-r border-slate-100 shrink-0 transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:w-64 lg:w-72 md:min-h-[860px] overflow-y-auto ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white p-5 flex flex-col justify-between border-r border-slate-100 shrink-0 transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:z-auto md:w-64 lg:w-72 md:min-h-[860px] overflow-y-auto ${
           isMobileNavOpen
             ? "translate-x-0 shadow-2xl"
             : "-translate-x-full md:translate-x-0 shadow-none"

@@ -106,6 +106,13 @@ export default function ChatBotModal({
       }
     } finally {
       setIsRefreshing(false);
+      // Mark seen in local storage, socket and API
+      const myRole = isAdmin ? "admin" : "client";
+      try {
+        localStorage.setItem(`chat_last_seen_${cleanWId}_${myRole}`, new Date().toISOString());
+      } catch (e) {}
+      markSocketMessagesRead(cleanWId, myRole);
+      api.markMessagesRead(cleanWId, myRole);
     }
   };
 
@@ -127,13 +134,23 @@ export default function ChatBotModal({
     // Rule 8: Dedupe incoming messages by id
     const onMessage = (msg) => {
       if (!msg || !msg.id) return;
+      const myRole = isAdmin ? "admin" : "client";
       setMessages((prev) =>
-        prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
+        prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, is_read: true }]
       );
 
       setRemoteTypingUser(null);
       if (msg.sender_role === "bot") {
         setIsSending(false);
+      }
+
+      // If incoming message is from the other party while chat is open, mark seen immediately
+      if (msg.sender_role !== myRole) {
+        try {
+          localStorage.setItem(`chat_last_seen_${targetWId}_${myRole}`, new Date().toISOString());
+        } catch (e) {}
+        markSocketMessagesRead(targetWId, myRole);
+        api.markMessagesRead(targetWId, myRole);
       }
     };
 
@@ -153,6 +170,14 @@ export default function ChatBotModal({
     // Load initial history from REST endpoint
     loadMessages(targetWId);
 
+    // Mark all existing messages as seen
+    const myRole = isAdmin ? "admin" : "client";
+    try {
+      localStorage.setItem(`chat_last_seen_${targetWId}_${myRole}`, new Date().toISOString());
+    } catch (e) {}
+    markSocketMessagesRead(targetWId, myRole);
+    api.markMessagesRead(targetWId, myRole);
+
     if (socket.connected) {
       setIsSocketLive(true);
       if (isAdmin) {
@@ -166,7 +191,7 @@ export default function ChatBotModal({
       socket.off("message", onMessage);
       socket.off("new_message", onMessage);
       socket.off("user_typing", onUserTyping);
-      socket.disconnect();
+      // Keep global socket connected so background CircularChatWidget can receive live messages
     };
   }, [isOpen, activeWeddingId, token, isAdmin]);
 
@@ -219,15 +244,37 @@ export default function ChatBotModal({
       (weddings && weddings[0]?.id) ||
       "wedding_01";
 
+    const cleanWId = String(targetWeddingId).replace(/^wedding:/, "").trim();
+
     const myName = isAdmin
       ? user?.name || "Admin"
       : user?.name || `${currentWedding.groom_name} & ${currentWedding.bride_name}`;
 
     // Clear typing status
-    emitTyping(targetWeddingId, myName, false);
+    emitTyping(cleanWId, myName, false);
 
-    // Target Architecture: Emit message over socket, validated & saved DB-first by server
-    socket.emit("message", textToSend, (response) => {
+    const payload = {
+      message: textToSend,
+      wedding_id: cleanWId,
+      sender_id: user?.id,
+      sender_name: myName,
+      sender_role: isAdmin ? "admin" : "client",
+    };
+
+    // Ensure socket is connected and authenticated
+    if (!socket.connected) {
+      const authToken = token || localStorage.getItem("manish_auth_token") || "";
+      socket.auth = {
+        token: authToken,
+        weddingId: cleanWId,
+        role: isAdmin ? "admin" : "client",
+        name: myName,
+      };
+      socket.connect();
+    }
+
+    // 1. Emit via socket for instant live delivery
+    socket.emit("message", payload, async (response) => {
       if (!isAdmin) {
         // Keep bot indicator on until bot reply arrives via socket or timeout
         setTimeout(() => setIsSending(false), 3000);
@@ -236,8 +283,18 @@ export default function ChatBotModal({
       }
 
       if (!response?.ok) {
-        console.error("Message send failed:", response?.error);
-        alert(response?.error || "Failed to send message");
+        console.warn("Socket send notice, falling back to REST API:", response?.error);
+        try {
+          await api.sendMessage({
+            wedding_id: cleanWId,
+            sender_id: user?.id,
+            sender_name: myName,
+            sender_role: isAdmin ? "admin" : "client",
+            message: textToSend,
+          });
+        } catch (apiErr) {
+          console.error("API send fallback failed:", apiErr);
+        }
       }
     });
   };
@@ -250,7 +307,7 @@ export default function ChatBotModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
       <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[700px] animate-scaleUp">
         {/* Header */}
         <div className="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-[#0f2922] to-[#184236] text-white flex items-center justify-between border-b border-emerald-900/40 shrink-0">
@@ -458,7 +515,7 @@ export default function ChatBotModal({
             <div className="flex flex-col items-start my-1 animate-pulse">
               <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl px-3.5 py-2 text-xs text-emerald-800 flex items-center gap-2 shadow-2xs">
                 <Bot className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
-                <span className="italic text-[11px] font-medium">Emitly Concierge is typing a response...</span>
+                <span className="italic text-[11px] font-medium">...</span>
               </div>
             </div>
           )}

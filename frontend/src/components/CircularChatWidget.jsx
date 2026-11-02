@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Bot, MessageSquare, Sparkles, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
@@ -7,6 +7,7 @@ import { socket } from "../services/socket";
 export default function CircularChatWidget({
   onOpenChat,
   selectedWedding,
+  isChatOpen = false,
 }) {
   const { user, isAdmin, isMarriageClient } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -15,8 +16,40 @@ export default function CircularChatWidget({
 
   const weddingId = selectedWedding?.id || user?.wedding_id || "wedding_01";
   const myRole = isAdmin ? "admin" : "client";
+  const cleanWId = String(weddingId).replace(/^wedding:/, "");
+  const lastSeenKey = `chat_last_seen_${cleanWId}_${myRole}`;
 
-  // Fetch initial message history from database
+  const isChatOpenRef = useRef(isChatOpen);
+  useEffect(() => {
+    isChatOpenRef.current = isChatOpen;
+    if (isChatOpen) {
+      setUnreadCount(0);
+      setShowNotificationBubble(false);
+      try {
+        localStorage.setItem(lastSeenKey, new Date().toISOString());
+      } catch (e) {}
+    }
+  }, [isChatOpen, lastSeenKey]);
+
+  // Ensure socket is authenticated and connected for real-time live messaging
+  useEffect(() => {
+    if (!isAdmin && !isMarriageClient) return;
+    const token = localStorage.getItem("manish_auth_token") || "";
+    socket.auth = {
+      token,
+      weddingId: cleanWId,
+      role: myRole,
+      name: user?.name,
+    };
+    if (!socket.connected) {
+      socket.connect();
+    }
+    if (isAdmin && cleanWId) {
+      socket.emit("join_wedding", cleanWId);
+    }
+  }, [isAdmin, isMarriageClient, cleanWId, myRole, user?.name]);
+
+  // Fetch message history and determine ONLY new unseen messages
   useEffect(() => {
     if (!isAdmin && !isMarriageClient) {
       setLatestMessage(null);
@@ -30,7 +63,6 @@ export default function CircularChatWidget({
       return;
     }
     let isMounted = true;
-    const cleanWId = String(weddingId).replace(/^wedding:/, "");
 
     const checkMessages = async () => {
       try {
@@ -40,38 +72,86 @@ export default function CircularChatWidget({
             const last = msgs[msgs.length - 1];
             setLatestMessage(last);
 
-            const unread = msgs.filter((m) => m.sender_role !== myRole && !m.is_read).length;
-            setUnreadCount(unread);
-            if (unread > 0) {
+            const lastSeenVal = localStorage.getItem(lastSeenKey);
+            const lastSeenTime = lastSeenVal ? new Date(lastSeenVal).getTime() : 0;
+
+            // Only count and pop up genuine unseen messages from the other sender
+            const unseenMsgs = msgs.filter((m) => {
+              if (m.sender_role === myRole) return false;
+              if (m.is_read) return false;
+              if (lastSeenVal) {
+                const msgTime = new Date(m.created_at).getTime();
+                return msgTime > lastSeenTime;
+              }
+              return true;
+            });
+
+            // If chat is currently open, everything is already seen!
+            if (isChatOpenRef.current) {
+              setUnreadCount(0);
+              setShowNotificationBubble(false);
+              return;
+            }
+
+            // Only pop up if there are actual unseen messages! Never pop up seen messages.
+            if (unseenMsgs.length > 0) {
+              const latestUnseen = unseenMsgs[unseenMsgs.length - 1];
+              setLatestMessage(latestUnseen);
+              setUnreadCount(unseenMsgs.length);
               setShowNotificationBubble(true);
+            } else {
+              setUnreadCount(0);
+              setShowNotificationBubble(false);
             }
           } else {
             setLatestMessage(null);
             setUnreadCount(0);
+            setShowNotificationBubble(false);
           }
         }
       } catch (e) {}
     };
 
-    // Load once on mount or when wedding/role changes
+    // Initial check
     checkMessages();
 
-    // Socket.IO passive listeners for live updates if socket is connected
+    // Background sync check every 6 seconds to catch offline/tab-switched incoming messages
+    const syncInterval = setInterval(checkMessages, 6000);
+
+    // Socket.IO real-time listener for live instant messages
     const handleNewMessage = (newMsg) => {
       if (!isMounted || !newMsg) return;
-      if (newMsg.wedding_id !== cleanWId) return;
-      setLatestMessage(newMsg);
+      const msgWeddingId = String(newMsg.wedding_id || "").replace(/^wedding:/, "");
+      if (myRole === "client" && msgWeddingId !== cleanWId) return;
+
       if (newMsg.sender_role !== myRole) {
-        setUnreadCount((prev) => prev + 1);
-        setShowNotificationBubble(true);
+        setLatestMessage(newMsg);
+
+        if (isChatOpenRef.current) {
+          // Chat is currently open: seen immediately
+          setUnreadCount(0);
+          setShowNotificationBubble(false);
+          try {
+            localStorage.setItem(lastSeenKey, new Date().toISOString());
+          } catch (e) {}
+        } else {
+          // Chat is closed: LIVE INCOMING UNSEEN MESSAGE! Pop up immediately!
+          setUnreadCount((prev) => prev + 1);
+          setShowNotificationBubble(true);
+        }
       }
     };
 
     const handleMessagesRead = ({ wedding_id, reader_role }) => {
-      if (!isMounted || wedding_id !== cleanWId) return;
+      if (!isMounted) return;
+      const cleanEventWId = String(wedding_id || "").replace(/^wedding:/, "");
+      if (cleanEventWId !== cleanWId) return;
       if (reader_role === myRole) {
         setUnreadCount(0);
         setShowNotificationBubble(false);
+        try {
+          localStorage.setItem(lastSeenKey, new Date().toISOString());
+        } catch (e) {}
       }
     };
 
@@ -81,11 +161,23 @@ export default function CircularChatWidget({
 
     return () => {
       isMounted = false;
+      clearInterval(syncInterval);
       socket.off("message", handleNewMessage);
       socket.off("new_message", handleNewMessage);
       socket.off("messages_read", handleMessagesRead);
     };
-  }, [weddingId, myRole, isAdmin, isMarriageClient]);
+  }, [weddingId, myRole, isAdmin, isMarriageClient, cleanWId, lastSeenKey]);
+
+  const handleOpenClick = () => {
+    setUnreadCount(0);
+    setShowNotificationBubble(false);
+    try {
+      localStorage.setItem(lastSeenKey, new Date().toISOString());
+    } catch (e) {}
+    socket.emit("mark_read", { wedding_id: cleanWId, reader_role: myRole });
+    api.markMessagesRead(cleanWId, myRole);
+    if (onOpenChat) onOpenChat();
+  };
 
   // Only for user (marriage client) and admin
   if (!isAdmin && !isMarriageClient) return null;
@@ -93,7 +185,7 @@ export default function CircularChatWidget({
   return (
     <aside
       aria-label="Live Chat Assistant"
-      className="fixed bottom-5 left-5 sm:bottom-7 sm:left-7 z-40 flex flex-col items-start select-none group"
+      className="fixed bottom-5 left-5 sm:bottom-7 sm:left-7 z-[60] flex flex-col items-start select-none group"
     >
       {/* Floating Unread Preview Speech Bubble (if there are new messages) */}
       {showNotificationBubble && latestMessage && unreadCount > 0 && (
@@ -111,6 +203,10 @@ export default function CircularChatWidget({
               onClick={(e) => {
                 e.stopPropagation();
                 setShowNotificationBubble(false);
+                setUnreadCount(0);
+                try {
+                  localStorage.setItem(lastSeenKey, new Date().toISOString());
+                } catch (err) {}
               }}
               className="text-emerald-400 hover:text-white transition-colors cursor-pointer p-0.5 rounded-full hover:bg-white/10"
               title="Dismiss preview"
@@ -119,13 +215,13 @@ export default function CircularChatWidget({
             </button>
           </div>
           <p
-            onClick={onOpenChat}
+            onClick={handleOpenClick}
             className="text-xs text-emerald-100/90 italic cursor-pointer line-clamp-2 hover:text-white transition-colors"
           >
             "{latestMessage.message}"
           </p>
           <div
-            onClick={onOpenChat}
+            onClick={handleOpenClick}
             className="mt-1.5 pt-1 border-t border-emerald-800/60 flex items-center justify-between text-[10px] font-bold text-[#84e030] cursor-pointer"
           >
             <span>Click circle to open wide</span>
@@ -151,7 +247,7 @@ export default function CircularChatWidget({
       {/* Main Circular Section Button */}
       <button
         type="button"
-        onClick={onOpenChat}
+        onClick={handleOpenClick}
         className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#0b221c] via-[#0f2922] to-[#1a4a3b] text-[#84e030] shadow-2xl shadow-emerald-950/60 border-2 border-emerald-500/50 hover:border-[#84e030] flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-300 relative group/btn focus:outline-none focus:ring-4 focus:ring-[#84e030]/30"
         title={isAdmin ? "Open Client Messenger (Wide View)" : "Chat with Admin Manish (Wide View)"}
         aria-label="Open live chat"
