@@ -151,28 +151,46 @@ app.get(
     const rawId = req.params.weddingId || "";
     const cleanWeddingId = rawId.replace(/^wedding:/, "").trim();
 
+    const idVariants = [cleanWeddingId];
+    if (cleanWeddingId.startsWith("wedding_")) {
+      idVariants.push(cleanWeddingId.replace(/^wedding_/, ""));
+    } else {
+      idVariants.push(`wedding_${cleanWeddingId}`);
+    }
+
     // Rule 7: Clients may only read their own wedding's room
-    if (req.user.role === "client" && req.user.weddingId !== cleanWeddingId) {
+    if (req.user.role === "client" && !idVariants.includes(req.user.weddingId)) {
       return res.status(403).json({ error: "Forbidden: You may only view your own wedding messages" });
     }
 
-    if (!supabase) {
-      return res.status(500).json({ error: "Database not available" });
+    let messages = [];
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("wedding_messages")
+          .select("*")
+          .in("wedding_id", idVariants)
+          .order("created_at", { ascending: true });
+
+        if (!error && Array.isArray(data)) {
+          messages = data;
+        }
+      } catch (e) {}
     }
 
-    const { data, error } = await supabase
-      .from("wedding_messages")
-      .select("*")
-      .eq("wedding_id", cleanWeddingId)
-      .order("created_at", { ascending: false })
-      .limit(50);
+    // Merge with in-memory store if present
+    const { store } = await import("./Db_connection/queries.js");
+    const localMsgs = (store?.messages || []).filter((m) => idVariants.includes(m.wedding_id));
+    const seen = new Set(messages.map((m) => m.id));
+    localMsgs.forEach((lm) => {
+      if (!seen.has(lm.id)) {
+        messages.push(lm);
+        seen.add(lm.id);
+      }
+    });
 
-    if (error) {
-      console.error("Failed to load messages:", error.message);
-      return res.status(500).json({ error: "Failed to load messages" });
-    }
-
-    res.json((data || []).reverse());
+    messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    res.json(messages);
   }
 );
 

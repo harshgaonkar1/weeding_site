@@ -49,9 +49,15 @@ export default function ChatBotModal({
   const { user, token, isAdmin, isMarriageClient } = useAuth();
 
   // Active wedding context for conversation (guaranteed valid ID fallback)
-  const [activeWeddingId, setActiveWeddingId] = useState(
-    selectedWedding?.id || user?.wedding_id || (weddings && weddings[0]?.id) || "wedding_01"
-  );
+  const [activeWeddingId, setActiveWeddingId] = useState(() => {
+    return (
+      selectedWedding?.id ||
+      user?.wedding_id ||
+      localStorage.getItem("manish_chat_active_wedding") ||
+      (weddings && weddings[0]?.id) ||
+      "wedding_01"
+    );
+  });
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -63,7 +69,7 @@ export default function ChatBotModal({
   const isSendingRef = useRef(false);
   const typingTimeoutRef = useRef(null);
 
-  // Sync active wedding ID when selectedWedding or weddings change
+  // Sync active wedding ID when selectedWedding or weddings change, and persist
   useEffect(() => {
     const validWedding = selectedWedding?.id || user?.wedding_id || (weddings && weddings.length > 0 && weddings[0]?.id);
     if (validWedding && (!activeWeddingId || activeWeddingId === "wedding_01")) {
@@ -73,40 +79,29 @@ export default function ChatBotModal({
     }
   }, [selectedWedding?.id, user?.wedding_id, weddings]);
 
-  // Load message history from REST endpoint: /weddings/:weddingId/messages (oldest first)
+  useEffect(() => {
+    if (activeWeddingId && activeWeddingId !== "wedding_01") {
+      try {
+        localStorage.setItem("manish_chat_active_wedding", activeWeddingId);
+      } catch (e) {}
+    }
+  }, [activeWeddingId]);
+
+  // Load message history from database (oldest first)
   const loadMessages = async (wId = activeWeddingId) => {
     const targetWId = wId || activeWeddingId || "wedding_01";
-    const cleanWId = String(targetWId).replace(/^wedding:/, "");
+    const cleanWId = String(targetWId).replace(/^wedding:/, "").trim();
     setIsRefreshing(true);
     try {
-      const res = await fetch(`${BACKEND_SERVER_URL}/weddings/${encodeURIComponent(cleanWId)}/messages`, {
-        headers: {
-          Authorization: `Bearer ${token || localStorage.getItem("manish_auth_token") || ""}`,
-        },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setMessages(data);
-          return;
-        }
-      }
-
-      // Fallback via api service if needed
-      const fallbackData = await api.fetchMessages(cleanWId);
-      if (Array.isArray(fallbackData)) {
-        setMessages(fallbackData);
+      const list = await api.fetchMessages(cleanWId);
+      if (Array.isArray(list)) {
+        list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        setMessages(list);
       }
     } catch (err) {
-      console.warn("REST history fetch notice:", err.message);
-      const fallbackData = await api.fetchMessages(cleanWId);
-      if (Array.isArray(fallbackData)) {
-        setMessages(fallbackData);
-      }
+      console.warn("Messages fetch notice:", err.message);
     } finally {
       setIsRefreshing(false);
-      // Mark seen in local storage, socket and API
       const myRole = isAdmin ? "admin" : "client";
       try {
         localStorage.setItem(`chat_last_seen_${cleanWId}_${myRole}`, new Date().toISOString());
@@ -116,35 +111,42 @@ export default function ChatBotModal({
     }
   };
 
-  // Socket.IO Real-Time Connection & Live Listener (Strict Mode Safe - Rule 1 & 2)
+  // Socket.IO Real-Time Connection & Live Listener
   useEffect(() => {
     if (!isOpen) return;
     const targetWId = String(activeWeddingId || selectedWedding?.id || user?.wedding_id || "wedding_01").replace(/^wedding:/, "");
     const authToken = token || localStorage.getItem("manish_auth_token") || "";
 
+    const joinRooms = () => {
+      socket.emit("join_room", targetWId);
+      if (isAdmin) {
+        socket.emit("join_admin");
+      }
+    };
+
     const onConnect = () => {
       setIsSocketLive(true);
-      if (isAdmin) {
-        socket.emit("join_wedding", targetWId);
-      }
+      joinRooms();
     };
 
     const onDisconnect = () => setIsSocketLive(false);
 
-    // Rule 8: Dedupe incoming messages by id
+    // Live message received from server
     const onMessage = (msg) => {
       if (!msg || !msg.id) return;
+      const msgWId = String(msg.wedding_id || "").replace(/^wedding:/, "");
+      if (msgWId && msgWId !== targetWId) return;
+
       const myRole = isAdmin ? "admin" : "client";
-      setMessages((prev) =>
-        prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, is_read: true }]
-      );
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
 
       setRemoteTypingUser(null);
-      if (msg.sender_role === "bot") {
-        setIsSending(false);
-      }
+      setIsSending(false);
 
-      // If incoming message is from the other party while chat is open, mark seen immediately
+      // If incoming message is from the other party while chat is open, mark seen
       if (msg.sender_role !== myRole) {
         try {
           localStorage.setItem(`chat_last_seen_${targetWId}_${myRole}`, new Date().toISOString());
@@ -158,40 +160,37 @@ export default function ChatBotModal({
       setRemoteTypingUser(is_typing ? user_name : null);
     };
 
-    // Attach verified auth token before connect
-    socket.auth = { token: authToken };
+    socket.auth = {
+      token: authToken,
+      weddingId: targetWId,
+      role: isAdmin ? "admin" : "client",
+      name: user?.name,
+    };
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("receive_message", onMessage);
     socket.on("message", onMessage);
     socket.on("new_message", onMessage);
     socket.on("user_typing", onUserTyping);
-    socket.connect();
 
-    // Load initial history from REST endpoint
-    loadMessages(targetWId);
-
-    // Mark all existing messages as seen
-    const myRole = isAdmin ? "admin" : "client";
-    try {
-      localStorage.setItem(`chat_last_seen_${targetWId}_${myRole}`, new Date().toISOString());
-    } catch (e) {}
-    markSocketMessagesRead(targetWId, myRole);
-    api.markMessagesRead(targetWId, myRole);
-
-    if (socket.connected) {
+    if (!socket.connected) {
+      socket.connect();
+    } else {
       setIsSocketLive(true);
-      if (isAdmin) {
-        socket.emit("join_wedding", targetWId);
-      }
+      joinRooms();
     }
+
+    // Load message history from DB
+    loadMessages(targetWId);
 
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("receive_message", onMessage);
       socket.off("message", onMessage);
       socket.off("new_message", onMessage);
       socket.off("user_typing", onUserTyping);
-      // Keep global socket connected so background CircularChatWidget can receive live messages
     };
   }, [isOpen, activeWeddingId, token, isAdmin]);
 
@@ -237,14 +236,13 @@ export default function ChatBotModal({
     setInputText("");
     setIsSending(true);
 
-    const targetWeddingId =
+    const cleanWId = String(
       activeWeddingId ||
       selectedWedding?.id ||
       user?.wedding_id ||
       (weddings && weddings[0]?.id) ||
-      "wedding_01";
-
-    const cleanWId = String(targetWeddingId).replace(/^wedding:/, "").trim();
+      "wedding_01"
+    ).replace(/^wedding:/, "").trim();
 
     const myName = isAdmin
       ? user?.name || "Admin"
@@ -254,49 +252,54 @@ export default function ChatBotModal({
     emitTyping(cleanWId, myName, false);
 
     const payload = {
-      message: textToSend,
       wedding_id: cleanWId,
-      sender_id: user?.id,
+      sender_id: user?.id || (isAdmin ? "admin" : "client"),
       sender_name: myName,
       sender_role: isAdmin ? "admin" : "client",
+      message: textToSend,
     };
 
-    // Ensure socket is connected and authenticated
-    if (!socket.connected) {
-      const authToken = token || localStorage.getItem("manish_auth_token") || "";
-      socket.auth = {
-        token: authToken,
-        weddingId: cleanWId,
-        role: isAdmin ? "admin" : "client",
-        name: myName,
-      };
-      socket.connect();
-    }
-
-    // 1. Emit via socket for instant live delivery
-    socket.emit("message", payload, async (response) => {
-      if (!isAdmin) {
-        // Keep bot indicator on until bot reply arrives via socket or timeout
-        setTimeout(() => setIsSending(false), 3000);
-      } else {
+    // Standard Socket.IO emit with acknowledgment
+    if (socket.connected) {
+      socket.emit("send_message", payload, async (response) => {
+        setIsSending(false);
+        if (response?.success && response?.data) {
+          const sentMsg = response.data;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === sentMsg.id)) return prev;
+            return [...prev, sentMsg];
+          });
+        } else {
+          // REST API fallback if socket ack had an issue
+          try {
+            const apiRes = await api.sendMessage(payload);
+            if (apiRes?.data) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === apiRes.data.id)) return prev;
+                return [...prev, apiRes.data];
+              });
+            }
+          } catch (apiErr) {
+            console.error("API send fallback failed:", apiErr);
+          }
+        }
+      });
+    } else {
+      // Direct REST API send if socket is offline
+      try {
+        const apiRes = await api.sendMessage(payload);
+        setIsSending(false);
+        if (apiRes?.data) {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === apiRes.data.id)) return prev;
+            return [...prev, apiRes.data];
+          });
+        }
+      } catch (apiErr) {
+        console.error("API send failed:", apiErr);
         setIsSending(false);
       }
-
-      if (!response?.ok) {
-        console.warn("Socket send notice, falling back to REST API:", response?.error);
-        try {
-          await api.sendMessage({
-            wedding_id: cleanWId,
-            sender_id: user?.id,
-            sender_name: myName,
-            sender_role: isAdmin ? "admin" : "client",
-            message: textToSend,
-          });
-        } catch (apiErr) {
-          console.error("API send fallback failed:", apiErr);
-        }
-      }
-    });
+    }
   };
 
   const handleKeyDown = (e) => {

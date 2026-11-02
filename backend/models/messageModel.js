@@ -6,7 +6,14 @@ export const MessageModel = {
   // 1. Get all messages for a specific wedding
   async getByWeddingId(weddingId) {
     const targetWeddingId = weddingId || "wedding_01";
-    const localMsgs = (store.messages || []).filter((m) => m.wedding_id === targetWeddingId);
+    const idVariants = [targetWeddingId];
+    if (targetWeddingId.startsWith("wedding_")) {
+      idVariants.push(targetWeddingId.replace(/^wedding_/, ""));
+    } else {
+      idVariants.push(`wedding_${targetWeddingId}`);
+    }
+
+    const localMsgs = (store.messages || []).filter((m) => idVariants.includes(m.wedding_id));
 
     // Fetch from Supabase database with 2.5s safety timeout
     if (supabase) {
@@ -14,7 +21,7 @@ export const MessageModel = {
         const queryPromise = supabase
           .from("wedding_messages")
           .select("*")
-          .eq("wedding_id", targetWeddingId)
+          .in("wedding_id", idVariants)
           .order("created_at", { ascending: true });
 
         const timeoutPromise = new Promise((_, reject) =>
@@ -23,7 +30,7 @@ export const MessageModel = {
 
         const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-        if (!error && Array.isArray(data) && data.length > 0) {
+        if (!error && Array.isArray(data)) {
           // Merge with any in-memory messages not yet in database
           const seen = new Set(data.map((m) => m.id));
           localMsgs.forEach((lm) => {
@@ -32,6 +39,7 @@ export const MessageModel = {
               seen.add(lm.id);
             }
           });
+          data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
           return data;
         }
       } catch (err) {
@@ -40,6 +48,7 @@ export const MessageModel = {
     }
 
     // Local fallback
+    localMsgs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     return localMsgs;
   },
 

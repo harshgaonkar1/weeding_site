@@ -6,7 +6,57 @@
     "sender_name": "Test Client",
     "sender_role": "client",
     "message": "Hello world test",
-    "is_read": false,
+    "is_read": true,
     "created_at": "2026-10-28T12:12:58.397Z"
+  },
+  {
+    "id": "msg_4774ea5f-a4a4-4648-88ea-06787753df5a",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "test_curl",
+    "sender_name": "Antigravity Test",
+    "sender_role": "client",
+    "message": "Test persistent storage",
+    "is_read": true,
+    "created_at": "2026-11-02T17:05:30.369Z"
+  },
+  {
+    "id": "msg_974e64c3-c149-4e78-93f7-5c41a99e7de5",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "test_client_socket",
+    "sender_name": "Client Albir",
+    "sender_role": "client",
+    "message": "Hello Admin, live chat test!",
+    "is_read": true,
+    "created_at": "2026-11-02T17:10:34.337Z"
+  },
+  {
+    "id": "msg_bd2fc5e0-305d-4e86-b119-92ad4464ef83",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish (Admin)",
+    "sender_role": "admin",
+    "message": "Admin live response to Client!",
+    "is_read": true,
+    "created_at": "2026-11-02T17:11:41.706Z"
+  },
+  {
+    "id": "msg_57e61752-c1d6-41fe-91dd-124823795092",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "hy",
+    "is_read": true,
+    "created_at": "2026-11-02T17:12:52.345Z"
+  },
+  {
+    "id": "msg_fd93a842-f923-4c7e-8b2e-0490f9204b95",
+    "wedding_id": "wedding_885ea383",
+    "sender_id": "marriage_wedding_885ea383",
+    "sender_name": "Albir & Jaisleen",
+    "sender_role": "client",
+    "message": "bro how to getg it done",
+    "is_read": true,
+    "created_at": "2026-11-02T17:13:40.968Z"
   }
 ]

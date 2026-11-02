@@ -1,14 +1,19 @@
-// Central configuration for Backend & Frontend Connection
-export const API_BASE_URL =
-  import.meta?.env?.NEXT_PUBLIC_API_BASE_URL ||
-  import.meta?.env?.VITE_API_BASE_URL ||
-  "http://localhost:5000/api";
+const isLocalhost =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1");
 
-export const BACKEND_SERVER_URL =
-  import.meta?.env?.NEXT_PUBLIC_BACKEND_URL ||
-  import.meta?.env?.VITE_BACKEND_URL ||
-  (typeof API_BASE_URL === "string" ? API_BASE_URL.replace(/\/api\/?$/, "") : "") ||
-  "http://localhost:5000";
+export const BACKEND_SERVER_URL = isLocalhost
+  ? "http://localhost:5000"
+  : import.meta?.env?.NEXT_PUBLIC_BACKEND_URL ||
+    import.meta?.env?.VITE_BACKEND_URL ||
+    "https://weeding-site-2v2w.onrender.com";
+
+export const API_BASE_URL = isLocalhost
+  ? "http://localhost:5000/api"
+  : import.meta?.env?.NEXT_PUBLIC_API_BASE_URL ||
+    import.meta?.env?.VITE_API_BASE_URL ||
+    `${BACKEND_SERVER_URL}/api`;
 
 /**
  * Helper to construct full backend API endpoint URLs

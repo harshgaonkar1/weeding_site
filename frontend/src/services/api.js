@@ -1341,6 +1341,7 @@ function syncAllGuestsToDatabase() {
   // ============================================================
   async fetchMessages(weddingId) {
     const targetId = weddingId || "wedding_01";
+    const cleanId = String(targetId).replace(/^wedding:/, "").trim();
 
     try {
       const token = localStorage.getItem("manish_auth_token") || "";
@@ -1349,21 +1350,36 @@ function syncAllGuestsToDatabase() {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const res = await fetch(`${API_BASE_URL}/messages/${encodeURIComponent(targetId)}`, {
+      const res = await fetch(`${API_BASE_URL}/messages/${encodeURIComponent(cleanId)}`, {
         headers,
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.data && Array.isArray(json.data)) {
+        // Support any response format: direct array, { data: [...] }, or { messages: [...] }
+        const rawList = Array.isArray(json)
+          ? json
+          : Array.isArray(json?.data)
+          ? json.data
+          : Array.isArray(json?.messages)
+          ? json.messages
+          : null;
+
+        if (Array.isArray(rawList)) {
           const unique = [];
           const seen = new Set();
-          json.data.forEach((m) => {
+          rawList.forEach((m) => {
             if (m && m.id && !seen.has(m.id)) {
               seen.add(m.id);
               unique.push(m);
             }
           });
-          localStorage.setItem(`cached_messages_${weddingId}`, JSON.stringify(unique));
+          unique.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+          try {
+            localStorage.setItem(`cached_messages_${cleanId}`, JSON.stringify(unique));
+            localStorage.setItem(`cached_messages_${targetId}`, JSON.stringify(unique));
+          } catch (e) {}
+
           return unique;
         }
       }
@@ -1372,18 +1388,27 @@ function syncAllGuestsToDatabase() {
     }
 
     try {
-      const local = localStorage.getItem(`cached_messages_${weddingId}`);
-      if (local) {
-        const parsed = JSON.parse(local);
-        const unique = [];
-        const seen = new Set();
-        parsed.forEach((m) => {
-          if (m && m.id && !seen.has(m.id)) {
-            seen.add(m.id);
-            unique.push(m);
+      const cacheKeys = [
+        `cached_messages_${cleanId}`,
+        `cached_messages_${targetId}`,
+      ];
+      for (const key of cacheKeys) {
+        const local = localStorage.getItem(key);
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const unique = [];
+            const seen = new Set();
+            parsed.forEach((m) => {
+              if (m && m.id && !seen.has(m.id)) {
+                seen.add(m.id);
+                unique.push(m);
+              }
+            });
+            unique.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            return unique;
           }
-        });
-        return unique;
+        }
       }
     } catch (e) {}
 
@@ -1495,30 +1520,57 @@ function syncAllGuestsToDatabase() {
 
   async markMessagesRead(weddingId, readerRole = "client") {
     if (!weddingId) return;
-    const cleanId = String(weddingId).replace(/^wedding:/, "").trim();
+    const rawId = typeof weddingId === "object" && weddingId !== null
+      ? weddingId.id || weddingId.wedding_id || ""
+      : weddingId;
+    const cleanId = String(rawId || "").replace(/^wedding:/, "").trim();
+    if (!cleanId || cleanId === "[object Object]") return;
 
-    // 1. Dispatch non-blocking HTTP PUT to update DB
+    // 1. Dispatch non-blocking HTTP PUT to update DB with 4s timeout
     try {
       const token = localStorage.getItem("manish_auth_token") || "";
       const headers = { "Content-Type": "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
+
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
+
       fetch(`${API_BASE_URL}/messages/read/${encodeURIComponent(cleanId)}`, {
         method: "PUT",
         headers,
         body: JSON.stringify({ readerRole }),
-      }).catch(() => {});
+        signal: controller ? controller.signal : undefined,
+      })
+        .then(() => {
+          if (timeoutId) clearTimeout(timeoutId);
+        })
+        .catch(() => {
+          if (timeoutId) clearTimeout(timeoutId);
+        });
     } catch (e) {}
 
-    // 2. Update local storage cache
+    // 2. Update local storage cache for all possible key variants
     try {
-      const local = localStorage.getItem(`cached_messages_${cleanId}`);
-      if (local) {
-        const msgs = JSON.parse(local).map((m) => {
-          if (m.sender_role !== readerRole) m.is_read = true;
-          return m;
-        });
-        localStorage.setItem(`cached_messages_${cleanId}`, JSON.stringify(msgs));
+      const cacheKeys = [
+        `cached_messages_${cleanId}`,
+        `cached_messages_wedding:${cleanId}`,
+      ];
+      if (!cleanId.startsWith("wedding_")) {
+        cacheKeys.push(`cached_messages_wedding_${cleanId}`);
       }
+
+      cacheKeys.forEach((key) => {
+        const local = localStorage.getItem(key);
+        if (local) {
+          try {
+            const msgs = JSON.parse(local).map((m) => {
+              if (m.sender_role !== readerRole) m.is_read = true;
+              return m;
+            });
+            localStorage.setItem(key, JSON.stringify(msgs));
+          } catch (err) {}
+        }
+      });
     } catch (e) {}
   },
 };

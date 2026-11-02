@@ -118,10 +118,25 @@ export default function Hero() {
     try {
       const data = await api.fetchWeddings();
       setWeddings(data || []);
+      if (!isMarriageClient && Array.isArray(data) && data.length > 0) {
+        const savedId = localStorage.getItem("manish_selected_wedding_id");
+        if (savedId) {
+          const matched = data.find((w) => w.id === savedId);
+          if (matched) setSelectedWedding(matched);
+        }
+      }
     } catch (e) {
       console.error("Error fetching weddings:", e);
     }
-  }, []);
+  }, [isMarriageClient]);
+
+  useEffect(() => {
+    if (selectedWedding?.id && selectedWedding.id !== "all") {
+      try {
+        localStorage.setItem("manish_selected_wedding_id", selectedWedding.id);
+      } catch (e) {}
+    }
+  }, [selectedWedding]);
 
   // 1b. Handle Marriage Client Scoping & Role Switching
   useEffect(() => {
