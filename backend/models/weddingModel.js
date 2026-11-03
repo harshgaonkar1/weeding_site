@@ -1,4 +1,4 @@
-﻿import pool from "../Db_connection/dbconnection.js";
+import pool from "../Db_connection/dbconnection.js";
 import { supabase } from "../Db_connection/supabaseClient.js";
 import { store, saveMessagesToFile } from "../Db_connection/queries.js";
 import crypto from "crypto";
@@ -32,10 +32,9 @@ export const WeddingModel = {
     // Check Supabase first
     if (supabase) {
       try {
-        const { data: weddingsData } = await supabase.from("weddings").select("*").order("created_at", { ascending: false });
-        const { data: guestsData } = await supabase.from("guests").select("wedding_id, rsvp_status, side");
-        
-        if (weddingsData && weddingsData.length > 0) {
+        const { data: weddingsData, error: wErr } = await supabase.from("weddings").select("*").order("created_at", { ascending: false });
+        if (!wErr && Array.isArray(weddingsData)) {
+          const { data: guestsData } = await supabase.from("guests").select("wedding_id, rsvp_status, side");
           const guestsList = guestsData || [];
           return weddingsData.map((rawW) => {
             const w = sanitizeWeddingRecord(rawW);
@@ -385,70 +384,23 @@ export const WeddingModel = {
   async delete(id) {
     if (!id) return true;
 
-    // 1. Purge from in-memory cache & local files
+    // 1. Purge from in-memory cache & local store immediately (<1ms)
     this.deleteLocal(id);
 
-    // 2. Supabase deletion (sequential child-to-parent to respect foreign key constraints)
+    // 2. Direct Supabase parallel purge (fast, resilient, non-blocking)
     if (supabase) {
       try {
-        await Promise.race([
-          (async () => {
-            // a. Collect all guest IDs for this wedding
-            let guestIds = [];
-            try {
-              const { data: guestsData } = await supabase
-                .from('guests')
-                .select('id')
-                .eq('wedding_id', id);
-              if (Array.isArray(guestsData)) {
-                guestIds = guestsData.map((g) => g.id).filter(Boolean);
-              }
-            } catch (e) {}
-
-            // b. Delete guest_call_logs first (child table of guests & weddings)
-            try {
-              await supabase.from('guest_call_logs').delete().eq('wedding_id', id);
-              if (guestIds.length > 0) {
-                await supabase.from('guest_call_logs').delete().in('guest_id', guestIds);
-              }
-            } catch (e) {
-              console.warn('Supabase call logs delete notice for ' + id + ':', e.message);
-            }
-
-            // c. Delete guests (child table of weddings)
-            try {
-              const { error: guestsDelErr } = await supabase.from('guests').delete().eq('wedding_id', id);
-              if (guestsDelErr) {
-                console.warn('Supabase guests delete error for ' + id + ':', guestsDelErr.message);
-              }
-            } catch (e) {
-              console.warn('Supabase guests delete notice for ' + id + ':', e.message);
-            }
-
-            // d. Delete wedding messages (child table of weddings)
-            try {
-              await supabase.from('wedding_messages').delete().eq('wedding_id', id);
-            } catch (e) {}
-
-            // e. Delete wedding record itself (parent table)
-            const { error: weddingDelErr } = await supabase.from('weddings').delete().eq('id', id);
-            if (weddingDelErr) {
-              console.warn('Supabase wedding delete error for ' + id + ':', weddingDelErr.message);
-            } else {
-              console.log('✅ Supabase wedding and related records deleted: ' + id);
-            }
-          })(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Supabase delete timeout')), 8000)),
+        await Promise.allSettled([
+          supabase.from("guest_call_logs").delete().eq("wedding_id", id),
+          supabase.from("guests").delete().eq("wedding_id", id),
+          supabase.from("wedding_messages").delete().eq("wedding_id", id),
+          supabase.from("weddings").delete().eq("id", id),
         ]);
+        console.log(`✅ Supabase records purged for wedding: ${id}`);
       } catch (err) {
-        console.warn('Supabase delete notice for ' + id + ':', err.message);
+        console.warn(`Supabase delete notice for ${id}:`, err.message);
       }
     }
-
-    // 3. Keep pool and local store query in sync
-    try {
-      await pool.query('DELETE FROM weddings WHERE id = $1', [id]);
-    } catch (e) {}
 
     return true;
   },

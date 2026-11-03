@@ -592,6 +592,10 @@ export const api = {
     setCachedGuests(guests);
     try {
       localStorage.removeItem('cached_messages_' + id);
+      const savedSel = localStorage.getItem("manish_selected_wedding_id");
+      if (savedSel === id) {
+        localStorage.removeItem("manish_selected_wedding_id");
+      }
     } catch (e) {}
 
     // 2. Call backend endpoint to purge database store & Google Sheet

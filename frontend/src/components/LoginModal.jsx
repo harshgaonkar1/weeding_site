@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ShieldCheck,
   PhoneCall,
@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { animateModalOpen, animateModalClose } from "../utils/animations";
 
 export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
   const { login, user } = useAuth();
@@ -21,6 +22,19 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const backdropRef = useRef(null);
+  const modalCardRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && backdropRef.current && modalCardRef.current) {
+      animateModalOpen(backdropRef.current, modalCardRef.current);
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    animateModalClose(backdropRef.current, modalCardRef.current, onClose);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -57,12 +71,21 @@ export default function LoginModal({ isOpen, onClose, initialTab = "admin" }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-      <div className="bg-white rounded-2xl sm:rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl border border-emerald-900/10 relative animate-scaleUp my-auto max-h-[94vh]">
+    <div
+      ref={backdropRef}
+      onClick={(e) => {
+        if (e.target === backdropRef.current) handleClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+    >
+      <div
+        ref={modalCardRef}
+        className="bg-white rounded-2xl sm:rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl border border-emerald-900/10 relative my-auto max-h-[94vh]"
+      >
         {/* Close Button if user is already logged in */}
         {user && (
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center cursor-pointer transition-colors"
           >
             <X className="w-4 h-4" />

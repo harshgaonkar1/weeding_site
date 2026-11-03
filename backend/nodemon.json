@@ -1,0 +1,21 @@
+{
+  "watch": [
+    "controllers",
+    "routes",
+    "services",
+    "models",
+    "socket",
+    "Db_connection",
+    "server.js"
+  ],
+  "ignore": [
+    "database/**",
+    "database/messages_store.json",
+    "exports/**",
+    "google_cred/**",
+    "node_modules/**",
+    "*.json"
+  ],
+  "ext": "js,mjs"
+}
+

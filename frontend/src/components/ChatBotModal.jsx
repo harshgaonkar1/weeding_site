@@ -24,6 +24,14 @@ import {
   emitTyping,
   markSocketMessagesRead,
 } from "../services/socket";
+import {
+  gsap,
+  animateModalOpen,
+  animateModalClose,
+  animateNewMessage,
+  animateStaggerIn,
+  animateFloat,
+} from "../utils/animations";
 
 const QUICK_CLIENT_PROMPTS = [
   "Airport shuttle & cab status update?",
@@ -68,6 +76,13 @@ export default function ChatBotModal({
   const messagesEndRef = useRef(null);
   const isSendingRef = useRef(false);
   const typingTimeoutRef = useRef(null);
+  const backdropRef = useRef(null);
+  const modalCardRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const chipsContainerRef = useRef(null);
+  const botIconRef = useRef(null);
+  const typingDotsRef = useRef(null);
+  const prevMessagesCountRef = useRef(0);
 
   // Sync active wedding ID when selectedWedding or weddings change, and persist
   useEffect(() => {
@@ -201,6 +216,65 @@ export default function ChatBotModal({
     }
   }, [messages, isOpen, isSending, remoteTypingUser]);
 
+  // GSAP: Modal entrance animation when opening
+  useEffect(() => {
+    if (isOpen && backdropRef.current && modalCardRef.current) {
+      animateModalOpen(backdropRef.current, modalCardRef.current);
+      if (botIconRef.current) {
+        animateFloat(botIconRef.current, 3, 2.4);
+      }
+      if (chipsContainerRef.current) {
+        animateStaggerIn(chipsContainerRef.current.children, { y: 8, duration: 0.35, stagger: 0.04 });
+      }
+    }
+  }, [isOpen]);
+
+  // GSAP: Animate newly added chat messages or initial history stagger
+  useEffect(() => {
+    if (!isOpen || !messagesContainerRef.current) return;
+    const currentLen = messages.length;
+    const prevLen = prevMessagesCountRef.current;
+
+    if (currentLen > prevLen) {
+      if (prevLen === 0) {
+        // Initial load: stagger in the recent message bubbles
+        const rows = messagesContainerRef.current.querySelectorAll(".chat-bubble-row");
+        const recentRows = Array.from(rows).slice(-15);
+        if (recentRows.length > 0) {
+          gsap.fromTo(
+            recentRows,
+            { opacity: 0, y: 14, scale: 0.96 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.35, stagger: 0.04, ease: "power2.out" }
+          );
+        }
+      } else {
+        // New incoming or outgoing message: pop in the new bubble with GSAP spring
+        const rows = messagesContainerRef.current.querySelectorAll(".chat-bubble-row");
+        const latestRow = rows[rows.length - 1];
+        if (latestRow) {
+          animateNewMessage(latestRow);
+        }
+      }
+    }
+    prevMessagesCountRef.current = currentLen;
+  }, [messages, isOpen]);
+
+  // GSAP: Wave animation for remote typing indicator dots
+  useEffect(() => {
+    if (remoteTypingUser && typingDotsRef.current) {
+      const dots = typingDotsRef.current.querySelectorAll(".typing-dot");
+      const tween = gsap.to(dots, {
+        y: -4,
+        repeat: -1,
+        yoyo: true,
+        stagger: 0.15,
+        duration: 0.35,
+        ease: "power1.inOut",
+      });
+      return () => tween.kill();
+    }
+  }, [remoteTypingUser]);
+
   if (!isOpen) return null;
 
   // Active Wedding details
@@ -302,6 +376,10 @@ export default function ChatBotModal({
     }
   };
 
+  const handleClose = () => {
+    animateModalClose(backdropRef.current, modalCardRef.current, onClose);
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -310,12 +388,24 @@ export default function ChatBotModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[700px] animate-scaleUp">
+    <div
+      ref={backdropRef}
+      onClick={(e) => {
+        if (e.target === backdropRef.current) handleClose();
+      }}
+      className="fixed inset-0 z-[70] flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs"
+    >
+      <div
+        ref={modalCardRef}
+        className="bg-white rounded-3xl w-full max-w-xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[700px]"
+      >
         {/* Header */}
         <div className="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-[#3b0b14] via-[#5c1322] to-[#7d1f33] text-white flex items-center justify-between border-b border-[#eedfc8]/20 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-[#eedfc8] text-[#4a0e17] flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+            <div
+              ref={botIconRef}
+              className="w-10 h-10 rounded-2xl bg-[#eedfc8] text-[#4a0e17] flex items-center justify-center font-bold text-sm shadow-xs shrink-0"
+            >
               <Bot className="w-5 h-5 stroke-[2.4]" />
             </div>
 
@@ -390,7 +480,7 @@ export default function ChatBotModal({
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -399,7 +489,10 @@ export default function ChatBotModal({
         </div>
 
         {/* Suggestion Quick Chips */}
-        <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        <div
+          ref={chipsContainerRef}
+          className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0"
+        >
           <span className="text-[10px] font-bold uppercase text-slate-400 shrink-0">
             {isAdmin ? "Quick Replies:" : "Quick Inquiries:"}
           </span>
@@ -416,7 +509,10 @@ export default function ChatBotModal({
         </div>
 
         {/* Messages List Area */}
-        <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3 bg-[#fbfdfb]">
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3 bg-[#fbfdfb]"
+        >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-[#f7f2ea] text-[#5c1322] border border-[#e3d3be] flex items-center justify-center shadow-xs">
@@ -442,7 +538,7 @@ export default function ChatBotModal({
               return (
                 <div
                   key={msg.id || index}
-                  className={`flex flex-col ${isBot ? "items-center" : isMe ? "items-end" : "items-start"
+                  className={`chat-bubble-row flex flex-col ${isBot ? "items-center" : isMe ? "items-end" : "items-start"
                     }`}
                 >
                   {/* Sender Name & Role Pill */}
@@ -504,12 +600,12 @@ export default function ChatBotModal({
           {/* Remote user typing indicator */}
           {remoteTypingUser && (
             <div className="flex items-center gap-2 text-xs text-slate-500 italic px-2 py-1 bg-slate-100/80 rounded-xl max-w-fit">
-              <span className="inline-flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse delay-75"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse delay-150"></span>
+              <span ref={typingDotsRef} className="inline-flex gap-1 items-center">
+                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-slate-400"></span>
               </span>
-              <span>...</span>
+              <span>{remoteTypingUser.split(" ")[0]} is typing...</span>
             </div>
           )}
 

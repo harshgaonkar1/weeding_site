@@ -1,3 +1,4 @@
+import React, { useRef, useEffect } from "react";
 import {
   Calendar,
   MapPin,
@@ -11,6 +12,7 @@ import {
   KeyRound,
   FileSpreadsheet,
 } from "lucide-react";
+import { animateFloat } from "../utils/animations";
 
 export default function WeddingCard({
   wedding,
@@ -58,12 +60,20 @@ export default function WeddingCard({
   const groomGuests = Number(wedding.groom_guests) || 0;
   const rsvpPercentage = totalGuests > 0 ? Math.round((confirmedGuests / totalGuests) * 100) : 0;
 
+  const orbRef = useRef(null);
+  useEffect(() => {
+    if (orbRef.current) {
+      const tween = animateFloat(orbRef.current, 8, 3.5);
+      return () => tween?.kill();
+    }
+  }, []);
+
   return (
     <div className="bg-white rounded-3xl border border-slate-200/90 hover:border-[#eedfc8] card-hover-lift flex flex-col overflow-hidden group relative">
       {/* Card Header Cover */}
       <div className={`p-6 bg-gradient-to-br ${theme.gradient} text-white relative overflow-hidden`}>
         {/* Ambient floating glows */}
-        <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none animate-floatSlow" />
+        <div ref={orbRef} className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#eedfc8]/15 rounded-full blur-xl pointer-events-none" />
         
         {/* Top Badges & Actions */}

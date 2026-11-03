@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { animatePopIn } from "../utils/animations";
 
 export default function LoginPage({ initialTab = "admin" }) {
   const { login } = useAuth();
@@ -26,6 +27,13 @@ export default function LoginPage({ initialTab = "admin" }) {
   // Mouse position for interactive spotlight and parallax
   const [mousePos, setMousePos] = useState({ x: null, y: null });
   const canvasRef = useRef(null);
+  const cardContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (cardContainerRef.current) {
+      animatePopIn(cardContainerRef.current, 0.1);
+    }
+  }, []);
 
   const handleRoleChange = (role) => {
     setActiveRole(role);
@@ -267,7 +275,7 @@ export default function LoginPage({ initialTab = "admin" }) {
       />
 
       {/* 5. Main Login Container */}
-      <div className="w-full max-w-md relative z-10 space-y-6">
+      <div ref={cardContainerRef} className="w-full max-w-md relative z-10 space-y-6">
         {/* Header Title */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eedfc8]/10 border border-[#eedfc8]/25 text-[#eedfc8] text-xs font-bold tracking-wide backdrop-blur-md shadow-xs mb-1">

@@ -1,5 +1,6 @@
 import { CallLogModel } from "../models/callLogModel.js";
 import { GuestModel } from "../models/guestModel.js";
+import { broadcastDataChange } from "../socket/chatSocket.js";
 
 export const callLogController = {
   // GET /api/call-logs/guest/:guestId
@@ -68,6 +69,20 @@ export const callLogController = {
 
       const updatedGuest = await GuestModel.getById(guest_id);
 
+      // Broadcast WebSocket mutation events so other users/call-desks update live without polling
+      const io = req.app.get("io");
+      const targetWId = wedding_id || updatedGuest?.wedding_id;
+      broadcastDataChange(io, {
+        event: "call_logs_updated",
+        weddingId: targetWId,
+        payload: { action: "create", guest_id, log: newLog, guest: updatedGuest },
+      });
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId: targetWId,
+        payload: { action: "call_logged", guest_id, guest: updatedGuest },
+      });
+
       res.status(201).json({
         success: true,
         message: `Call #${newLog.call_number} checkpoint recorded successfully`,
@@ -110,6 +125,19 @@ export const callLogController = {
         });
       }
 
+      // Broadcast WebSocket mutation events
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "call_logs_updated",
+        weddingId: updated?.wedding_id,
+        payload: { action: "update", log: updated },
+      });
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId: updated?.wedding_id,
+        payload: { action: "call_log_updated" },
+      });
+
       res.status(200).json({
         success: true,
         message: "Call log notes updated successfully",
@@ -136,6 +164,17 @@ export const callLogController = {
           message: "Call log entry not found",
         });
       }
+
+      // Broadcast WebSocket mutation events
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "call_logs_updated",
+        payload: { action: "delete", id },
+      });
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        payload: { action: "call_log_deleted" },
+      });
 
       res.status(200).json({
         success: true,

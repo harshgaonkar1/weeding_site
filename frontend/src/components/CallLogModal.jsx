@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { api } from "../services/api";
+import { socket } from "../services/socket";
 import { useAuth } from "../context/AuthContext";
 
 const CALL_OUTCOMES = [
@@ -128,6 +129,20 @@ export default function CallLogModal({
       setIsLoadingLogs(false);
     }
   };
+
+  // Real-Time Socket sync for active guest's call logs (no polling loops)
+  useEffect(() => {
+    if (!isOpen || !guest?.id) return;
+    const handleCallLogsUpdated = (payload) => {
+      if (String(payload?.guest_id) === String(guest.id)) {
+        loadLogs(guest.id);
+      }
+    };
+    socket.on("call_logs_updated", handleCallLogsUpdated);
+    return () => {
+      socket.off("call_logs_updated", handleCallLogsUpdated);
+    };
+  }, [isOpen, guest?.id]);
 
   if (!isOpen || !guest) return null;
 

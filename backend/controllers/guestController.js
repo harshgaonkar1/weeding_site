@@ -1,5 +1,6 @@
 import { GuestModel } from "../models/guestModel.js";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
+import { broadcastDataChange } from "../socket/chatSocket.js";
 
 // Helper for CSV escaping
 const escapeCsvField = (field) => {
@@ -112,6 +113,14 @@ export const guestController = {
         );
       }
 
+      // Broadcast WebSocket mutation event (clients ask only once on mount & update only on changes)
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId: newGuest?.wedding_id,
+        payload: { action: "create", guest: newGuest },
+      });
+
       res.status(201).json({
         success: true,
         message: "Guest added successfully",
@@ -155,6 +164,14 @@ export const guestController = {
         );
       }
 
+      // Broadcast WebSocket mutation event
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId: wedding_id,
+        payload: { action: "bulk_import", count: imported.length },
+      });
+
       res.status(201).json({
         success: true,
         count: imported.length,
@@ -197,6 +214,14 @@ export const guestController = {
           console.warn("Auto Google Sheet sync note on update:", e.message)
         );
       }
+
+      // Broadcast WebSocket mutation event
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId: updatedGuest?.wedding_id,
+        payload: { action: "update", guest: updatedGuest },
+      });
 
       res.status(200).json({
         success: true,
@@ -250,6 +275,14 @@ export const guestController = {
           console.warn("Auto Google Sheet deleteDimension sync note on delete:", sheetErr.message);
         }
       }
+
+      // Broadcast WebSocket mutation event
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId,
+        payload: { action: "delete", guest_id: id },
+      });
 
       res.status(200).json({
         success: true,
@@ -353,6 +386,15 @@ export const guestController = {
     try {
       const { weddingId } = req.query;
       const guests = await GuestModel.getAll({ weddingId });
+
+      // Broadcast WebSocket mutation event
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId,
+        payload: { action: "sync" },
+      });
+
       res.status(200).json({
         success: true,
         message: "Guest records synchronized successfully",

@@ -1,6 +1,7 @@
 import { GoogleSheetsService, GOOGLE_SHEET_HEADERS } from "../services/googleSheetsService.js";
 import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
+import { broadcastDataChange } from "../socket/chatSocket.js";
 
 export const googleSheetsController = {
   // 0. GET /api/sheets/auth-status
@@ -47,6 +48,14 @@ export const googleSheetsController = {
       // Fetch freshly updated guest list
       const updatedGuests = await GuestModel.getAll({ weddingId: id });
       const stats = await GuestModel.getStatistics(id);
+
+      // Broadcast WebSocket mutation event for live sync
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId: id,
+        payload: { action: "sheet_sync", stats },
+      });
 
       res.status(200).json({
         success: true,
@@ -194,6 +203,19 @@ export const googleSheetsController = {
       const guests = await GuestModel.getAll({ weddingId: id });
       const stats = await GuestModel.getStatistics(id);
 
+      // Broadcast WebSocket mutation events
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "weddings_updated",
+        weddingId: id,
+        payload: { action: "sheet_linked", wedding: updated },
+      });
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId: id,
+        payload: { action: "sheet_linked" },
+      });
+
       res.status(200).json({
         success: true,
         message: syncResult
@@ -227,6 +249,14 @@ export const googleSheetsController = {
       }
 
       const result = await GoogleSheetsService.handleWebhook(payload);
+
+      // Broadcast WebSocket mutation event
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "guests_updated",
+        weddingId: payload.wedding_id,
+        payload: { action: "webhook_edit", data: result },
+      });
 
       res.status(200).json({
         success: true,
@@ -267,6 +297,14 @@ export const googleSheetsController = {
       } catch (pushErr) {
         console.warn("Could not push guests immediately:", pushErr.message);
       }
+
+      // Broadcast WebSocket mutation event
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "weddings_updated",
+        weddingId: id,
+        payload: { action: "live_sheet_created", wedding: updated },
+      });
 
       res.status(200).json({
         success: sheetData.isLiveCreated,

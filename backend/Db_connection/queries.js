@@ -104,33 +104,14 @@ export const query = async (text, params = []) => {
     // skip disk write during delete
 
     if (supabase) {
-      try {
-        await Promise.race([
-          (async () => {
-            let guestIds = [];
-            try {
-              const { data: guestsData } = await supabase.from("guests").select("id").eq("wedding_id", id);
-              if (Array.isArray(guestsData)) guestIds = guestsData.map((g) => g.id).filter(Boolean);
-            } catch (e) {}
-
-            try {
-              await supabase.from("guest_call_logs").delete().eq("wedding_id", id);
-              if (guestIds.length > 0) {
-                await supabase.from("guest_call_logs").delete().in("guest_id", guestIds);
-              }
-            } catch (e) {}
-
-            try {
-              await supabase.from("guests").delete().eq("wedding_id", id);
-            } catch (e) {}
-
-            await supabase.from("weddings").delete().eq("id", id);
-          })(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase delete timeout")), 5000)),
-        ]);
-      } catch (err) {
+      Promise.allSettled([
+        supabase.from("guest_call_logs").delete().eq("wedding_id", id),
+        supabase.from("guests").delete().eq("wedding_id", id),
+        supabase.from("wedding_messages").delete().eq("wedding_id", id),
+        supabase.from("weddings").delete().eq("id", id),
+      ]).catch((err) => {
         console.warn("Supabase wedding delete notice:", err.message);
-      }
+      });
     }
     const affected = Math.max(1, initialLen - store.weddings.length);
     return formatResult(new Array(affected).fill({ id }));

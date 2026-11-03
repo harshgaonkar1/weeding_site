@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Users,
   CheckCircle2,
@@ -9,8 +9,11 @@ import {
   ChevronDown,
   ChevronsUpDown,
 } from "lucide-react";
+import { gsap, animateStaggerIn } from "../utils/animations";
 
 export default function StatsCards({ stats }) {
+  const gridRef = useRef(null);
+
   // Dropdown expansion state for each card
   const [expandedCards, setExpandedCards] = useState({
     total: false,
@@ -20,6 +23,18 @@ export default function StatsCards({ stats }) {
     idCard: false,
     flight: false,
   });
+
+  // GSAP: Stagger entrance for metric cards on mount
+  useEffect(() => {
+    if (gridRef.current) {
+      animateStaggerIn(gridRef.current.children, {
+        y: 20,
+        scale: 0.96,
+        duration: 0.45,
+        stagger: 0.05,
+      });
+    }
+  }, []);
 
   const toggleCard = (key) => {
     setExpandedCards((prev) => ({
@@ -93,7 +108,7 @@ export default function StatsCards({ stats }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
+      <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
         {/* 1. Total Registered */}
         <div className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs card-hover-lift animate-fadeInUp">
           <div className="flex items-start justify-between">

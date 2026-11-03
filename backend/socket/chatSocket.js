@@ -32,18 +32,54 @@ export async function authenticate(auth) {
 }
 
 /**
- * Standard Socket.IO Chat Implementation
- * Handles real-time client-to-admin communication with database persistence.
+ * Broadcast real-time data changes across WebSockets.
+ * Emits ONLY when mutations occur on the server (create, update, delete, sheet sync, call logs).
+ * This eliminates periodic client polling and saves server stress.
+ */
+export const broadcastDataChange = (io, { event, weddingId, payload = {} }) => {
+  if (!io) return;
+  const cleanId = weddingId ? getCleanWeddingId(weddingId) : null;
+  const eventData = {
+    ...payload,
+    wedding_id: cleanId,
+    timestamp: new Date().toISOString(),
+  };
+
+  if (cleanId) {
+    io.to(cleanId).emit(event, eventData);
+    io.to(`wedding:${cleanId}`).emit(event, eventData);
+  }
+  // Admins & Call Center room always receive updates
+  io.to("admins").emit(event, eventData);
+
+  // If wedding cards were created/updated/deleted, also broadcast globally
+  if (event === "weddings_updated") {
+    io.emit(event, eventData);
+  }
+};
+
+/**
+ * Standard Socket.IO Chat & Live Data Sync Implementation
+ * Handles real-time client-to-admin communication and live event-driven data sync.
  */
 export const initializeChatSocket = (io) => {
   io.on("connection", (socket) => {
     console.log(`🔌 [Socket Connected] ID: ${socket.id}`);
 
-    // Automatically join admins room if user claims admin or role passed in auth
+    // Automatically join admins room if user claims admin or call_center in handshake
     const authRole = socket.handshake.auth?.role || socket.handshake.query?.role;
-    if (authRole === "admin") {
+    if (authRole === "admin" || authRole === "call_center") {
       socket.join("admins");
-      console.log(`💬 Socket ${socket.id} joined admins channel`);
+      console.log(`💬 Socket ${socket.id} joined admins channel (${authRole})`);
+    }
+
+    // Automatically join wedding room if specified in auth handshake
+    const initialWeddingId = socket.handshake.auth?.weddingId || socket.handshake.query?.weddingId;
+    if (initialWeddingId) {
+      const room = getCleanWeddingId(initialWeddingId);
+      socket.join(room);
+      socket.data.weddingId = room;
+      console.log(`💬 Socket ${socket.id} joined initial room: ${room}`);
     }
 
     // 1. Join a wedding conversation room

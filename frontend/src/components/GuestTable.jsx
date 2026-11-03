@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   FileText,
   Edit3,
@@ -22,6 +22,7 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { animateStaggerIn } from "../utils/animations";
 
 const getAvatarTheme = (name = "") => {
   const char = (name.charAt(0) || "G").toUpperCase();
@@ -66,6 +67,27 @@ export default function GuestTable({
     const start = (currentPage - 1) * pageSize;
     return guests.slice(start, start + pageSize);
   }, [guests, currentPage, pageSize]);
+
+  const tbodyRef = useRef(null);
+  const mobileListRef = useRef(null);
+
+  // GSAP: Stagger table rows and mobile cards when paginated guests change
+  useEffect(() => {
+    if (tbodyRef.current && paginatedGuests.length > 0) {
+      animateStaggerIn(tbodyRef.current.children, {
+        y: 10,
+        duration: 0.35,
+        stagger: 0.02,
+      });
+    }
+    if (mobileListRef.current && paginatedGuests.length > 0) {
+      animateStaggerIn(mobileListRef.current.children, {
+        y: 10,
+        duration: 0.35,
+        stagger: 0.025,
+      });
+    }
+  }, [currentPage, pageSize, guests.length]);
 
   if (loading && guests.length === 0) {
     return (
@@ -121,7 +143,7 @@ export default function GuestTable({
   return (
     <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs my-3 sm:my-4 animate-fadeIn">
       {/* 1. Mobile Cards View (< md) */}
-      <div className="block md:hidden divide-y divide-slate-100">
+      <div ref={mobileListRef} className="block md:hidden divide-y divide-slate-100">
         {paginatedGuests.map((guest) => {
           const avatarTheme = getAvatarTheme(guest.guest_name);
           const rsvp = (guest.rsvp_status || "Pending").toLowerCase();
@@ -391,7 +413,7 @@ export default function GuestTable({
           </thead>
 
           {/* Table Body */}
-          <tbody className="divide-y divide-slate-100 text-xs">
+          <tbody ref={tbodyRef} className="divide-y divide-slate-100 text-xs">
             {paginatedGuests.map((guest) => {
               const avatarTheme = getAvatarTheme(guest.guest_name);
               const rsvp = (guest.rsvp_status || "Pending").toLowerCase();

@@ -38,7 +38,14 @@ import ChatBotModal from "../components/ChatBotModal";
 import CircularChatWidget from "../components/CircularChatWidget";
 import LoginPage from "./LoginPage";
 import { api, calculateStatsFromList } from "../services/api";
+import { socket } from "../services/socket";
 import { useAuth } from "../context/AuthContext";
+import {
+  gsap,
+  animateToastIn,
+  animateToastOut,
+  animateStaggerIn,
+} from "../utils/animations";
 
 export default function Hero() {
   const {
@@ -107,10 +114,44 @@ export default function Hero() {
 
   // Toast Notification
   const [toast, setToast] = useState(null);
+  const toastRef = useRef(null);
+  const weddingGridRef = useRef(null);
+  const mainViewRef = useRef(null);
+
+  // GSAP: Animate toast notification
+  useEffect(() => {
+    if (toast && toastRef.current) {
+      animateToastIn(toastRef.current);
+    }
+  }, [toast]);
+
+  // GSAP: Stagger animate wedding cards when activeTab is weddings
+  useEffect(() => {
+    if (activeTab === "weddings" && weddingGridRef.current && weddings.length > 0) {
+      animateStaggerIn(weddingGridRef.current.children, { y: 24, duration: 0.5, stagger: 0.07 });
+    }
+  }, [activeTab, weddings]);
+
+  // GSAP: Smooth view transition when switching tabs
+  useEffect(() => {
+    if (mainViewRef.current) {
+      gsap.fromTo(
+        mainViewRef.current,
+        { opacity: 0.85, y: 8 },
+        { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
+      );
+    }
+  }, [activeTab]);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => {
+      if (toastRef.current) {
+        animateToastOut(toastRef.current, () => setToast(null));
+      } else {
+        setToast(null);
+      }
+    }, 3000);
   };
 
   // 1. Load Weddings (only called on mount and after explicit wedding creation/updates)
@@ -122,7 +163,13 @@ export default function Hero() {
         const savedId = localStorage.getItem("manish_selected_wedding_id");
         if (savedId) {
           const matched = data.find((w) => w.id === savedId);
-          if (matched) setSelectedWedding(matched);
+          if (matched) {
+            setSelectedWedding(matched);
+          } else {
+            try {
+              localStorage.removeItem("manish_selected_wedding_id");
+            } catch (e) {}
+          }
         }
       }
     } catch (e) {
@@ -240,6 +287,77 @@ export default function Hero() {
     loadGuests();
   }, [loadGuests]);
 
+  // ------------------- REAL-TIME WEBSOCKET SYNCHRONIZATION -------------------
+  // Ask the server ONLY ONCE on mount/selection; then listen for live socket events to update ONLY when changes occur.
+  // This eliminates periodic polling intervals and ensures zero unnecessary server stress.
+  useEffect(() => {
+    const token = localStorage.getItem("manish_auth_token") || "";
+    const cleanWId = selectedWeddingId ? String(selectedWeddingId).replace(/^wedding:/, "").trim() : null;
+
+    socket.auth = {
+      token,
+      role: user?.role || "client",
+      weddingId: cleanWId || user?.wedding_id || "wedding_01",
+      name: user?.name,
+    };
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    const joinActiveRooms = () => {
+      if (user?.role === "admin" || user?.role === "call_center") {
+        socket.emit("join_admin");
+      }
+      if (cleanWId && cleanWId !== "all") {
+        socket.emit("join_wedding", cleanWId);
+      }
+    };
+
+    joinActiveRooms();
+
+    let guestUpdateTimer = null;
+    const handleGuestsUpdated = (payload) => {
+      const eventWeddingId = payload?.wedding_id;
+      const currentId = activeWeddingRef.current;
+      // Only refresh if mutation belongs to current wedding or viewing all
+      if (!eventWeddingId || !currentId || currentId === "all" || eventWeddingId === currentId) {
+        if (guestUpdateTimer) clearTimeout(guestUpdateTimer);
+        guestUpdateTimer = setTimeout(() => {
+          loadGuests();
+        }, 150);
+      }
+    };
+
+    const handleWeddingsUpdated = () => {
+      loadWeddings();
+    };
+
+    const handleCallLogsUpdated = (payload) => {
+      const eventWeddingId = payload?.wedding_id;
+      const currentId = activeWeddingRef.current;
+      if (!eventWeddingId || !currentId || currentId === "all" || eventWeddingId === currentId) {
+        if (guestUpdateTimer) clearTimeout(guestUpdateTimer);
+        guestUpdateTimer = setTimeout(() => {
+          loadGuests();
+        }, 150);
+      }
+    };
+
+    socket.on("connect", joinActiveRooms);
+    socket.on("guests_updated", handleGuestsUpdated);
+    socket.on("weddings_updated", handleWeddingsUpdated);
+    socket.on("call_logs_updated", handleCallLogsUpdated);
+
+    return () => {
+      if (guestUpdateTimer) clearTimeout(guestUpdateTimer);
+      socket.off("connect", joinActiveRooms);
+      socket.off("guests_updated", handleGuestsUpdated);
+      socket.off("weddings_updated", handleWeddingsUpdated);
+      socket.off("call_logs_updated", handleCallLogsUpdated);
+    };
+  }, [selectedWeddingId, user?.role, user?.wedding_id, user?.name, loadGuests, loadWeddings]);
+
   // ------------------- WEDDING ACTIONS -------------------
   const handleSelectWedding = (wedding) => {
     if (wedding) {
@@ -262,6 +380,9 @@ export default function Hero() {
       setGuests([]);
       setStats({});
       setActiveTab("weddings");
+      try {
+        localStorage.removeItem("manish_selected_wedding_id");
+      } catch (e) {}
     }
   };
 
@@ -333,6 +454,14 @@ export default function Hero() {
 
       // 2. Perform delete - cleans cache + syncs backend (graceful even if offline)
       await api.deleteWedding(delId);
+
+      // Clean saved selected wedding id from localStorage if matching
+      try {
+        if (localStorage.getItem("manish_selected_wedding_id") === delId) {
+          localStorage.removeItem("manish_selected_wedding_id");
+        }
+      } catch (e) {}
+
       showToast("Marriage card removed");
 
       // 3. Navigate away if we were viewing the deleted wedding
@@ -565,7 +694,8 @@ export default function Hero() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 sm:top-5 sm:right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold animate-slideIn ${
+          ref={toastRef}
+          className={`fixed top-4 right-4 sm:top-5 sm:right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold ${
             toast.type === "error"
               ? "bg-rose-900 text-white"
               : "bg-[#4a0e17] text-[#eedfc8] border border-[#eedfc8]/30 shadow-rose-950/20"
@@ -610,7 +740,7 @@ export default function Hero() {
         />
 
         {/* Right Main Content */}
-        <main className="flex-1 flex flex-col bg-[#fcfdfc] overflow-y-auto min-w-0">
+        <main ref={mainViewRef} className="flex-1 flex flex-col bg-[#fcfdfc] overflow-y-auto min-w-0">
           {/* Top Header Bar */}
           <Header
             searchQuery={searchQuery}
@@ -703,7 +833,7 @@ export default function Hero() {
               </div>
 
               {/* Marriage Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
+              <div ref={weddingGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
                 {weddings.map((wedding) => (
                   <WeddingCard
                     key={wedding.id}

@@ -1,8 +1,9 @@
-﻿import { WeddingModel } from "../models/weddingModel.js";
+import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
 import { MessageModel } from "../models/messageModel.js";
 import { ExcelService } from "../services/excelService.js";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
+import { broadcastDataChange } from "../socket/chatSocket.js";
 import fs from "fs";
 import { supabase } from '../Db_connection/supabaseClient.js';
 import { store } from '../Db_connection/queries.js';
@@ -76,6 +77,13 @@ export const weddingController = {
       }
 
       // 3. Respond to client with created wedding and Excel sheet path
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "weddings_updated",
+        weddingId: newWedding?.id,
+        payload: { action: "create", wedding: newWedding },
+      });
+
       res.status(201).json({
         success: true,
         message: "Wedding created and Marriage Excel sheet generated successfully!",
@@ -110,6 +118,15 @@ export const weddingController = {
           message: "Wedding not found",
         });
       }
+
+      // Broadcast WebSocket mutation event
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "weddings_updated",
+        weddingId: updated?.id,
+        payload: { action: "update", wedding: updated },
+      });
+
       res.status(200).json({
         success: true,
         message: "Wedding updated successfully",
@@ -133,22 +150,10 @@ export const weddingController = {
         return res.status(400).json({ success: false, message: 'Wedding ID is required' });
       }
 
-      // 1. Fetch wedding info if in memory or Supabase for Google Sheet cleanup
+      // 1. Fetch wedding info if in memory for Google Sheet cleanup
       let wedding = null;
       if (store && Array.isArray(store.weddings)) {
         wedding = store.weddings.find((w) => w.id === id) || null;
-      }
-      if (!wedding && supabase) {
-        try {
-          const fetchPromise = supabase
-            .from('weddings')
-            .select('id, groom_name, bride_name, google_sheet_id, google_sheet_url')
-            .eq('id', id)
-            .single();
-          const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: null }), 1500));
-          const result = await Promise.race([fetchPromise, timeoutPromise]);
-          wedding = result?.data || null;
-        } catch (e) {}
       }
 
       // 2. Execute DB & local deletion (fast, resilient, non-blocking)
@@ -157,14 +162,18 @@ export const weddingController = {
       // 3. Fire-and-forget Google Sheet cleanup (never blocks HTTP response)
       if (wedding && (wedding.google_sheet_url || wedding.google_sheet_id)) {
         setImmediate(() => {
-          Promise.race([
-            GoogleSheetsService.deleteWeddingSheet(wedding),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Sheet timeout')), 4000)),
-          ]).catch(() => {});
+          GoogleSheetsService.deleteWeddingSheet(wedding).catch(() => {});
         });
       }
 
-      // 4. Return success immediately
+      // 4. Return success immediately and broadcast over WebSocket
+      const io = req.app.get("io");
+      broadcastDataChange(io, {
+        event: "weddings_updated",
+        weddingId: id,
+        payload: { action: "delete", wedding_id: id },
+      });
+
       return res.status(200).json({
         success: true,
         message: 'Wedding and associated guest directory deleted successfully',

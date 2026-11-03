@@ -3,6 +3,12 @@ import { Bot, Sparkles } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { socket } from "../services/socket";
+import {
+  gsap,
+  animateWidgetBounce,
+  animateNotificationBadge,
+  animateFloat,
+} from "../utils/animations";
 
 export default function CircularChatWidget({
   onOpenChat,
@@ -11,6 +17,12 @@ export default function CircularChatWidget({
 }) {
   const { user, isAdmin, isMarriageClient } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const containerRef = useRef(null);
+  const buttonRef = useRef(null);
+  const botSvgRef = useRef(null);
+  const badgeRef = useRef(null);
+  const prevUnreadRef = useRef(0);
 
   const weddingId = selectedWedding?.id || user?.wedding_id || "wedding_01";
   const myRole = isAdmin ? "admin" : "client";
@@ -92,12 +104,8 @@ export default function CircularChatWidget({
       } catch (e) {}
     };
 
-    // Initial check
+    // Ask the server ONLY ONCE on mount / wedding change (zero polling loops)
     checkMessages();
-
-    // Background safety sync (30s) + on tab focus
-    const syncInterval = setInterval(checkMessages, 30000);
-    window.addEventListener("focus", checkMessages);
 
     // Socket.IO real-time listener for live instant messages
     const handleNewMessage = (newMsg) => {
@@ -138,14 +146,44 @@ export default function CircularChatWidget({
 
     return () => {
       isMounted = false;
-      clearInterval(syncInterval);
-      window.removeEventListener("focus", checkMessages);
       socket.off("receive_message", handleNewMessage);
       socket.off("message", handleNewMessage);
       socket.off("new_message", handleNewMessage);
       socket.off("messages_read", handleMessagesRead);
     };
   }, [weddingId, myRole, isAdmin, isMarriageClient, cleanWId, lastSeenKey]);
+
+  // GSAP: Initial entrance animation of the widget
+  useEffect(() => {
+    if (containerRef.current) {
+      gsap.fromTo(
+        containerRef.current,
+        { y: 50, scale: 0.4, opacity: 0 },
+        { y: 0, scale: 1, opacity: 1, duration: 0.8, ease: "elastic.out(1, 0.6)" }
+      );
+    }
+  }, []);
+
+  // GSAP: Continuous subtle float for bot icon
+  useEffect(() => {
+    if (botSvgRef.current) {
+      const tween = animateFloat(botSvgRef.current, 3, 2.2);
+      return () => tween?.kill();
+    }
+  }, []);
+
+  // GSAP: Wiggle/punch button and pop badge when new message arrives
+  useEffect(() => {
+    if (unreadCount > prevUnreadRef.current && unreadCount > 0) {
+      if (buttonRef.current) {
+        animateWidgetBounce(buttonRef.current);
+      }
+      if (badgeRef.current) {
+        animateNotificationBadge(badgeRef.current);
+      }
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 
   const handleOpenClick = () => {
     setUnreadCount(0);
@@ -162,6 +200,7 @@ export default function CircularChatWidget({
 
   return (
     <aside
+      ref={containerRef}
       aria-label="Live Chat Assistant"
       className="fixed bottom-5 left-5 sm:bottom-7 sm:left-7 z-[60] flex flex-col items-start select-none group"
     >
@@ -176,6 +215,7 @@ export default function CircularChatWidget({
 
       {/* Main Circular Section Button */}
       <button
+        ref={buttonRef}
         type="button"
         onClick={handleOpenClick}
         className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#3b0b14] via-[#5c1322] to-[#7d1f33] text-[#eedfc8] shadow-2xl shadow-rose-950/60 border-2 border-[#eedfc8]/50 hover:border-[#eedfc8] flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-300 relative group/btn focus:outline-none focus:ring-4 focus:ring-[#722233]/40"
@@ -188,7 +228,7 @@ export default function CircularChatWidget({
         )}
 
         {/* Bot Icon */}
-        <div className="relative flex items-center justify-center">
+        <div ref={botSvgRef} className="relative flex items-center justify-center">
           <Bot className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.2] text-[#eedfc8] drop-shadow-sm group-hover/btn:rotate-6 transition-transform" />
           <Sparkles className="w-3 h-3 text-amber-300 absolute -top-1 -right-1 animate-pulse" />
         </div>
@@ -196,6 +236,7 @@ export default function CircularChatWidget({
         {/* Dot indicating that there is a new message (instead of popup) */}
         {unreadCount > 0 && (
           <span
+            ref={badgeRef}
             className="absolute -top-1 -right-1 flex h-4 w-4 z-10"
             title={`${unreadCount} new message${unreadCount > 1 ? "s" : ""}`}
           >
