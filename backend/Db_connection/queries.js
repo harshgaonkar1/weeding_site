@@ -278,13 +278,30 @@ export const query = async (text, params = []) => {
       pOffset = 1;
     }
 
+    let resolvedSide = params[5];
+    if (!resolvedSide || String(resolvedSide).trim() === "") {
+      const r = (guestRelation || "").toLowerCase();
+      if (r.includes("bride") || r.includes("ladki") || r.includes("girl") || r.includes("female") || r.includes("wife")) {
+        resolvedSide = "Bride";
+      } else {
+        resolvedSide = "Groom";
+      }
+    } else {
+      const s = String(resolvedSide).toLowerCase().trim();
+      if (s.includes("bride") || s.includes("ladki") || s === "b" || s.startsWith("bride")) {
+        resolvedSide = "Bride";
+      } else if (s.includes("both") || s.includes("mutual")) {
+        resolvedSide = "Both";
+      }
+    }
+
     const newGuest = {
       id: params[0],
       wedding_id: params[1] || "wedding_01",
       sr_no: Number(params[2]) || 1,
       guest_name: params[3],
       contact: params[4] || null,
-      side: params[5] || "Groom",
+      side: resolvedSide,
       relation: guestRelation,
       rsvp_status: params[6 + pOffset] || "Confirmed",
       id_card_received: params[7 + pOffset] || "No",

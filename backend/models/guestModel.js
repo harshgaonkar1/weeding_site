@@ -3,6 +3,69 @@ import { supabase } from "../Db_connection/supabaseClient.js";
 import { store } from "../Db_connection/queries.js";
 import crypto from "crypto";
 
+// Helper function to resolve and normalize guest side (Bride vs Groom vs Both)
+export function resolveGuestSide(sideVal, relationVal, defaultSide = "Groom") {
+  if (sideVal !== undefined && sideVal !== null) {
+    const s = String(sideVal).toLowerCase().trim();
+    if (
+      s.includes("bride") ||
+      s.includes("ladki") ||
+      s.includes("girl") ||
+      s.includes("female") ||
+      s.includes("wife") ||
+      s === "b" ||
+      s === "b side" ||
+      s === "b/s" ||
+      s.startsWith("bride")
+    ) {
+      return "Bride";
+    }
+    if (
+      s.includes("groom") ||
+      s.includes("ladka") ||
+      s.includes("ladke") ||
+      s.includes("boy") ||
+      s.includes("male") ||
+      s.includes("husband") ||
+      s === "g" ||
+      s === "g side" ||
+      s === "g/s" ||
+      s.startsWith("groom")
+    ) {
+      return "Groom";
+    }
+    if (s.includes("both") || s.includes("mutual") || s.includes("common")) {
+      return "Both";
+    }
+  }
+
+  // Fallback to relation inference if side is empty or ambiguous
+  if (relationVal !== undefined && relationVal !== null) {
+    const rel = String(relationVal).toLowerCase().trim();
+    if (
+      rel.includes("bride") ||
+      rel.includes("ladki") ||
+      rel.includes("girl") ||
+      rel.includes("female") ||
+      rel.includes("wife")
+    ) {
+      return "Bride";
+    }
+    if (
+      rel.includes("groom") ||
+      rel.includes("ladka") ||
+      rel.includes("ladke") ||
+      rel.includes("boy") ||
+      rel.includes("male") ||
+      rel.includes("husband")
+    ) {
+      return "Groom";
+    }
+  }
+
+  return defaultSide || "Groom";
+}
+
 // Helper function to calculate complete statistics from any list of guest objects
 export const calculateGuestStats = (guests = []) => {
   const total = guests.length;
@@ -425,7 +488,7 @@ export const GuestModel = {
       sr_no: Number(srNo) || 1,
       guest_name: (data.guest_name || "").trim(),
       contact: data.contact || null,
-      side: data.side || "Groom",
+      side: resolveGuestSide(data.side, data.relation),
       relation: data.relation !== undefined && data.relation ? String(data.relation).trim() : null,
       rsvp_status: data.rsvp_status || "Confirmed",
       id_card_received: data.id_card_received || "No",
@@ -536,7 +599,7 @@ export const GuestModel = {
         sr_no: srNo,
         guest_name: data.guest_name.trim(),
         contact: data.contact || null,
-        side: data.side || "Groom",
+        side: resolveGuestSide(data.side, data.relation),
         relation: data.relation !== undefined && data.relation ? String(data.relation).trim() : null,
         rsvp_status: data.rsvp_status || "Confirmed",
         id_card_received: data.id_card_received || "No",
@@ -619,7 +682,7 @@ export const GuestModel = {
         sr_no: r.sr_no && !isNaN(Number(r.sr_no)) ? Number(r.sr_no) : idx + 1,
         guest_name: String(r.guest_name || "Guest").trim(),
         contact: r.contact ? String(r.contact).trim() : null,
-        side: r.side || "Groom",
+        side: resolveGuestSide(r.side, r.relation),
         relation: r.relation ? String(r.relation).trim() : null,
         rsvp_status: r.rsvp_status || "Confirmed",
         id_card_received: r.id_card_received || "No",
@@ -737,7 +800,7 @@ export const GuestModel = {
       sr_no: data.sr_no !== undefined && data.sr_no !== "" && !isNaN(Number(data.sr_no)) ? Number(data.sr_no) : (existing.sr_no || 1),
       guest_name: data.guest_name !== undefined ? String(data.guest_name).trim() : existing.guest_name,
       contact: data.contact !== undefined ? (data.contact ? String(data.contact).trim() : null) : existing.contact,
-      side: data.side !== undefined && data.side ? String(data.side) : (existing.side || "Groom"),
+      side: data.side !== undefined && data.side ? resolveGuestSide(data.side, data.relation !== undefined ? data.relation : existing.relation) : (existing.side || "Groom"),
       relation: data.relation !== undefined ? (data.relation ? String(data.relation).trim() : null) : (existing.relation || null),
       rsvp_status: data.rsvp_status !== undefined && data.rsvp_status ? String(data.rsvp_status) : (existing.rsvp_status || "Confirmed"),
       id_card_received: data.id_card_received !== undefined && data.id_card_received ? String(data.id_card_received) : (existing.id_card_received || "No"),

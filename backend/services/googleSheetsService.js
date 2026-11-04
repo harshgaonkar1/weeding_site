@@ -528,8 +528,10 @@ export const GoogleSheetsService = {
   },
 
   // 6. Normalize a row object into MySQL Guest structure
-  normalizeRowToGuest(row, weddingId, defaultSrNo = 1) {
+  normalizeRowToGuest(row, weddingId, defaultSrNo = 1, defaultSide = null) {
+    const rowKeys = Object.keys(row || {});
     const getVal = (...keys) => {
+      // 1. Direct or sanitized match on row
       for (const k of keys) {
         if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
           return String(row[k]).trim();
@@ -537,6 +539,19 @@ export const GoogleSheetsService = {
         const cleaned = k.toLowerCase().replace(/[^a-z0-9]/g, "_");
         if (row[cleaned] !== undefined && row[cleaned] !== null && String(row[cleaned]).trim() !== "") {
           return String(row[cleaned]).trim();
+        }
+      }
+      // 2. Fuzzy match across all row keys
+      for (const k of keys) {
+        const cleanKw = k.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!cleanKw) continue;
+        for (const rk of rowKeys) {
+          const cleanRk = rk.toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (cleanRk === cleanKw || cleanRk.includes(cleanKw) || cleanKw.includes(cleanRk)) {
+            if (row[rk] !== undefined && row[rk] !== null && String(row[rk]).trim() !== "") {
+              return String(row[rk]).trim();
+            }
+          }
         }
       }
       return null;
@@ -547,12 +562,94 @@ export const GoogleSheetsService = {
     const srNoRaw = getVal("sr_no", "srno", "sr", "serial_no", "id", "#");
     const srNo = srNoRaw && !isNaN(Number(srNoRaw)) ? Number(srNoRaw) : defaultSrNo;
     const contact = getVal("contact", "phone", "mobile", "contact_no", "phone_number") || "";
+    const relation =
+      getVal(
+        "relation",
+        "relationship",
+        "relation_to_couple",
+        "relation_to_bride_groom",
+        "guest_relation",
+        "relative"
+      ) || null;
 
-    // Side normalization
-    let side = getVal("side", "family_side", "side_type") || "Groom";
-    if (side.toLowerCase().includes("bride")) side = "Bride";
-    else if (side.toLowerCase().includes("groom")) side = "Groom";
-    else if (side.toLowerCase().includes("both")) side = "Both";
+    // Side normalization supporting single/combined column, Indian wedding terms, and abbreviations
+    const rawSideVal = getVal(
+      "side",
+      "bride_groom",
+      "groom_bride",
+      "side_bride_groom",
+      "side_groom_bride",
+      "whose_side",
+      "family_side",
+      "side_type",
+      "party",
+      "affiliation",
+      "category",
+      "ladka_ladki",
+      "ladki_ladka"
+    );
+
+    let side = null;
+    if (rawSideVal) {
+      const s = rawSideVal.toLowerCase().trim();
+      if (
+        s.includes("bride") ||
+        s.includes("ladki") ||
+        s.includes("girl") ||
+        s.includes("female") ||
+        s.includes("wife") ||
+        s === "b" ||
+        s === "b side" ||
+        s === "b/s" ||
+        s.startsWith("bride")
+      ) {
+        side = "Bride";
+      } else if (
+        s.includes("groom") ||
+        s.includes("ladka") ||
+        s.includes("ladke") ||
+        s.includes("boy") ||
+        s.includes("male") ||
+        s.includes("husband") ||
+        s === "g" ||
+        s === "g side" ||
+        s === "g/s" ||
+        s.startsWith("groom")
+      ) {
+        side = "Groom";
+      } else if (s.includes("both") || s.includes("mutual") || s.includes("common")) {
+        side = "Both";
+      }
+    }
+
+    // If side column is missing or empty, infer from relation or tab default
+    if (!side) {
+      const relLower = (relation || "").toLowerCase();
+      if (
+        relLower.includes("bride") ||
+        relLower.includes("ladki") ||
+        relLower.includes("girl") ||
+        relLower.includes("female") ||
+        relLower.includes("wife")
+      ) {
+        side = "Bride";
+      } else if (
+        relLower.includes("groom") ||
+        relLower.includes("ladka") ||
+        relLower.includes("ladke") ||
+        relLower.includes("boy") ||
+        relLower.includes("male") ||
+        relLower.includes("husband")
+      ) {
+        side = "Groom";
+      } else if (row._tabDefaultSide) {
+        side = row._tabDefaultSide;
+      } else if (defaultSide) {
+        side = defaultSide;
+      } else {
+        side = "Groom";
+      }
+    }
 
     // RSVP normalization
     let rsvp = getVal("rsvp_status", "rsvp", "status") || "Confirmed";
@@ -593,7 +690,7 @@ export const GoogleSheetsService = {
       guest_name: guestName,
       contact: contact,
       side: side,
-      relation: getVal("relation", "relationship", "relation_to_couple", "relation_to_bride_groom", "guest_relation") || null,
+      relation: relation,
       rsvp_status: rsvp,
       id_card_received: idCard,
       arrival_date: getVal("arrival_date", "arrival"),
@@ -700,26 +797,66 @@ export const GoogleSheetsService = {
     if (auth && google) {
       try {
         const sheets = google.sheets({ version: "v4", auth });
-        const tabTitle = await this.resolveSheetTab(sheets, sheetId, sheetUrlOrId, weddingId);
-        const fetchRange = tabTitle ? `'${tabTitle}'!A1:Z1000` : "A1:Z1000";
+        const gid = this.extractSheetGid(sheetUrlOrId);
+        
+        // Retrieve spreadsheet metadata to inspect all tabs
+        const metaRes = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+        const sheetsList = metaRes.data.sheets || [];
 
-        const res = await sheets.spreadsheets.values.get({
-          spreadsheetId: sheetId,
-          range: fetchRange,
-        });
+        let targetTabs = [];
+        if (gid !== null) {
+          const found = sheetsList.find((s) => s.properties?.sheetId === gid);
+          if (found) targetTabs.push(found);
+        }
 
-        const values = res.data.values;
-        if (values && values.length >= 2) {
-          const rawHeaders = values[0];
-          const headers = rawHeaders.map((h) => String(h || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "_"));
-          for (let i = 1; i < values.length; i++) {
-            const rowValues = values[i];
-            if (!rowValues || rowValues.length === 0 || rowValues.every((v) => !v || String(v).trim() === "")) continue;
-            const rowObj = {};
-            headers.forEach((header, index) => {
-              rowObj[header] = rowValues[index] !== undefined && rowValues[index] !== null ? String(rowValues[index]).trim() : "";
+        if (targetTabs.length === 0) {
+          // If no specific gid was provided, check all valid guest sheets
+          const isExcludedTab = (t) => /summary|dashboard|stats|overview|instructions|readme|settings|template/i.test(t);
+          const candidateTabs = sheetsList.filter(
+            (s) => s.properties?.title && !isExcludedTab(s.properties.title)
+          );
+          if (candidateTabs.length > 0) {
+            targetTabs = candidateTabs;
+          } else if (sheetsList.length > 0) {
+            targetTabs = [sheetsList[0]];
+          }
+        }
+
+        for (const tab of targetTabs) {
+          const tabTitle = tab.properties?.title;
+          if (!tabTitle) continue;
+
+          let tabDefaultSide = null;
+          const tLower = tabTitle.toLowerCase();
+          if (tLower.includes("bride") || tLower.includes("ladki") || tLower.includes("girl") || tLower.includes("female")) {
+            tabDefaultSide = "Bride";
+          } else if (tLower.includes("groom") || tLower.includes("ladka") || tLower.includes("ladke") || tLower.includes("boy") || tLower.includes("male")) {
+            tabDefaultSide = "Groom";
+          }
+
+          try {
+            const fetchRange = `'${tabTitle}'!A1:Z2000`;
+            const res = await sheets.spreadsheets.values.get({
+              spreadsheetId: sheetId,
+              range: fetchRange,
             });
-            rows.push(rowObj);
+
+            const values = res.data.values;
+            if (values && values.length >= 2) {
+              const rawHeaders = values[0];
+              const headers = rawHeaders.map((h) => String(h || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "_"));
+              for (let i = 1; i < values.length; i++) {
+                const rowValues = values[i];
+                if (!rowValues || rowValues.length === 0 || rowValues.every((v) => !v || String(v).trim() === "")) continue;
+                const rowObj = { _tabDefaultSide: tabDefaultSide };
+                headers.forEach((header, index) => {
+                  rowObj[header] = rowValues[index] !== undefined && rowValues[index] !== null ? String(rowValues[index]).trim() : "";
+                });
+                rows.push(rowObj);
+              }
+            }
+          } catch (tabErr) {
+            console.warn(`Note reading tab '${tabTitle}':`, tabErr.message);
           }
         }
       } catch (apiErr) {
@@ -779,7 +916,7 @@ export const GoogleSheetsService = {
     const recordsToUpsert = [];
 
     for (let i = 0; i < rows.length; i++) {
-      const normalized = this.normalizeRowToGuest(rows[i], weddingId, i + 1);
+      const normalized = this.normalizeRowToGuest(rows[i], weddingId, i + 1, rows[i]._tabDefaultSide);
       if (!normalized.guest_name || normalized.guest_name.trim() === "") continue;
       // Skip repeated header rows
       if (normalized.guest_name.toLowerCase() === "guest name" || normalized.guest_name.toLowerCase() === "guest_name") continue;
@@ -1225,7 +1362,7 @@ export const GoogleSheetsService = {
       let created = 0;
       let updated = 0;
       for (let i = 0; i < payload.rows.length; i++) {
-        const normalized = this.normalizeRowToGuest(payload.rows[i], weddingId, i + 1);
+        const normalized = this.normalizeRowToGuest(payload.rows[i], weddingId, i + 1, payload.rows[i]._tabDefaultSide);
         if (!normalized.guest_name) continue;
         const res = await this.upsertGuest(weddingId, normalized);
         if (res.action === "created") created++;
@@ -1246,7 +1383,7 @@ export const GoogleSheetsService = {
 
     if (payload.row || payload.data) {
       const rowData = payload.row || payload.data;
-      const normalized = this.normalizeRowToGuest(rowData, weddingId);
+      const normalized = this.normalizeRowToGuest(rowData, weddingId, 1, rowData._tabDefaultSide);
       const res = await this.upsertGuest(weddingId, normalized);
 
       await pool.query(
