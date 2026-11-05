@@ -1182,8 +1182,10 @@ export const api = {
     if (!res.ok) {
       throw new Error(json.message || "Failed to sync Google Sheet");
     }
-    if (json.data?.guests) {
-      setCachedGuests(json.data.guests);
+    if (json.data?.guests && Array.isArray(json.data.guests)) {
+      const allCached = getCachedGuests();
+      const otherGuests = allCached.filter((g) => g.wedding_id !== weddingId);
+      setCachedGuests([...otherGuests, ...json.data.guests]);
     }
     return json;
   },

@@ -122,6 +122,25 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Real-time terminal error logging endpoint for frontend browser errors
+app.post("/api/logs/client-error", (req, res) => {
+  const { message, stack, componentStack, url, line, column, time } = req.body || {};
+  console.log("\n=======================================================");
+  console.error("🚨 [CLIENT BROWSER RUNTIME ERROR DETECTED]:");
+  console.error(`📌 Message: ${message || "Unknown error"}`);
+  if (url || line || column) {
+    console.error(`📍 Location: ${url || "browser"}:${line || "?"}:${column || "?"}`);
+  }
+  if (componentStack) {
+    console.error(`🧱 React Component Stack:\n${componentStack.trim()}`);
+  }
+  if (stack) {
+    console.error(`📜 Stack Trace:\n${stack.trim()}`);
+  }
+  console.log("=======================================================\n");
+  res.json({ success: true, logged: true });
+});
+
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/weddings", weddingRoutes);

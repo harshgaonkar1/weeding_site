@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   MessageSquare,
   BarChart3,
+  Upload,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -32,7 +33,6 @@ import LoginModal from "../components/LoginModal";
 import CallLogModal from "../components/CallLogModal";
 import AdminPasswordModal from "../components/AdminPasswordModal";
 import GoogleSheetModal from "../components/GoogleSheetModal";
-import ExcelImportModal from "../components/ExcelImportModal";
 import WhatsAppMessageModal from "../components/WhatsAppMessageModal";
 import AnalyticsView from "../components/AnalyticsView";
 import ChatBotModal from "../components/ChatBotModal";
@@ -110,8 +110,8 @@ export default function Hero() {
   // Google Sheet Sync Modal State
   const [googleSheetModalWedding, setGoogleSheetModalWedding] = useState(null);
 
-  // Excel / CSV Bulk Import Modal State
-  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  // 1-Click Pull from Google Sheet State
+  const [isPullingFromSheet, setIsPullingFromSheet] = useState(false);
 
   // Live Chat Bot / Admin & Client Messenger State
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
@@ -674,6 +674,28 @@ export default function Hero() {
     }
   };
 
+  const handleDirectPullFromGoogleSheet = async () => {
+    const targetWedding = selectedWedding || (weddings && weddings[0]);
+    if (!targetWedding) return;
+
+    if (!targetWedding.google_sheet_url || targetWedding.google_sheet_url.includes("wed_")) {
+      setGoogleSheetModalWedding(targetWedding);
+      showToast("Please link your Google Sheet URL first.");
+      return;
+    }
+
+    setIsPullingFromSheet(true);
+    try {
+      const result = await api.syncGoogleSheet(targetWedding.id, targetWedding.google_sheet_url);
+      showToast(result.message || "✓ Google Sheet data pulled into DB & website!");
+      await Promise.all([loadGuests(), loadWeddings()]);
+    } catch (err) {
+      showToast(err.message || "Failed to pull data from Google Sheet", "error");
+    } finally {
+      setIsPullingFromSheet(false);
+    }
+  };
+
   // If user is not logged in, show dedicated Full Login Page
   if (!user) {
     return <LoginPage />;
@@ -909,25 +931,26 @@ export default function Hero() {
                   {!isMarriageClient && !isViewOnly && (
                     <>
                       <button
-                        onClick={() => setIsExcelModalOpen(true)}
-                        className="bg-[#f7f2ea] hover:bg-[#eedfc8]/60 border border-[#e3d3be] text-[#5c1322] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
-                        title="Upload & Import Excel (.xlsx, .xls) or CSV guest directory"
-                      >
-                        <Upload className="w-3.5 h-3.5 text-[#722233]" />
-                        <span>Import Excel</span>
-                      </button>
-
-                      <button
                         onClick={() =>
                           setGoogleSheetModalWedding(
                             selectedWedding || (weddings && weddings[0])
                           )
                         }
                         className="bg-[#f7f2ea] hover:bg-[#eedfc8]/60 border border-[#e3d3be] text-[#5c1322] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
-                        title="Live Google Sheet Two-Way Sync"
+                        title="Live Google Sheet Two-Way Sync Settings"
                       >
                         <FileSpreadsheet className="w-3.5 h-3.5 text-[#722233]" />
                         <span>Google Sheet Sync</span>
+                      </button>
+
+                      <button
+                        onClick={handleDirectPullFromGoogleSheet}
+                        disabled={isPullingFromSheet}
+                        className="bg-[#5c1322] hover:bg-[#722233] text-white text-[11px] sm:text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive transition-all disabled:opacity-50"
+                        title="Pull latest plain-text guest data from Google Sheet directly into DB & website"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 text-[#eedfc8] ${isPullingFromSheet ? "animate-spin" : ""}`} />
+                        <span>{isPullingFromSheet ? "Pulling..." : "Pull from Sheet"}</span>
                       </button>
                     </>
                   )}
@@ -1163,22 +1186,6 @@ export default function Hero() {
               setSelectedWedding((prev) => ({ ...prev, ...updatedWedding }));
             }
           }
-          await Promise.all([loadGuests(), loadWeddings()]);
-        }}
-      />
-
-      {/* 10b. Excel / CSV Bulk Import Modal */}
-      <ExcelImportModal
-        isOpen={isExcelModalOpen}
-        weddingId={selectedWedding?.id || "wedding_01"}
-        weddingName={
-          selectedWedding
-            ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
-            : "Selected Wedding"
-        }
-        onClose={() => setIsExcelModalOpen(false)}
-        onImportSuccess={async (count) => {
-          showToast(`✓ Successfully imported ${count} guests from Excel!`);
           await Promise.all([loadGuests(), loadWeddings()]);
         }}
       />

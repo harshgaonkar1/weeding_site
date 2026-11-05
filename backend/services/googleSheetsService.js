@@ -378,7 +378,7 @@ export const GoogleSheetsService = {
           }
         }
 
-        // 2. Direct Sheets API creation
+        // 2. Direct Sheets API creation with 2 separate sheets: "Groom Side" and "Bride Side"
         if (!spreadsheetId) {
           const createRes = await sheets.spreadsheets.create({
             requestBody: {
@@ -388,7 +388,15 @@ export const GoogleSheetsService = {
               sheets: [
                 {
                   properties: {
-                    title: "Guest Directory",
+                    title: "Groom Side",
+                    gridProperties: {
+                      frozenRowCount: 1,
+                    },
+                  },
+                },
+                {
+                  properties: {
+                    title: "Bride Side",
                     gridProperties: {
                       frozenRowCount: 1,
                     },
@@ -403,16 +411,29 @@ export const GoogleSheetsService = {
             createRes.data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
         }
 
-        // 3. Format Header Row & Apply Styling
+        // 3. Format Header Row on both tabs
         if (spreadsheetId) {
-          await sheets.spreadsheets.values.update({
-            spreadsheetId: spreadsheetId,
-            range: "A1:R1",
-            valueInputOption: "USER_ENTERED",
-            requestBody: {
-              values: [GOOGLE_SHEET_HEADERS],
-            },
-          });
+          try {
+            await sheets.spreadsheets.values.batchUpdate({
+              spreadsheetId: spreadsheetId,
+              requestBody: {
+                valueInputOption: "USER_ENTERED",
+                data: [
+                  { range: "'Groom Side'!A1:S1", values: [GOOGLE_SHEET_HEADERS] },
+                  { range: "'Bride Side'!A1:S1", values: [GOOGLE_SHEET_HEADERS] },
+                ],
+              },
+            });
+          } catch (e) {
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: spreadsheetId,
+              range: "A1:S1",
+              valueInputOption: "USER_ENTERED",
+              requestBody: {
+                values: [GOOGLE_SHEET_HEADERS],
+              },
+            });
+          }
 
           // 4. Make the Spreadsheet Publicly Editable / Viewable by Anyone with Link
           try {
@@ -776,6 +797,73 @@ export const GoogleSheetsService = {
     return null;
   },
 
+  // 7d. Discover all tabs and their GIDs directly from Google Sheet HTML (Works without Service Account API)
+  async discoverSheetTabsFromHtml(sheetId) {
+    if (!sheetId) return [];
+    try {
+      const urls = [
+        `https://docs.google.com/spreadsheets/d/${sheetId}/htmlview`,
+        `https://docs.google.com/spreadsheets/d/${sheetId}/edit`,
+      ];
+      for (const u of urls) {
+        try {
+          const res = await fetch(u, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeddingLogisticsApp/1.0",
+            },
+          });
+          if (!res.ok) continue;
+          const html = await res.text();
+          if (!html || html.length < 50) continue;
+
+          const tabs = [];
+          const seenGids = new Set();
+
+          // Regex 1: <li id="sheet-button-([0-9]+)"[^>]*><a[^>]*>([^<]+)</a>
+          const r1 = /id=["']sheet-button-([0-9]+)["'][^>]*><a[^>]*>([^<]+)<\/a>/gi;
+          let m1;
+          while ((m1 = r1.exec(html)) !== null) {
+            const gid = m1[1];
+            const name = m1[2].trim();
+            if (!seenGids.has(gid)) {
+              seenGids.add(gid);
+              tabs.push({ gid, name });
+            }
+          }
+
+          // Regex 2: {"sheetId":([0-9]+),"title":"([^"]+)"}
+          const r2 = /\{[^}]*?["']sheetId["']?\s*:\s*([0-9]+)[^}]*?["']title["']?\s*:\s*["']([^"']+)["']/gi;
+          let m2;
+          while ((m2 = r2.exec(html)) !== null) {
+            const gid = m2[1];
+            const name = m2[2].trim();
+            if (!seenGids.has(gid)) {
+              seenGids.add(gid);
+              tabs.push({ gid, name });
+            }
+          }
+
+          // Regex 3: {"pageUrl":"...gid=([0-9]+)...","name":"([^"]+)"}
+          const r3 = /pageUrl["']?\s*:\s*["'][^"']*gid=([0-9]+)["'][^}]*?["']?name["']?\s*:\s*["']([^"']+)["']/gi;
+          let m3;
+          while ((m3 = r3.exec(html)) !== null) {
+            const gid = m3[1];
+            const name = m3[2].trim();
+            if (!seenGids.has(gid)) {
+              seenGids.add(gid);
+              tabs.push({ gid, name });
+            }
+          }
+
+          if (tabs.length > 0) {
+            return tabs;
+          }
+        } catch (innerErr) {}
+      }
+    } catch (e) {}
+    return [];
+  },
+
   // 8. Sync from Google Sheet to MySQL DB (via Google API v4 if authenticated, or CSV fallback)
   async syncFromGoogleSheet(weddingId, sheetUrlOrId) {
     const sheetId = this.extractSheetId(sheetUrlOrId);
@@ -864,35 +952,83 @@ export const GoogleSheetsService = {
       }
     }
 
-    // 2. If API v4 returned no rows or wasn't configured, try CSV export URLs
+    // 2. If API v4 returned no rows or wasn't configured, try CSV export URLs across all discovered tabs
     if (rows.length === 0) {
       const gid = this.extractSheetGid(sheetUrlOrId);
-      const gidParam = gid !== null ? `&gid=${gid}` : "";
-      const csvExportUrls = [
-        `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv${gidParam}`,
-        `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv${gidParam}`,
-      ];
 
-      let csvText = null;
-      for (const url of csvExportUrls) {
-        try {
-          const response = await fetch(url, {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeddingLogisticsApp/1.0",
-            },
-          });
-          if (response.ok) {
-            const text = await response.text();
-            if (text && !text.includes("<!DOCTYPE html>") && text.length > 10) {
-              csvText = text;
-              break;
-            }
-          }
-        } catch (err) { }
+      // Try discovering multiple tabs (e.g. Groom tab and Bride tab) from Sheet HTML
+      let tabsToFetch = [];
+      if (gid !== null) {
+        tabsToFetch = [{ gid: String(gid), name: "Target Sheet" }];
+      } else {
+        const discovered = await this.discoverSheetTabsFromHtml(sheetId);
+        if (discovered && discovered.length > 0) {
+          tabsToFetch = discovered;
+        }
       }
 
-      if (csvText) {
-        rows = this.parseCSV(csvText);
+      if (tabsToFetch.length > 0) {
+        for (const t of tabsToFetch) {
+          const tName = t.name || "";
+          const tLower = tName.toLowerCase();
+          let tabDefaultSide = null;
+          if (tLower.includes("bride") || tLower.includes("ladki") || tLower.includes("girl") || tLower.includes("female")) {
+            tabDefaultSide = "Bride";
+          } else if (tLower.includes("groom") || tLower.includes("ladka") || tLower.includes("ladke") || tLower.includes("boy") || tLower.includes("male")) {
+            tabDefaultSide = "Groom";
+          }
+
+          const csvUrls = [
+            `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${t.gid}`,
+            `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${t.gid}`,
+          ];
+
+          for (const url of csvUrls) {
+            try {
+              const response = await fetch(url, {
+                headers: {
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeddingLogisticsApp/1.0",
+                },
+              });
+              if (response.ok) {
+                const text = await response.text();
+                if (text && !text.includes("<!DOCTYPE html>") && text.length > 10) {
+                  const tabRows = this.parseCSV(text);
+                  tabRows.forEach((r) => {
+                    r._tabDefaultSide = tabDefaultSide;
+                  });
+                  rows.push(...tabRows);
+                  break;
+                }
+              }
+            } catch (err) {}
+          }
+        }
+      }
+
+      // If still 0 rows, try standard root CSV export URL
+      if (rows.length === 0) {
+        const rootCsvUrls = [
+          `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`,
+          `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`,
+        ];
+
+        for (const url of rootCsvUrls) {
+          try {
+            const response = await fetch(url, {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeddingLogisticsApp/1.0",
+              },
+            });
+            if (response.ok) {
+              const text = await response.text();
+              if (text && !text.includes("<!DOCTYPE html>") && text.length > 10) {
+                rows = this.parseCSV(text);
+                break;
+              }
+            }
+          } catch (err) {}
+        }
       }
     }
 
@@ -902,31 +1038,91 @@ export const GoogleSheetsService = {
       );
     }
 
-    // Fetch all current guests for this wedding in 1 call to index existing guests
+    // Fetch all current guests for this wedding to index existing guests by Name
     const currentGuests = await GuestModel.getAll({ weddingId });
-    const bySr = new Map();
     const byName = new Map();
     for (const g of currentGuests) {
-      if (g.sr_no) bySr.set(Number(g.sr_no), g);
       if (g.guest_name) byName.set(String(g.guest_name).trim().toLowerCase(), g);
     }
 
     let createdCount = 0;
     let updatedCount = 0;
+    let brideCount = 0;
+    let groomCount = 0;
+    let bothCount = 0;
     const recordsToUpsert = [];
 
-    for (let i = 0; i < rows.length; i++) {
-      const normalized = this.normalizeRowToGuest(rows[i], weddingId, i + 1, rows[i]._tabDefaultSide);
-      if (!normalized.guest_name || normalized.guest_name.trim() === "") continue;
-      // Skip repeated header rows
-      if (normalized.guest_name.toLowerCase() === "guest name" || normalized.guest_name.toLowerCase() === "guest_name") continue;
+    // Track active section side if stacked tables exist on a single sheet
+    let activeSectionSide = null;
 
-      let existing = null;
-      if (normalized.sr_no && bySr.has(Number(normalized.sr_no))) {
-        existing = bySr.get(Number(normalized.sr_no));
-      } else if (normalized.guest_name && byName.has(normalized.guest_name.trim().toLowerCase())) {
-        existing = byName.get(normalized.guest_name.trim().toLowerCase());
+    const isSectionHeader = (name) => {
+      if (!name) return false;
+      const clean = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return (
+        clean.includes("brideside") ||
+        clean.includes("bridefamily") ||
+        clean.includes("brideguest") ||
+        clean.includes("ladkiwale") ||
+        clean.includes("groomside") ||
+        clean.includes("groomfamily") ||
+        clean.includes("groomguest") ||
+        clean.includes("ladkewale") ||
+        clean === "bride" ||
+        clean === "groom" ||
+        clean === "ladki" ||
+        clean === "ladka"
+      );
+    };
+
+    const isHeaderRow = (name) => {
+      if (!name) return true;
+      const clean = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return (
+        clean === "guestname" ||
+        clean === "guest" ||
+        clean === "name" ||
+        clean === "fullname" ||
+        clean === "srno" ||
+        clean === "serialno"
+      );
+    };
+
+    let nextSr = 1;
+
+    for (let i = 0; i < rows.length; i++) {
+      const rawRow = rows[i];
+      const tabSide = rawRow._tabDefaultSide || activeSectionSide || null;
+      const normalized = this.normalizeRowToGuest(rawRow, weddingId, nextSr, tabSide);
+
+      const rawName = (normalized.guest_name || "").trim();
+      if (!rawName) continue;
+
+      // Skip repeated header rows
+      if (isHeaderRow(rawName)) continue;
+
+      // Detect section headers (e.g., "Bride Side", "Groom Side", "Ladkiwale")
+      if (isSectionHeader(rawName)) {
+        const lowerName = rawName.toLowerCase();
+        if (lowerName.includes("bride") || lowerName.includes("ladki") || lowerName.includes("girl")) {
+          activeSectionSide = "Bride";
+        } else if (lowerName.includes("groom") || lowerName.includes("ladka") || lowerName.includes("ladke") || lowerName.includes("boy")) {
+          activeSectionSide = "Groom";
+        }
+        continue; // Do NOT insert section header as a guest record
       }
+
+      // If side was defaulted to Groom but activeSectionSide is Bride, assign Bride
+      if (activeSectionSide && (!rawRow.side && !rawRow.family_side && !rawRow.side_type && !rawRow.side_bride_groom)) {
+        normalized.side = activeSectionSide;
+      }
+
+      if (normalized.side === "Bride") brideCount++;
+      else if (normalized.side === "Both") bothCount++;
+      else groomCount++;
+
+      // Match existing guest ONLY by Name (case-insensitive) to prevent Sr No collision
+      const nameKey = rawName.toLowerCase();
+      let existing = byName.get(nameKey);
 
       if (existing) {
         updatedCount++;
@@ -934,6 +1130,7 @@ export const GoogleSheetsService = {
           ...existing,
           ...normalized,
           id: existing.id,
+          sr_no: existing.sr_no || nextSr++,
           wedding_id: weddingId,
         };
         recordsToUpsert.push(record);
@@ -943,11 +1140,11 @@ export const GoogleSheetsService = {
         const record = {
           ...normalized,
           id: newId,
+          sr_no: nextSr++,
           wedding_id: weddingId,
         };
         recordsToUpsert.push(record);
-        if (record.sr_no) bySr.set(Number(record.sr_no), record);
-        if (record.guest_name) byName.set(record.guest_name.trim().toLowerCase(), record);
+        byName.set(nameKey, record);
       }
     }
 
@@ -964,10 +1161,13 @@ export const GoogleSheetsService = {
 
     return {
       success: true,
-      message: `Successfully synchronized ${recordsToUpsert.length} guests from Google Sheet with database!`,
+      message: `Successfully synchronized ${recordsToUpsert.length} guests (${brideCount} Bride, ${groomCount} Groom) from Google Sheet with database!`,
       createdCount,
       updatedCount,
       totalRows: rows.length,
+      brideCount,
+      groomCount,
+      bothCount,
     };
   },
 
@@ -1016,45 +1216,131 @@ export const GoogleSheetsService = {
     if (auth && google) {
       try {
         const sheets = google.sheets({ version: "v4", auth });
-        const tabTitle = await this.resolveSheetTab(sheets, sheetId, targetSheetUrl, weddingId);
+        
+        // Inspect all tabs in the target spreadsheet
+        const metaRes = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+        const existingSheets = metaRes.data.sheets || [];
 
-        // 1. Clear rows A2:S1000 so any deleted guest rows are completely removed
-        const clearRange = tabTitle ? `'${tabTitle}'!A2:S1000` : "A2:S1000";
-        try {
-          await sheets.spreadsheets.values.clear({
-            spreadsheetId: sheetId,
-            range: clearRange,
-          });
-        } catch (clearErr) {}
-
-        // 2. Ensure header row A1:S1 is intact
-        const headerRange = tabTitle ? `'${tabTitle}'!A1:S1` : "A1:S1";
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: sheetId,
-          range: headerRange,
-          valueInputOption: "USER_ENTERED",
-          requestBody: {
-            values: [GOOGLE_SHEET_HEADERS],
-          },
+        const groomTab = existingSheets.find((s) => {
+          const t = (s.properties?.title || "").toLowerCase();
+          return t.includes("groom") || t.includes("ladka") || t.includes("ladke");
+        });
+        const brideTab = existingSheets.find((s) => {
+          const t = (s.properties?.title || "").toLowerCase();
+          return t.includes("bride") || t.includes("ladki");
         });
 
-        // 3. Write active guests
-        if (rows.length > 0) {
-          const writeRange = tabTitle
-            ? `'${tabTitle}'!A2:S${rows.length + 1}`
-            : "A2:S" + (rows.length + 1);
+        const formatGuestRow = (g, idx) => [
+          g.sr_no || idx + 1,
+          g.guest_name || "",
+          g.contact || "",
+          g.side || "Groom",
+          g.relation || "",
+          g.rsvp_status || "Confirmed",
+          g.id_card_received || "No",
+          g.arrival_date || "",
+          g.arrival_time || "",
+          g.arrival_location || "",
+          g.arrival_flight_train_no || "",
+          g.departure_date || "",
+          g.departure_time || "",
+          g.departure_location || "",
+          g.departure_flight_train_no || "",
+          g.special_request || "",
+          g.call_status || "Not Called",
+          g.call_count || 0,
+          g.last_call_summary || "",
+        ];
 
+        // If both Groom and Bride tabs exist, write separated lists!
+        if (groomTab && brideTab) {
+          const groomTitle = groomTab.properties.title;
+          const brideTitle = brideTab.properties.title;
+
+          const groomGuests = guests.filter((g) => (g.side || "").toLowerCase() !== "bride");
+          const brideGuests = guests.filter((g) => (g.side || "").toLowerCase() === "bride");
+
+          const groomRows = groomGuests.map(formatGuestRow);
+          const brideRows = brideGuests.map(formatGuestRow);
+
+          // Clear & update Groom tab
+          try {
+            await sheets.spreadsheets.values.clear({ spreadsheetId: sheetId, range: `'${groomTitle}'!A2:S2000` });
+          } catch (e) {}
           await sheets.spreadsheets.values.update({
             spreadsheetId: sheetId,
-            range: writeRange,
+            range: `'${groomTitle}'!A1:S1`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values: [GOOGLE_SHEET_HEADERS] },
+          });
+          if (groomRows.length > 0) {
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: sheetId,
+              range: `'${groomTitle}'!A2:S${groomRows.length + 1}`,
+              valueInputOption: "USER_ENTERED",
+              requestBody: { values: groomRows },
+            });
+          }
+
+          // Clear & update Bride tab
+          try {
+            await sheets.spreadsheets.values.clear({ spreadsheetId: sheetId, range: `'${brideTitle}'!A2:S2000` });
+          } catch (e) {}
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: sheetId,
+            range: `'${brideTitle}'!A1:S1`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values: [GOOGLE_SHEET_HEADERS] },
+          });
+          if (brideRows.length > 0) {
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: sheetId,
+              range: `'${brideTitle}'!A2:S${brideRows.length + 1}`,
+              valueInputOption: "USER_ENTERED",
+              requestBody: { values: brideRows },
+            });
+          }
+
+          console.log(`✅ Synced separate sheets: '${groomTitle}' (${groomRows.length} Groom) and '${brideTitle}' (${brideRows.length} Bride).`);
+          return { success: true, count: guests.length, groomCount: groomRows.length, brideCount: brideRows.length };
+        } else {
+          // Single tab fallback
+          const tabTitle = await this.resolveSheetTab(sheets, sheetId, targetSheetUrl, weddingId);
+          const clearRange = tabTitle ? `'${tabTitle}'!A2:S2000` : "A2:S2000";
+          try {
+            await sheets.spreadsheets.values.clear({
+              spreadsheetId: sheetId,
+              range: clearRange,
+            });
+          } catch (clearErr) {}
+
+          const headerRange = tabTitle ? `'${tabTitle}'!A1:S1` : "A1:S1";
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: sheetId,
+            range: headerRange,
             valueInputOption: "USER_ENTERED",
             requestBody: {
-              values: rows,
+              values: [GOOGLE_SHEET_HEADERS],
             },
           });
+
+          if (rows.length > 0) {
+            const writeRange = tabTitle
+              ? `'${tabTitle}'!A2:S${rows.length + 1}`
+              : "A2:S" + (rows.length + 1);
+
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: sheetId,
+              range: writeRange,
+              valueInputOption: "USER_ENTERED",
+              requestBody: {
+                values: rows,
+              },
+            });
+          }
+          console.log(`✅ Synced ${rows.length} active guests to Google Sheet (tab: '${tabTitle || "default"}').`);
+          return { success: true, count: rows.length };
         }
-        console.log(`✅ Synced ${rows.length} active guests to Google Sheet (tab: '${tabTitle || "default"}').`);
-        return { success: true, count: rows.length };
       } catch (err) {
         console.warn("⚠️ Error pushing data via Google API:", err.message);
       }

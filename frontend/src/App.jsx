@@ -2,6 +2,7 @@ import React from "react";
 import Hero from "./pages/Hero";
 import LoginPage from "./pages/LoginPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function MainApp() {
   const { user } = useAuth();
@@ -10,13 +11,19 @@ function MainApp() {
     return <LoginPage />;
   }
 
-  return <Hero />;
+  return (
+    <ErrorBoundary>
+      <Hero />
+    </ErrorBoundary>
+  );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

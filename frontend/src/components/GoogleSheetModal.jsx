@@ -230,8 +230,19 @@ export default function GoogleSheetModal({
               <div>
                 <p className="font-bold">{syncResult.message || "Sync Complete!"}</p>
                 {syncResult.data && (
-                  <p className="text-[11px] text-emerald-700 mt-0.5">
-                    {syncResult.data.createdCount} new guests added • {syncResult.data.updatedCount} guests updated • {syncResult.data.totalRows} total rows processed.
+                  <p className="text-[11px] text-emerald-800 mt-1 flex items-center gap-2 flex-wrap">
+                    <span>{syncResult.data.createdCount} new guests added</span>
+                    <span>• {syncResult.data.updatedCount} updated</span>
+                    {syncResult.data.brideCount !== undefined && (
+                      <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold">
+                        Bride: {syncResult.data.brideCount}
+                      </span>
+                    )}
+                    {syncResult.data.groomCount !== undefined && (
+                      <span className="bg-[#5c1322]/10 text-[#5c1322] px-2 py-0.5 rounded-full font-bold">
+                        Groom: {syncResult.data.groomCount}
+                      </span>
+                    )}
                   </p>
                 )}
               </div>
@@ -356,7 +367,7 @@ export default function GoogleSheetModal({
                       className="w-full bg-[#0f2922] hover:bg-[#163a30] text-white py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-60"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 text-[#84e030] ${isSyncing ? "animate-spin" : ""}`} />
-                      <span>{isSyncing ? "Syncing..." : "Pull & Sync to DB"}</span>
+                      <span>{isSyncing ? "Pulling..." : "Pull & Sync to DB"}</span>
                     </button>
                   </div>
                 )}
@@ -403,10 +414,13 @@ export default function GoogleSheetModal({
                 </span>
                 <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-600 leading-relaxed">
                   <li>
-                    <strong>Sheet to DB:</strong> Click <em>"Pull & Sync to DB"</em> anytime to import edits, new guests, or travel updates from your Google Sheet into the database.
+                    <strong>2 Separate Sheets Supported:</strong> In your Google Spreadsheet, you can have 2 separate tabs at the bottom: <strong>"Groom Side"</strong> (for Groom guests) and <strong>"Bride Side"</strong> (for Bride guests).
                   </li>
                   <li>
-                    <strong>Pre-Configured Columns:</strong> Supports 18 wedding logistics fields (RSVP, Side, Flights/Trains, ID proof, and 3-call checkpoint logs).
+                    <strong>Automatic Side Detection:</strong> When you click <em>"Pull from Sheet"</em> or <em>"Pull & Sync to DB"</em>, both tabs are pulled into the database and tagged to their respective side.
+                  </li>
+                  <li>
+                    <strong>Plain Text Format:</strong> Standard columns: <em>Sr No, Guest Name, Contact, Relation, RSVP Status, Arrival Date, Arrival Flight/Train, Special Request</em>. No formulas required!
                   </li>
                 </ul>
               </div>
