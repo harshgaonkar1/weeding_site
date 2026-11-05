@@ -1038,12 +1038,9 @@ export const GoogleSheetsService = {
       );
     }
 
-    // Fetch all current guests for this wedding to index existing guests by Name
+    // Fetch all current guests for this wedding to match existing records safely
     const currentGuests = await GuestModel.getAll({ weddingId });
-    const byName = new Map();
-    for (const g of currentGuests) {
-      if (g.guest_name) byName.set(String(g.guest_name).trim().toLowerCase(), g);
-    }
+    const existingPool = [...currentGuests];
 
     let createdCount = 0;
     let updatedCount = 0;
@@ -1120,9 +1117,44 @@ export const GoogleSheetsService = {
       else if (normalized.side === "Both") bothCount++;
       else groomCount++;
 
-      // Match existing guest ONLY by Name (case-insensitive) to prevent Sr No collision
+      // Match existing guest safely by:
+      // 1. Name + Side + Contact (best match)
+      // 2. Name + Side
+      // 3. Name only
       const nameKey = rawName.toLowerCase();
-      let existing = byName.get(nameKey);
+      const rawSide = (normalized.side || tabSide || "Groom").toLowerCase();
+      const cleanContact = (normalized.contact || "").replace(/[^0-9]/g, "");
+
+      let matchIdx = -1;
+      if (cleanContact.length >= 7) {
+        matchIdx = existingPool.findIndex((g) => {
+          const gName = (g.guest_name || "").trim().toLowerCase();
+          const gSide = (g.side || "Groom").toLowerCase();
+          const gContact = (g.contact || "").replace(/[^0-9]/g, "");
+          return gName === nameKey && gSide === rawSide && gContact === cleanContact;
+        });
+      }
+
+      if (matchIdx === -1) {
+        matchIdx = existingPool.findIndex((g) => {
+          const gName = (g.guest_name || "").trim().toLowerCase();
+          const gSide = (g.side || "Groom").toLowerCase();
+          return gName === nameKey && gSide === rawSide;
+        });
+      }
+
+      if (matchIdx === -1) {
+        matchIdx = existingPool.findIndex((g) => {
+          const gName = (g.guest_name || "").trim().toLowerCase();
+          return gName === nameKey;
+        });
+      }
+
+      let existing = null;
+      if (matchIdx !== -1) {
+        // Remove from pool so no two rows can ever claim or share the same ID
+        existing = existingPool.splice(matchIdx, 1)[0];
+      }
 
       if (existing) {
         updatedCount++;
@@ -1130,7 +1162,7 @@ export const GoogleSheetsService = {
           ...existing,
           ...normalized,
           id: existing.id,
-          sr_no: existing.sr_no || nextSr++,
+          sr_no: normalized.sr_no || existing.sr_no || nextSr++,
           wedding_id: weddingId,
         };
         recordsToUpsert.push(record);
@@ -1140,12 +1172,20 @@ export const GoogleSheetsService = {
         const record = {
           ...normalized,
           id: newId,
-          sr_no: nextSr++,
+          sr_no: normalized.sr_no || nextSr++,
           wedding_id: weddingId,
         };
         recordsToUpsert.push(record);
-        byName.set(nameKey, record);
       }
+    }
+
+    // Safety guard: Guarantee 100% unique IDs across the entire batch to prevent PostgreSQL 21000 ON CONFLICT error
+    const seenBatchIds = new Set();
+    for (const rec of recordsToUpsert) {
+      if (!rec.id || seenBatchIds.has(rec.id)) {
+        rec.id = `guest_${crypto.randomUUID().slice(0, 8)}`;
+      }
+      seenBatchIds.add(rec.id);
     }
 
     // High performance bulk upsert to Supabase & Store

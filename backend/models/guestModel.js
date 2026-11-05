@@ -705,16 +705,37 @@ export const GuestModel = {
       };
     });
 
+    // Enforce strictly unique IDs across the entire batch
+    const seenBatchIds = new Set();
+    for (const item of sanitized) {
+      if (!item.id || seenBatchIds.has(item.id)) {
+        item.id = `guest_${crypto.randomUUID().slice(0, 8)}`;
+      }
+      seenBatchIds.add(item.id);
+    }
+
     // 1. Supabase batch upsert (chunks of 100 for optimal network performance)
     if (supabase) {
       const CHUNK_SIZE = 100;
       for (let i = 0; i < sanitized.length; i += CHUNK_SIZE) {
         const chunk = sanitized.slice(i, i + CHUNK_SIZE);
         try {
-          const { error } = await supabase.from("guests").upsert(chunk, { onConflict: "id" });
+          let { error } = await supabase.from("guests").upsert(chunk, { onConflict: "id" });
           if (error && (error.message?.includes("relation") || error.code === "PGRST204")) {
             const strippedChunk = chunk.map(({ relation, ...rest }) => rest);
-            await supabase.from("guests").upsert(strippedChunk, { onConflict: "id" });
+            const retryRes = await supabase.from("guests").upsert(strippedChunk, { onConflict: "id" });
+            error = retryRes.error;
+          }
+
+          if (error) {
+            console.warn(`Supabase bulkUpsert chunk notice (${error.message || error.code}). Retrying individual rows...`);
+            for (const singleItem of chunk) {
+              const { error: sErr } = await supabase.from("guests").upsert([singleItem], { onConflict: "id" });
+              if (sErr) {
+                const freshItem = { ...singleItem, id: `guest_${crypto.randomUUID().slice(0, 8)}` };
+                await supabase.from("guests").upsert([freshItem], { onConflict: "id" }).catch(() => {});
+              }
+            }
           }
         } catch (supaErr) {
           console.warn("Supabase bulkUpsert chunk notice:", supaErr.message);

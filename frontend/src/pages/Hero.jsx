@@ -1139,15 +1139,22 @@ export default function Hero() {
         isOpen={Boolean(googleSheetModalWedding)}
         wedding={googleSheetModalWedding}
         onClose={() => setGoogleSheetModalWedding(null)}
-        onSyncSuccess={async ({ updatedWedding } = {}) => {
-          showToast("✓ Google Sheet synchronized with database!");
-          if (updatedWedding) {
+        onSyncSuccess={async (syncData = {}) => {
+          showToast(syncData?.message || "✓ Google Sheet synchronized with database!");
+          const wRec = syncData?.data?.wedding || syncData?.updatedWedding;
+          if (wRec) {
             setWeddings((prev) =>
-              prev.map((w) => (w.id === updatedWedding.id ? { ...w, ...updatedWedding } : w))
+              prev.map((w) => (w.id === wRec.id ? { ...w, ...wRec } : w))
             );
-            if (selectedWedding?.id === updatedWedding.id) {
-              setSelectedWedding((prev) => ({ ...prev, ...updatedWedding }));
+            if (selectedWedding?.id === wRec.id) {
+              setSelectedWedding((prev) => ({ ...prev, ...wRec }));
             }
+          }
+          if (syncData?.data?.guests && Array.isArray(syncData.data.guests)) {
+            setGuests(syncData.data.guests);
+          }
+          if (syncData?.data?.stats) {
+            setStats(syncData.data.stats);
           }
           await Promise.all([loadGuests(), loadWeddings()]);
         }}

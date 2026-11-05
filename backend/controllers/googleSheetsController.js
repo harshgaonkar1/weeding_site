@@ -45,16 +45,22 @@ export const googleSheetsController = {
 
       const syncResult = await GoogleSheetsService.syncFromGoogleSheet(id, targetUrlOrId);
 
-      // Fetch freshly updated guest list
+      // Fetch freshly updated guest list and wedding stats
       const updatedGuests = await GuestModel.getAll({ weddingId: id });
       const stats = await GuestModel.getStatistics(id);
+      const weddingRecord = await WeddingModel.getById(id);
 
       // Broadcast WebSocket mutation event for live sync
       const io = req.app.get("io");
       broadcastDataChange(io, {
         event: "guests_updated",
         weddingId: id,
-        payload: { action: "sheet_sync", stats },
+        payload: { action: "sheet_sync", stats, count: updatedGuests.length },
+      });
+      broadcastDataChange(io, {
+        event: "weddings_updated",
+        weddingId: id,
+        payload: { action: "sheet_sync", wedding: weddingRecord },
       });
 
       res.status(200).json({
@@ -69,6 +75,7 @@ export const googleSheetsController = {
           bothCount: syncResult.bothCount,
           guests: updatedGuests,
           stats: stats,
+          wedding: weddingRecord,
         },
       });
     } catch (error) {
