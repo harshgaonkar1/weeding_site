@@ -239,7 +239,7 @@ export default function GoogleSheetModal({
                       </span>
                     )}
                     {syncResult.data.groomCount !== undefined && (
-                      <span className="bg-[#5c1322]/10 text-[#5c1322] px-2 py-0.5 rounded-full font-bold">
+                      <span className="bg-[#14213D]/10 text-[#14213D] px-2 py-0.5 rounded-full font-bold">
                         Groom: {syncResult.data.groomCount}
                       </span>
                     )}

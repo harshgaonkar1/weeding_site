@@ -332,23 +332,23 @@ export default function ExcelImportModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="bg-[#fbf9f5] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-[#e3d3be] my-4 relative flex flex-col max-h-[90vh]">
-        {/* Header - Burgundy & Beige Luxury Palette */}
-        <div className="bg-gradient-to-r from-[#5c1322] via-[#722233] to-[#450e19] p-5 text-white flex items-center justify-between shrink-0 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#eedfc8]/15 rounded-full blur-2xl pointer-events-none" />
+      <div className="bg-[#FAF7F2] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-[#E5DAC8] my-4 relative flex flex-col max-h-[90vh]">
+        {/* Header - Navy & Cream Palette */}
+        <div className="bg-gradient-to-r from-[#14213D] via-[#1c2d52] to-[#0b1324] p-5 text-[#F4EDE0] flex items-center justify-between shrink-0 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6B5B]/15 rounded-full blur-2xl pointer-events-none" />
 
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 border border-[#eedfc8]/30 flex items-center justify-center text-[#eedfc8] shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 border border-[#E5DAC8]/30 flex items-center justify-center text-[#FF6B5B] shadow-xs">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold tracking-tight flex items-center gap-2">
                 <span>Import Guests from Excel / CSV</span>
-                <span className="text-[10px] bg-[#eedfc8] text-[#5c1322] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">
+                <span className="text-[10px] bg-[#FF6B5B] text-white px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">
                   Both Sides
                 </span>
               </h3>
-              <p className="text-xs text-[#eedfc8]/80 mt-0.5">
+              <p className="text-xs text-[#F4EDE0]/80 mt-0.5">
                 Target Wedding: <strong className="text-white underline">{weddingName}</strong>
               </p>
             </div>
@@ -374,7 +374,7 @@ export default function ExcelImportModal({
           {/* Upload Dropzone */}
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-[#d4be9e] hover:border-[#722233] bg-[#f7f2ea]/60 hover:bg-[#eedfc8]/40 rounded-3xl p-6 text-center cursor-pointer transition-all group card-hover-lift"
+            className="border-2 border-dashed border-[#E5DAC8] hover:border-[#FF6B5B] bg-[#F4EDE0]/40 hover:bg-[#F4EDE0]/80 rounded-3xl p-6 text-center cursor-pointer transition-all group card-hover-lift"
           >
             <input
               ref={fileInputRef}
@@ -383,10 +383,10 @@ export default function ExcelImportModal({
               onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
               className="hidden"
             />
-            <div className="w-12 h-12 rounded-2xl bg-[#eedfc8]/50 text-[#722233] flex items-center justify-center mx-auto mb-2.5 group-hover:scale-110 group-hover:bg-[#722233] group-hover:text-white transition-all shadow-2xs">
+            <div className="w-12 h-12 rounded-2xl bg-[#FF6B5B]/10 text-[#FF6B5B] flex items-center justify-center mx-auto mb-2.5 group-hover:scale-110 group-hover:bg-[#FF6B5B] group-hover:text-white transition-all shadow-2xs">
               <Upload className="w-6 h-6 transition-colors" />
             </div>
-            <p className="text-sm font-bold text-[#3d271d] group-hover:text-[#5c1322] transition-colors">
+            <p className="text-sm font-bold text-[#14213D] group-hover:text-[#FF6B5B] transition-colors">
               {file ? file.name : "Click to select or drag & drop Excel / CSV file"}
             </p>
             <p className="text-xs text-slate-500 mt-1">
@@ -395,17 +395,17 @@ export default function ExcelImportModal({
           </div>
 
           {/* Download Template Bar */}
-          <div className="bg-gradient-to-r from-[#f7f2ea] to-[#eedfc8]/40 border border-[#e3d3be] rounded-2xl p-3 flex items-center justify-between gap-2 flex-wrap">
+          <div className="bg-gradient-to-r from-[#FAF7F2] to-[#F4EDE0] border border-[#E5DAC8] rounded-2xl p-3 flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-slate-700">
-              <FileSpreadsheet className="w-4 h-4 text-[#722233] shrink-0" />
+              <FileSpreadsheet className="w-4 h-4 text-[#FF6B5B] shrink-0" />
               <span>Need the standard template structure with Bride & Groom columns?</span>
             </div>
             <button
               type="button"
               onClick={handleDownloadTemplate}
-              className="bg-white hover:bg-slate-50 border border-[#e3d3be] text-[#5c1322] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer btn-interactive text-xs"
+              className="bg-white hover:bg-slate-50 border border-[#E5DAC8] text-[#14213D] hover:text-[#FF6B5B] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer btn-interactive text-xs"
             >
-              <Download className="w-3.5 h-3.5 text-[#722233]" />
+              <Download className="w-3.5 h-3.5 text-[#FF6B5B]" />
               <span>Download Template</span>
             </button>
           </div>
@@ -413,7 +413,7 @@ export default function ExcelImportModal({
           {/* Parsed Preview */}
           {isParsing && (
             <div className="py-6 text-center text-slate-500 space-y-2 animate-fadeIn">
-              <div className="w-8 h-8 border-3 border-[#722233] border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="w-8 h-8 border-3 border-[#FF6B5B] border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="font-semibold text-slate-700">Reading sheets and parsing guest data for both sides...</p>
             </div>
           )}
@@ -428,7 +428,7 @@ export default function ExcelImportModal({
                 
                 {/* Side Breakdown Pills */}
                 <div className="flex items-center gap-1.5 text-[11px] font-bold">
-                  <span className="bg-[#5c1322]/10 text-[#5c1322] border border-[#5c1322]/20 px-2 py-0.5 rounded-full">
+                  <span className="bg-[#14213D]/10 text-[#14213D] border border-[#14213D]/20 px-2 py-0.5 rounded-full">
                     Groom: {groomCount}
                   </span>
                   <span className="bg-rose-100 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-full">
@@ -442,9 +442,9 @@ export default function ExcelImportModal({
                 </div>
               </div>
 
-              <div className="border border-[#e3d3be] rounded-2xl overflow-hidden shadow-2xs bg-white">
+              <div className="border border-[#E5DAC8] rounded-2xl overflow-hidden shadow-2xs bg-white">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#f7f2ea] text-slate-700 font-bold border-b border-[#e3d3be]">
+                  <thead className="bg-[#F4EDE0] text-slate-700 font-bold border-b border-[#E5DAC8]">
                     <tr>
                       <th className="p-2.5">#</th>
                       <th className="p-2.5">Guest Name</th>
@@ -457,7 +457,7 @@ export default function ExcelImportModal({
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-[11px]">
                     {parsedRows.slice(0, 8).map((row, i) => (
-                      <tr key={i} className="hover:bg-[#f7f2ea]/50 transition-colors">
+                      <tr key={i} className="hover:bg-[#F4EDE0]/50 transition-colors">
                         <td className="p-2.5 text-slate-400 font-bold">{i + 1}</td>
                         <td className="p-2.5 font-bold text-slate-900">{row.guest_name}</td>
                         <td className="p-2.5 font-mono text-slate-600">{row.contact || "—"}</td>
@@ -468,7 +468,7 @@ export default function ExcelImportModal({
                                 ? "bg-rose-50 text-rose-800 border-rose-200"
                                 : row.side === "Both"
                                 ? "bg-amber-50 text-amber-800 border-amber-200"
-                                : "bg-[#f7f2ea] text-[#5c1322] border-[#e3d3be]"
+                                : "bg-[#FAF7F2] text-[#14213D] border-[#E5DAC8]"
                             }`}
                           >
                             {row.side}
@@ -488,7 +488,7 @@ export default function ExcelImportModal({
                   </tbody>
                 </table>
                 {parsedRows.length > 8 && (
-                  <div className="p-2 bg-[#fbf9f5] border-t border-[#e3d3be] text-center text-slate-500 text-[11px]">
+                  <div className="p-2 bg-[#FAF7F2] border-t border-[#E5DAC8] text-center text-slate-500 text-[11px]">
                     ...and {parsedRows.length - 8} more guests
                   </div>
                 )}
@@ -498,11 +498,11 @@ export default function ExcelImportModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-[#f7f2ea] border-t border-[#e3d3be] flex items-center justify-between shrink-0">
+        <div className="p-4 bg-[#FAF7F2] border-t border-[#E5DAC8] flex items-center justify-between shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-[#d4be9e] text-slate-700 hover:bg-white font-semibold cursor-pointer btn-interactive text-xs"
+            className="px-4 py-2 rounded-xl border border-[#E5DAC8] text-slate-700 hover:bg-white font-semibold cursor-pointer btn-interactive text-xs"
           >
             Cancel
           </button>
@@ -511,9 +511,9 @@ export default function ExcelImportModal({
             type="button"
             disabled={parsedRows.length === 0 || isImporting}
             onClick={handleConfirmImport}
-            className="bg-[#5c1322] hover:bg-[#722233] text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 transition-all btn-interactive text-xs"
+            className="bg-[#FF6B5B] hover:bg-[#E85545] text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-md shadow-[#FF6B5B]/20 cursor-pointer disabled:opacity-50 transition-all btn-interactive text-xs"
           >
-            <Upload className="w-4 h-4 text-[#eedfc8]" />
+            <Upload className="w-4 h-4 text-[#F4EDE0]" />
             <span>
               {isImporting
                 ? "Importing Guests..."

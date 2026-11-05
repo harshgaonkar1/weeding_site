@@ -68,15 +68,15 @@ export default class ErrorBoundary extends React.Component {
       const componentStack = this.state.errorInfo?.componentStack || "";
 
       return (
-        <div className="min-h-screen bg-[#f7f2ea] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full border border-[#e3d3be] shadow-2xl p-6 sm:p-8 space-y-5 animate-fadeIn">
+        <div className="min-h-screen bg-[#14213D] flex items-center justify-center p-4">
+          <div className="bg-[#FAF7F2] rounded-3xl max-w-xl w-full border border-[#E5DAC8] shadow-2xl p-6 sm:p-8 space-y-5 animate-fadeIn">
             {/* Header */}
             <div className="flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 shadow-2xs">
                 <AlertCircle className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-bold text-[#5c1322] tracking-tight">
+                <h2 className="text-lg sm:text-xl font-bold text-[#14213D] tracking-tight">
                   Something Went Wrong
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -129,18 +129,18 @@ export default class ErrorBoundary extends React.Component {
               <button
                 type="button"
                 onClick={this.handleReset}
-                className="px-4 py-2 rounded-xl border border-[#d4be9e] text-slate-700 hover:bg-[#f7f2ea] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors btn-interactive"
+                className="px-4 py-2 rounded-xl border border-[#E5DAC8] text-slate-700 hover:bg-[#F4EDE0] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors btn-interactive"
               >
-                <Home className="w-3.5 h-3.5 text-[#722233]" />
+                <Home className="w-3.5 h-3.5 text-[#14213D]" />
                 <span>Go to Home / Weddings</span>
               </button>
 
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="px-4 py-2 rounded-xl bg-[#5c1322] hover:bg-[#722233] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors btn-interactive"
+                className="px-4 py-2 rounded-xl bg-[#FF6B5B] hover:bg-[#E85545] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#FF6B5B]/20 transition-colors btn-interactive"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-[#eedfc8]" />
+                <RefreshCw className="w-3.5 h-3.5 text-[#F4EDE0]" />
                 <span>Reload Page</span>
               </button>
             </div>

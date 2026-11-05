@@ -312,9 +312,9 @@ export default function GuestTable({
                     <button
                       type="button"
                       onClick={() => onOpenCallLogs && onOpenCallLogs(guest)}
-                      className="bg-[#5c1322] hover:bg-[#480e1b] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs"
+                      className="bg-[#FF6B5B] hover:bg-[#E85545] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-xs"
                     >
-                      <PhoneCall className="w-2.5 h-2.5 text-[#eedfc8]" />
+                      <PhoneCall className="w-2.5 h-2.5 text-[#F4EDE0]" />
                       <span>{!canUpdateCallLogs ? `Responses (${callCount})` : callCount > 0 ? "Notes" : "Log Call"}</span>
                     </button>
                   </div>
@@ -707,9 +707,9 @@ export default function GuestTable({
                         <button
                           type="button"
                           onClick={() => onOpenCallLogs && onOpenCallLogs(guest)}
-                          className="bg-[#5c1322] hover:bg-[#480e1b] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs btn-interactive"
+                          className="bg-[#FF6B5B] hover:bg-[#E85545] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-xs btn-interactive"
                         >
-                          <PhoneCall className="w-2.5 h-2.5 text-[#eedfc8]" />
+                          <PhoneCall className="w-2.5 h-2.5 text-[#F4EDE0]" />
                           <span>{!canUpdateCallLogs ? `Responses (${callCount})` : callCount > 0 ? "Notes" : "Log Call"}</span>
                         </button>
                       </div>
@@ -806,7 +806,7 @@ export default function GuestTable({
                   setPageSize(e.target.value === "all" ? "all" : Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#722233] cursor-pointer"
+                className="bg-white border border-[#E5DAC8] rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#FF6B5B] cursor-pointer"
               >
                 <option value={25}>25</option>
                 <option value={50}>50</option>
@@ -858,7 +858,7 @@ export default function GuestTable({
                             onClick={() => setCurrentPage(p)}
                             className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                               currentPage === p
-                                ? "bg-[#5c1322] text-[#eedfc8] shadow-2xs font-extrabold"
+                                ? "bg-[#14213D] text-[#F4EDE0] shadow-xs font-extrabold"
                                 : "text-slate-600 hover:bg-slate-100"
                             }`}
                           >

@@ -60,7 +60,7 @@ export default function Sidebar({
 
       {/* Sidebar (Desktop Static + Mobile Drawer) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white p-5 flex flex-col justify-between border-r border-slate-100 shrink-0 transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:z-auto md:w-64 lg:w-72 md:min-h-[860px] overflow-y-auto ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white md:bg-[#FAF7F2] p-5 flex flex-col justify-between border-r border-[#E5DAC8] shrink-0 transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:z-auto md:w-64 lg:w-72 md:min-h-[860px] overflow-y-auto ${
           isMobileNavOpen
             ? "translate-x-0 shadow-2xl"
             : "-translate-x-full md:translate-x-0 shadow-none"
@@ -70,17 +70,17 @@ export default function Sidebar({
           {/* Brand Logo & Current Role Badge */}
           <div className="flex items-center justify-between px-2 pt-1">
             <div className="flex items-center gap-3 group cursor-pointer" onClick={closeMobile}>
-              <div className="w-8 h-8 rounded-2xl bg-[#4a0e17] flex items-center justify-center p-1.5 shadow-sm ring-4 ring-[#eedfc8] transition-all group-hover:scale-105">
+              <div className="w-8 h-8 rounded-2xl bg-[#14213D] flex items-center justify-center p-1.5 shadow-sm ring-4 ring-[#F4EDE0] transition-all group-hover:scale-105">
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#eedfc8] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#eedfc8]"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6B5B] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FF6B5B]"></span>
                 </span>
               </div>
               <div>
-                <span className="text-lg font-extrabold tracking-tight text-slate-900 font-sans block leading-none">
+                <span className="text-lg font-extrabold tracking-tight text-[#14213D] font-sans block leading-none">
                   Wedding Site
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium">Guest & Travel Directory</span>
+                <span className="text-[10px] text-slate-500 font-medium">Guest & Travel Directory</span>
               </div>
             </div>
 
@@ -98,12 +98,12 @@ export default function Sidebar({
         {/* Role Pill Banner */}
         <div className="px-2">
           {isAdmin ? (
-            <div className="flex items-center justify-between bg-[#fbf6ef] border border-[#e6dbc8] px-3 py-1.5 rounded-xl text-[#4a0e17] text-xs font-bold shadow-2xs animate-fadeIn">
+            <div className="flex items-center justify-between bg-[#F4EDE0] border border-[#E5DAC8] px-3 py-1.5 rounded-xl text-[#14213D] text-xs font-bold shadow-2xs animate-fadeIn">
               <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#722233]" />
+                <ShieldCheck className="w-3.5 h-3.5 text-[#FF6B5B]" />
                 <span>Super Admin</span>
               </span>
-              <span className="text-[10px] bg-[#eedfc8] text-[#4a0e17] px-1.5 py-0.5 rounded-md font-semibold border border-[#dfcbb1]">
+              <span className="text-[10px] bg-[#14213D] text-[#F4EDE0] px-1.5 py-0.5 rounded-md font-semibold border border-[#14213D]">
                 Full Access
               </span>
             </div>
@@ -111,23 +111,23 @@ export default function Sidebar({
             <div
               onClick={() => setIsAdminPasswordModalOpen(true)}
               title="Click to Unlock Super Admin Mode with Password"
-              className="flex items-center justify-between bg-[#fbf6ef] hover:bg-[#eedfc8]/50 border border-[#e6dbc8] px-3 py-1.5 rounded-xl text-[#5c1322] text-xs font-bold shadow-2xs animate-fadeIn cursor-pointer group transition-colors"
+              className="flex items-center justify-between bg-[#F4EDE0] hover:bg-[#EFE6D6] border border-[#E5DAC8] px-3 py-1.5 rounded-xl text-[#14213D] text-xs font-bold shadow-2xs animate-fadeIn cursor-pointer group transition-colors"
             >
               <span className="flex items-center gap-1.5">
-                <PhoneCall className="w-3.5 h-3.5 text-[#722233]" />
+                <PhoneCall className="w-3.5 h-3.5 text-[#FF6B5B]" />
                 <span>Call Center Desk</span>
               </span>
-              <span className="text-[10px] bg-[#eedfc8] text-[#4a0e17] group-hover:bg-[#4a0e17] group-hover:text-[#eedfc8] px-1.5 py-0.5 rounded-md font-semibold transition-colors border border-[#dfcbb1]">
+              <span className="text-[10px] bg-[#14213D] text-[#F4EDE0] group-hover:bg-[#FF6B5B] group-hover:text-white px-1.5 py-0.5 rounded-md font-semibold transition-colors border border-[#14213D]">
                 Switch Role
               </span>
             </div>
           ) : (
-            <div className="flex items-center justify-between bg-[#faf7f2] border border-[#e8dfd5] px-3 py-1.5 rounded-xl text-[#5c1322] text-xs font-bold shadow-2xs animate-fadeIn">
+            <div className="flex items-center justify-between bg-[#F4EDE0] border border-[#E5DAC8] px-3 py-1.5 rounded-xl text-[#14213D] text-xs font-bold shadow-2xs animate-fadeIn">
               <span className="flex items-center gap-1.5">
-                <Heart className="w-3.5 h-3.5 text-[#8f273c]" />
+                <Heart className="w-3.5 h-3.5 text-[#FF6B5B]" />
                 <span>Client Portal</span>
               </span>
-              <span className="text-[10px] bg-[#eedfc8]/70 text-[#4a0e17] px-1.5 py-0.5 rounded-md font-semibold border border-[#dfcbb1]">
+              <span className="text-[10px] bg-[#14213D] text-[#F4EDE0] px-1.5 py-0.5 rounded-md font-semibold border border-[#14213D]">
                 View Only
               </span>
             </div>
@@ -189,12 +189,12 @@ export default function Sidebar({
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors cursor-pointer ${
                   !selectedWedding
-                    ? "bg-[#eedfc8] text-[#4a0e17] border border-[#e0cbaf]"
-                    : "text-slate-700 hover:bg-[#faf7f2]"
+                    ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D]"
+                    : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
                 }`}
               >
                 <span>All Marriage Cards</span>
-                <span className="text-[10px] bg-[#f2ebde] text-slate-700 px-1.5 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-[#E5DAC8] text-[#14213D] px-1.5 py-0.5 rounded-full font-bold">
                   {weddings.length}
                 </span>
               </button>
@@ -211,8 +211,8 @@ export default function Sidebar({
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors cursor-pointer ${
                     selectedWedding?.id === w.id
-                      ? "bg-[#eedfc8] text-[#4a0e17] border border-[#e0cbaf]"
-                      : "text-slate-700 hover:bg-[#faf7f2]"
+                      ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D]"
+                      : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
                   }`}
                 >
                   <span className="truncate">
@@ -221,8 +221,8 @@ export default function Sidebar({
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 font-bold ${
                       selectedWedding?.id === w.id
-                        ? "bg-[#4a0e17]/15 text-[#4a0e17]"
-                        : "bg-[#f2ebde] text-slate-700"
+                        ? "bg-[#FF6B5B] text-white"
+                        : "bg-[#E5DAC8] text-[#14213D]"
                     }`}
                   >
                     {w.total_guests || 0} {w.total_guests === 1 ? "guest" : "guests"}
@@ -238,9 +238,9 @@ export default function Sidebar({
                       setIsWorkspaceDropdownOpen(false);
                       onOpenAddWeddingModal();
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-[#5c1322] hover:bg-[#faf7f2] transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-[#14213D] hover:bg-[#F4EDE0] transition-colors cursor-pointer"
                   >
-                    <PlusCircle className="w-3.5 h-3.5 text-[#722233]" />
+                    <PlusCircle className="w-3.5 h-3.5 text-[#FF6B5B]" />
                     <span>+ Create Marriage Card</span>
                   </button>
                 </div>
@@ -260,19 +260,19 @@ export default function Sidebar({
               }}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer ${
                 activeTab === "weddings"
-                  ? "bg-[#eedfc8] text-[#4a0e17] border border-[#e0cbaf] font-bold shadow-xs"
-                  : "text-slate-600 hover:bg-[#faf7f2] hover:text-[#4a0e17]"
+                  ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D] font-bold shadow-sm"
+                  : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
               }`}
             >
               <div className="flex items-center gap-3">
-                <Heart className="w-4 h-4 stroke-[2.2]" />
+                <Heart className={`w-4 h-4 stroke-[2.2] ${activeTab === "weddings" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
                 <span>Marriage Cards</span>
               </div>
               <span
                 className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                   activeTab === "weddings"
-                    ? "bg-[#4a0e17]/15 text-[#4a0e17]"
-                    : "bg-[#f2ebde] text-slate-700"
+                    ? "bg-[#FF6B5B] text-white"
+                    : "bg-[#E5DAC8] text-[#14213D]"
                 }`}
               >
                 {totalWeddingsCount}
@@ -290,19 +290,19 @@ export default function Sidebar({
             }}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer ${
               activeTab === "directory"
-                ? "bg-[#eedfc8] text-[#4a0e17] border border-[#e0cbaf] font-bold shadow-xs"
-                : "text-slate-600 hover:bg-[#faf7f2] hover:text-[#4a0e17]"
+                ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D] font-bold shadow-sm"
+                : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
             }`}
           >
             <div className="flex items-center gap-3">
-              <Users className="w-4 h-4 stroke-[2.2]" />
+              <Users className={`w-4 h-4 stroke-[2.2] ${activeTab === "directory" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
               <span>Guest Directory</span>
             </div>
             <span
               className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                 activeTab === "directory"
-                  ? "bg-[#4a0e17]/15 text-[#4a0e17]"
-                  : "bg-[#f2ebde] text-slate-700"
+                  ? "bg-[#FF6B5B] text-white"
+                  : "bg-[#E5DAC8] text-[#14213D]"
               }`}
             >
               {totalCount}
@@ -320,19 +320,19 @@ export default function Sidebar({
             }}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer ${
               activeTab === "analytics"
-                ? "bg-[#eedfc8] text-[#4a0e17] border border-[#e0cbaf] font-bold shadow-xs"
-                : "text-slate-600 hover:bg-[#faf7f2] hover:text-[#4a0e17]"
+                ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D] font-bold shadow-sm"
+                : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
             }`}
           >
             <div className="flex items-center gap-3">
-              <BarChart3 className="w-4 h-4 stroke-[2.2]" />
+              <BarChart3 className={`w-4 h-4 stroke-[2.2] ${activeTab === "analytics" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
               <span>Analytics & Trends</span>
             </div>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                 activeTab === "analytics"
-                  ? "bg-[#4a0e17]/15 text-[#4a0e17]"
-                  : "bg-[#f4ebe1] text-[#5c1322]"
+                  ? "bg-[#FF6B5B] text-white"
+                  : "bg-[#E5DAC8] text-[#14213D]"
               }`}
             >
               Graphs
@@ -346,13 +346,13 @@ export default function Sidebar({
                 if (onOpenCallCenterModal) onOpenCallCenterModal();
                 closeMobile();
               }}
-              className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-[#4a0e17] hover:bg-[#faf7f2] transition-colors cursor-pointer group"
+              className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-[#14213D] hover:bg-[#F4EDE0] transition-colors cursor-pointer group"
             >
               <div className="flex items-center gap-3">
-                <Headphones className="w-4 h-4 text-[#5c1322] stroke-[2]" />
+                <Headphones className="w-4 h-4 text-[#FF6B5B] stroke-[2]" />
                 <span>Call Center Team</span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f4ebe1] text-[#5c1322] group-hover:bg-[#eedfc8]">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FF6B5B]/15 text-[#FF6B5B] group-hover:bg-[#FF6B5B] group-hover:text-white transition-colors">
                 Manage
               </span>
             </button>
@@ -362,9 +362,9 @@ export default function Sidebar({
           {!isViewOnly && isAdmin && (
             <button
               onClick={onOpenAddWeddingModal}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-600 hover:text-[#4a0e17] hover:bg-[#faf7f2] transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-[#14213D] hover:bg-[#F4EDE0] transition-colors cursor-pointer"
             >
-              <PlusCircle className="w-4 h-4 text-[#722233] stroke-[2]" />
+              <PlusCircle className="w-4 h-4 text-[#FF6B5B] stroke-[2]" />
               <span>+ Add Marriage Card</span>
             </button>
           )}
@@ -373,9 +373,9 @@ export default function Sidebar({
           {canEditGuests && (
             <button
               onClick={onOpenAddModal}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-600 hover:text-[#4a0e17] hover:bg-[#faf7f2] transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-[#14213D] hover:bg-[#F4EDE0] transition-colors cursor-pointer"
             >
-              <UserPlus className="w-4 h-4 text-[#5c1322] stroke-[2]" />
+              <UserPlus className="w-4 h-4 text-[#FF6B5B] stroke-[2]" />
               <span>+ Add Guest Entry</span>
             </button>
           )}
@@ -390,7 +390,7 @@ export default function Sidebar({
           className="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#4a0e17] via-[#5c1322] to-[#8f273c] p-0.5 flex items-center justify-center text-white font-semibold text-xs shadow-xs overflow-hidden">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#14213D] via-[#1c2d52] to-[#FF6B5B] p-0.5 flex items-center justify-center text-white font-semibold text-xs shadow-xs overflow-hidden">
               {user?.avatar ? (
                 <img
                   src={user.avatar}

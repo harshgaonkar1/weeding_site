@@ -233,9 +233,9 @@ export default function LoginPage({ initialTab = "admin" }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#071913] flex flex-col justify-center items-center p-4 sm:p-6 font-sans antialiased text-slate-800 relative overflow-hidden select-none">
+    <div className="min-h-screen bg-[#14213D] flex flex-col justify-center items-center p-4 sm:p-6 font-sans antialiased text-slate-800 relative overflow-hidden select-none">
       {/* 1. Base Gradient Layer */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#0f2e23] via-[#071913] to-[#040e0b] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1c2d52] via-[#14213D] to-[#0b1324] pointer-events-none" />
 
       {/* 2. Interactive Spotlight that tracks cursor */}
       <div
@@ -243,14 +243,14 @@ export default function LoginPage({ initialTab = "admin" }) {
         style={{
           background:
             mousePos.x !== null
-              ? `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.05) 45%, transparent 70%)`
-              : "radial-gradient(800px circle at 50% 50%, rgba(34, 197, 94, 0.12), transparent 70%)",
+              ? `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(255, 107, 91, 0.15), rgba(20, 33, 61, 0.05) 45%, transparent 70%)`
+              : "radial-gradient(800px circle at 50% 50%, rgba(255, 107, 91, 0.1), transparent 70%)",
         }}
       />
 
       {/* 3. Ambient Glowing Animated Orbs */}
       <div
-        className="absolute top-1/4 -left-20 w-96 h-96 bg-[#eedfc8]/15 rounded-full blur-3xl pointer-events-none animate-floatSlow"
+        className="absolute top-1/4 -left-20 w-96 h-96 bg-[#F4EDE0]/10 rounded-full blur-3xl pointer-events-none animate-floatSlow"
         style={{
           transform:
             mousePos.x !== null
@@ -259,7 +259,7 @@ export default function LoginPage({ initialTab = "admin" }) {
         }}
       />
       <div
-        className="absolute bottom-1/4 -right-20 w-96 h-96 bg-amber-400/10 rounded-full blur-3xl pointer-events-none animate-floatSlow"
+        className="absolute bottom-1/4 -right-20 w-96 h-96 bg-[#FF6B5B]/10 rounded-full blur-3xl pointer-events-none animate-floatSlow"
         style={{
           transform:
             mousePos.x !== null
@@ -278,32 +278,32 @@ export default function LoginPage({ initialTab = "admin" }) {
       <div ref={cardContainerRef} className="w-full max-w-md relative z-10 space-y-6">
         {/* Header Title */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eedfc8]/10 border border-[#eedfc8]/25 text-[#eedfc8] text-xs font-bold tracking-wide backdrop-blur-md shadow-xs mb-1">
-            <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F4EDE0]/10 border border-[#F4EDE0]/25 text-[#F4EDE0] text-xs font-bold tracking-wide backdrop-blur-md shadow-xs mb-1">
+            <Sparkles className="w-3.5 h-3.5 text-[#FF6B5B] animate-pulse" />
             <span>Wedding Logistics Portal</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-sans">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F4EDE0] font-sans">
             Welcome Back
           </h1>
-          <p className="text-xs sm:text-sm text-[#eedfc8]/80 font-medium">
+          <p className="text-xs sm:text-sm text-[#F4EDE0]/80 font-medium">
             Sign in to access your guest & travel desk
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 ring-1 ring-emerald-950/20 overflow-hidden transition-all duration-300 hover:shadow-emerald-900/20">
+        <div className="bg-[#FAF7F2] backdrop-blur-xl rounded-3xl shadow-2xl border border-[#F4EDE0]/60 ring-1 ring-[#14213D]/20 overflow-hidden transition-all duration-300">
           {/* Clean Role Navigation */}
-          <div className="grid grid-cols-3 border-b border-slate-200/90 bg-slate-50/90 text-xs font-semibold">
+          <div className="grid grid-cols-3 border-b border-[#E5DAC8] bg-[#F4EDE0]/60 text-xs font-semibold">
             <button
               type="button"
               onClick={() => handleRoleChange("admin")}
               className={`py-3.5 px-2 text-center transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeRole === "admin"
-                  ? "bg-white text-slate-900 border-b-2 border-emerald-600 font-bold shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50"
+                  ? "bg-white text-[#14213D] border-b-2 border-[#FF6B5B] font-bold shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
               }`}
             >
-              <Shield className="w-3.5 h-3.5 text-emerald-700" />
+              <Shield className={`w-3.5 h-3.5 ${activeRole === "admin" ? "text-[#FF6B5B]" : "text-slate-400"}`} />
               <span>Admin</span>
             </button>
 
@@ -312,11 +312,11 @@ export default function LoginPage({ initialTab = "admin" }) {
               onClick={() => handleRoleChange("call_center")}
               className={`py-3.5 px-2 text-center transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeRole === "call_center"
-                  ? "bg-white text-slate-900 border-b-2 border-emerald-600 font-bold shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50"
+                  ? "bg-white text-[#14213D] border-b-2 border-[#FF6B5B] font-bold shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
               }`}
             >
-              <Phone className="w-3.5 h-3.5 text-emerald-700" />
+              <Phone className={`w-3.5 h-3.5 ${activeRole === "call_center" ? "text-[#FF6B5B]" : "text-slate-400"}`} />
               <span>Call Center</span>
             </button>
 
@@ -325,11 +325,11 @@ export default function LoginPage({ initialTab = "admin" }) {
               onClick={() => handleRoleChange("marriage_client")}
               className={`py-3.5 px-2 text-center transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeRole === "marriage_client"
-                  ? "bg-white text-slate-900 border-b-2 border-emerald-600 font-bold shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50"
+                  ? "bg-white text-[#14213D] border-b-2 border-[#FF6B5B] font-bold shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
               }`}
             >
-              <Building2 className="w-3.5 h-3.5 text-emerald-700" />
+              <Building2 className={`w-3.5 h-3.5 ${activeRole === "marriage_client" ? "text-[#FF6B5B]" : "text-slate-400"}`} />
               <span>Marriage View</span>
             </button>
           </div>
@@ -420,7 +420,7 @@ export default function LoginPage({ initialTab = "admin" }) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#5c1322] hover:bg-[#480e1b] active:scale-98 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all disabled:opacity-50 mt-2 btn-interactive"
+                className="w-full bg-[#FF6B5B] hover:bg-[#E85545] active:scale-98 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all disabled:opacity-50 mt-2 btn-interactive"
               >
                 {isLoading ? (
                   <span>Signing In...</span>
@@ -431,7 +431,7 @@ export default function LoginPage({ initialTab = "admin" }) {
                         ? "View Marriage Details"
                         : "Sign In"}
                     </span>
-                    <ArrowRight className="w-4 h-4 text-[#eedfc8]" />
+                    <ArrowRight className="w-4 h-4 text-[#F4EDE0]" />
                   </>
                 )}
               </button>
@@ -440,7 +440,7 @@ export default function LoginPage({ initialTab = "admin" }) {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-[#eedfc8]/60">
+        <p className="text-center text-xs text-[#F4EDE0]/60">
           Wedding Logistics & Guest Management Portal
         </p>
       </div>

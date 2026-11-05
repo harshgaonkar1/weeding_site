@@ -724,7 +724,7 @@ export default function Hero() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f7f4ee] p-0 sm:p-2 md:p-6 text-slate-800 flex justify-center font-sans antialiased selection:bg-[#722233]/20 selection:text-[#4a0e17]">
+    <div className="min-h-screen bg-[#14213D] p-0 sm:p-2 md:p-6 text-slate-900 flex justify-center font-sans antialiased selection:bg-[#FF6B5B]/20 selection:text-[#14213D]">
       {/* Toast Notification */}
       {toast && (
         <div
@@ -732,7 +732,7 @@ export default function Hero() {
           className={`fixed top-4 right-4 sm:top-5 sm:right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold ${
             toast.type === "error"
               ? "bg-rose-900 text-white"
-              : "bg-[#4a0e17] text-[#eedfc8] border border-[#eedfc8]/30 shadow-rose-950/20"
+              : "bg-[#14213D] text-[#F4EDE0] border border-[#FF6B5B]/50 shadow-2xl"
           }`}
         >
           <span>{toast.message}</span>
@@ -740,7 +740,7 @@ export default function Hero() {
       )}
 
       {/* Main App Container */}
-      <div className="w-full max-w-[1440px] bg-white rounded-none sm:rounded-[28px] shadow-sm border-0 sm:border border-slate-200/80 flex flex-col md:flex-row overflow-hidden min-h-screen md:min-h-[92vh]">
+      <div className="w-full max-w-[1440px] bg-[#FAF7F2] rounded-none sm:rounded-[28px] shadow-2xl border-0 sm:border border-[#14213D]/20 ring-1 ring-white/10 flex flex-col md:flex-row overflow-hidden min-h-screen md:min-h-[92vh]">
         {/* Left Sidebar (Desktop Static + Mobile Slide-Out Drawer) */}
         <Sidebar
           totalCount={
@@ -789,13 +789,13 @@ export default function Hero() {
 
           {/* Banner 1: Call Center Active Notice */}
           {isCallCenter && (
-            <div className="bg-gradient-to-r from-[#fbf6ef] via-[#f7f1e6] to-[#fdfbf7] border-b border-[#e6dbc8] px-6 py-2 flex items-center justify-between text-xs text-[#5c1322] animate-fadeIn">
+            <div className="bg-gradient-to-r from-[#14213D] via-[#1b2b4d] to-[#14213D] border-b border-[#14213D]/20 px-6 py-2.5 flex items-center justify-between text-xs text-[#F4EDE0] animate-fadeIn shadow-inner">
               <div className="flex items-center gap-2 font-semibold">
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8f273c] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#5c1322]"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6B5B] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FF6B5B]"></span>
                 </span>
-                <Headphones className="w-4 h-4 text-[#722233]" />
+                <Headphones className="w-4 h-4 text-[#FF6B5B]" />
                 <span>
                   Call Center Telecaller Desk
                   {user?.wedding_id && user.wedding_id !== "all"
@@ -804,7 +804,7 @@ export default function Hero() {
                   {" • Call Logging & WhatsApp Enabled"}
                 </span>
               </div>
-              <span className="text-[10px] font-extrabold bg-[#eedfc8] text-[#4a0e17] px-2.5 py-0.5 rounded-full border border-[#dfcbb1] shadow-2xs">
+              <span className="text-[10px] font-extrabold bg-[#FF6B5B] text-white px-2.5 py-0.5 rounded-full shadow-xs">
                 {user?.wedding_id && user.wedding_id !== "all" ? "Assigned Marriage" : "Global Call Desk"}
               </span>
             </div>
@@ -812,9 +812,9 @@ export default function Hero() {
 
           {/* Banner 2: Marriage Client View-Only Notice */}
           {isMarriageClient && (
-            <div className="bg-gradient-to-r from-amber-50 via-rose-50/50 to-amber-50 border-b border-amber-200/90 px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-950 animate-fadeIn">
+            <div className="bg-[#F4EDE0] border-b border-[#E5DAC8] px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-[#14213D] animate-fadeIn">
               <div className="flex items-center gap-2 font-bold">
-                <span className="w-6 h-6 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center text-xs shadow-2xs">
+                <span className="w-6 h-6 rounded-lg bg-[#FF6B5B]/15 text-[#FF6B5B] flex items-center justify-center text-xs shadow-2xs">
                   <Heart className="w-3.5 h-3.5" />
                 </span>
                 <span>
@@ -822,7 +822,7 @@ export default function Hero() {
                     ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}'s Private Wedding Portal`
                     : "Wedding Client Portal"}
                 </span>
-                <span className="text-[10px] bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border border-amber-300/80">
+                <span className="text-[10px] bg-[#14213D] text-[#F4EDE0] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                   View Only Dashboard
                 </span>
               </div>
@@ -830,17 +830,17 @@ export default function Hero() {
                 <button
                   type="button"
                   onClick={() => setActiveTab((prev) => (prev === "analytics" ? "directory" : "analytics"))}
-                  className="bg-white hover:bg-amber-100/70 text-amber-950 border border-amber-300 px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                  className="bg-white hover:bg-[#FAF7F2] text-[#14213D] border border-[#E5DAC8] px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
                 >
-                  <BarChart3 className="w-3.5 h-3.5 text-amber-800" />
+                  <BarChart3 className="w-3.5 h-3.5 text-[#FF6B5B]" />
                   <span>{activeTab === "analytics" ? "Guest Directory Table" : "Analytics & Graphs"}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsChatModalOpen(true)}
-                  className="bg-[#5c1322] hover:bg-[#480e1b] text-white px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                  className="bg-[#FF6B5B] hover:bg-[#E85545] active:scale-98 text-white px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-[#eedfc8]" />
+                  <MessageSquare className="w-3.5 h-3.5 text-[#F4EDE0]" />
                   <span>Chat with Admin</span>
                 </button>
               </div>
@@ -865,19 +865,19 @@ export default function Hero() {
                   {isAdmin && (
                     <button
                       onClick={() => setIsCallCenterModalOpen(true)}
-                      className="bg-[#f7f2ea] hover:bg-[#eedfc8]/60 border border-[#e3d3be] text-[#5c1322] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-2 cursor-pointer transition-all shadow-2xs btn-interactive"
+                      className="bg-[#F4EDE0] hover:bg-[#EFE6D6] border border-[#E5DAC8] text-[#14213D] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-2 cursor-pointer transition-all shadow-2xs btn-interactive"
                       title="Manage Call Center User IDs and Marriage Allocations"
                     >
-                      <Headphones className="w-4 h-4 text-[#722233]" />
+                      <Headphones className="w-4 h-4 text-[#FF6B5B]" />
                       <span>Call Center IDs</span>
                     </button>
                   )}
                   {isAdmin && (
                     <button
                       onClick={handleOpenAddWeddingModal}
-                      className="bg-[#5c1322] hover:bg-[#480e1b] text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 cursor-pointer transition-all self-start sm:self-auto shadow-xs btn-interactive"
+                      className="bg-[#FF6B5B] hover:bg-[#E85545] active:scale-98 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 cursor-pointer transition-all self-start sm:self-auto shadow-sm btn-interactive"
                     >
-                      <PlusCircle className="w-4 h-4 text-[#eedfc8]" />
+                      <PlusCircle className="w-4 h-4 text-[#F4EDE0]" />
                       <span>+ New Wedding</span>
                     </button>
                   )}
@@ -920,20 +920,20 @@ export default function Hero() {
                     <button
                       type="button"
                       onClick={() => handleSelectWedding(null)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5c1322] hover:text-[#380911] mb-1 cursor-pointer transition-all hover:-translate-x-1"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#14213D] hover:text-[#FF6B5B] mb-1 cursor-pointer transition-all hover:-translate-x-1"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-3.5 h-3.5 text-[#FF6B5B]" />
                       <span>← All Weddings</span>
                     </button>
                   )}
 
-                  <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#14213D] tracking-tight flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <span className="truncate">
                       {selectedWedding
                         ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
                         : "Guest Directory"}
                     </span>
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#f4ebe1] text-[#5c1322] border border-[#e3d3be] shadow-2xs shrink-0">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#F4EDE0] text-[#14213D] border border-[#E5DAC8] shadow-2xs shrink-0">
                       {stats?.totalRegistered !== undefined
                         ? `${stats.totalRegistered} Guests`
                         : selectedWedding?.total_guests !== undefined
@@ -941,7 +941,7 @@ export default function Hero() {
                         : `${displayedGuests.length} Guests`}
                     </span>
                     {isMarriageClient && (
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#eedfc8] text-[#4a0e17] border border-[#dfcbb1] shrink-0">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#14213D] text-[#F4EDE0] border border-[#14213D] shrink-0">
                         View Only
                       </span>
                     )}
@@ -961,10 +961,10 @@ export default function Hero() {
                           selectedWedding || (weddings && weddings[0])
                         )
                       }
-                      className="bg-[#f7f2ea] hover:bg-[#eedfc8]/60 border border-[#e3d3be] text-[#5c1322] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                      className="bg-[#F4EDE0] hover:bg-[#EFE6D6] border border-[#E5DAC8] text-[#14213D] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
                       title="Live Google Sheet Two-Way Sync Settings"
                     >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#722233]" />
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#FF6B5B]" />
                       <span>Google Sheet Sync</span>
                     </button>
                   )}
@@ -1004,9 +1004,9 @@ export default function Hero() {
                   {!isViewOnly && (
                     <button
                       onClick={handleOpenAddGuestModal}
-                      className="bg-[#5c1322] hover:bg-[#480e1b] text-white text-[11px] sm:text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-xs btn-interactive"
+                      className="bg-[#FF6B5B] hover:bg-[#E85545] active:scale-98 text-white text-[11px] sm:text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-sm btn-interactive"
                     >
-                      <Plus className="w-3.5 h-3.5 text-[#eedfc8]" />
+                      <Plus className="w-3.5 h-3.5 text-[#F4EDE0]" />
                       <span>Add Guest</span>
                     </button>
                   )}

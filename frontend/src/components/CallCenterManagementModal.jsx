@@ -305,23 +305,23 @@ export default function CallCenterManagementModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-[#eedfc8] overflow-hidden my-auto flex flex-col max-h-[92vh]">
+      <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-[#E5DAC8] overflow-hidden my-auto flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-[#480e1b] via-[#5c1322] to-[#722233] px-6 py-5 text-white flex items-center justify-between shrink-0 shadow-sm">
+        <div className="bg-gradient-to-r from-[#14213D] via-[#1c2d52] to-[#14213D] px-6 py-5 text-white flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
-              <Headphones className="w-6 h-6 text-[#eedfc8]" />
+              <Headphones className="w-6 h-6 text-[#FF6B5B]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold tracking-tight font-serif text-white">
+                <h2 className="text-xl font-extrabold tracking-tight font-serif text-[#F4EDE0]">
                   Call Center Team & Allocation
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#eedfc8]/20 text-[#eedfc8] border border-[#eedfc8]/30">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FF6B5B]/20 text-[#FF6B5B] border border-[#FF6B5B]/30">
                   Admin Control
                 </span>
               </div>
-              <p className="text-xs text-[#eedfc8]/80 mt-0.5">
+              <p className="text-xs text-[#F4EDE0]/80 mt-0.5">
                 Create telecaller accounts, assign specific marriages, and manage call desk access.
               </p>
             </div>
@@ -359,17 +359,17 @@ export default function CallCenterManagementModal({
         )}
 
         {/* Tab Switcher & Quick Metrics */}
-        <div className="px-6 pt-4 pb-3 border-b border-slate-100 bg-[#fdfbf7] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2 bg-[#f4ebe1] p-1 rounded-2xl border border-[#e3d3be]">
+        <div className="px-6 pt-4 pb-3 border-b border-slate-100 bg-[#FAF7F2] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2 bg-[#F4EDE0] p-1 rounded-2xl border border-[#E5DAC8]">
             <button
               onClick={() => setActiveTab("team")}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "team"
-                  ? "bg-[#5c1322] text-white shadow-xs"
-                  : "text-slate-700 hover:text-[#5c1322]"
+                  ? "bg-[#14213D] text-[#F4EDE0] shadow-sm"
+                  : "text-slate-700 hover:text-[#14213D]"
               }`}
             >
-              <Users className="w-4 h-4" />
+              <Users className={`w-4 h-4 ${activeTab === "team" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
               <span>Call Center Agents ({callCenterUsers.length})</span>
             </button>
 
@@ -377,11 +377,11 @@ export default function CallCenterManagementModal({
               onClick={() => setActiveTab("create")}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "create"
-                  ? "bg-[#5c1322] text-white shadow-xs"
-                  : "text-slate-700 hover:text-[#5c1322]"
+                  ? "bg-[#14213D] text-[#F4EDE0] shadow-sm"
+                  : "text-slate-700 hover:text-[#14213D]"
               }`}
             >
-              <UserPlus className="w-4 h-4" />
+              <UserPlus className={`w-4 h-4 ${activeTab === "create" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
               <span>+ Create New ID</span>
             </button>
           </div>
@@ -411,7 +411,7 @@ export default function CallCenterManagementModal({
                     placeholder="Search agent by name, username, phone or wedding..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20 focus:border-[#5c1322]"
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20 focus:border-[#FF6B5B]"
                   />
                   {searchQuery && (
                     <button
@@ -428,7 +428,7 @@ export default function CallCenterManagementModal({
                   <select
                     value={weddingFilter}
                     onChange={(e) => setWeddingFilter(e.target.value)}
-                    className="px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20"
+                    className="px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20"
                   >
                     <option value="all">All Agents</option>
                     <option value="global">Global Desk (All Marriages)</option>
@@ -442,9 +442,9 @@ export default function CallCenterManagementModal({
                   <button
                     onClick={loadUsers}
                     title="Refresh agents"
-                    className="p-2 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-slate-600 hover:text-[#5c1322] hover:bg-[#eedfc8]/40 transition-colors cursor-pointer"
+                    className="p-2 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-slate-600 hover:text-[#FF6B5B] hover:bg-[#F4EDE0] transition-colors cursor-pointer"
                   >
-                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-[#5c1322]" : ""}`} />
+                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-[#FF6B5B]" : ""}`} />
                   </button>
                 </div>
               </div>
@@ -452,11 +452,11 @@ export default function CallCenterManagementModal({
               {/* Agent Cards / Table */}
               {loading && filteredUsers.length === 0 ? (
                 <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-                  <RefreshCw className="w-6 h-6 animate-spin text-[#5c1322]" />
+                  <RefreshCw className="w-6 h-6 animate-spin text-[#FF6B5B]" />
                   <span>Loading call center agents...</span>
                 </div>
               ) : filteredUsers.length === 0 ? (
-                <div className="py-16 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-[#fdfbf7] p-8">
+                <div className="py-16 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-[#FAF7F2] p-8">
                   <Headphones className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                   <h4 className="text-sm font-bold text-slate-700">No Call Center Agents Found</h4>
                   <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
@@ -466,7 +466,7 @@ export default function CallCenterManagementModal({
                   </p>
                   <button
                     onClick={() => setActiveTab("create")}
-                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#5c1322] text-white text-xs font-bold hover:bg-[#480e1b] transition-all cursor-pointer"
+                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FF6B5B] text-white text-xs font-bold hover:bg-[#E85545] transition-all cursor-pointer shadow-sm shadow-[#FF6B5B]/20"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     <span>Create Call Center Account</span>
@@ -479,11 +479,11 @@ export default function CallCenterManagementModal({
                     return (
                       <div
                         key={agent.id}
-                        className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-[#eedfc8] hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                        className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-[#E5DAC8] hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
                       >
                         {/* Agent Info */}
                         <div className="flex items-center gap-3.5 min-w-[220px]">
-                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#5c1322] to-[#8f273c] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#14213D] to-[#1c2d52] border border-[#E5DAC8]/40 text-[#F4EDE0] flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
                             {agent.avatar ? (
                               <img
                                 src={agent.avatar}
@@ -528,10 +528,10 @@ export default function CallCenterManagementModal({
                             <select
                               value={agent.wedding_id || "all"}
                               onChange={(e) => handleQuickReassign(agent, e.target.value)}
-                              className={`w-full appearance-none pl-3 pr-8 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20 ${
+                              className={`w-full appearance-none pl-3 pr-8 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20 ${
                                 isGlobal
                                   ? "bg-amber-50/70 border-amber-300 text-amber-900"
-                                  : "bg-[#fbf7f0] border-[#e3d3be] text-[#5c1322]"
+                                  : "bg-[#FAF7F2] border-[#E5DAC8] text-[#14213D] font-extrabold"
                               }`}
                             >
                               <option value="all">🌟 All Marriages (Global Call Desk)</option>
@@ -550,7 +550,7 @@ export default function CallCenterManagementModal({
                           <button
                             onClick={() => handleStartEdit(agent)}
                             title="Edit Agent Profile / Password"
-                            className="p-2 rounded-xl bg-slate-50 hover:bg-[#eedfc8]/40 text-slate-600 hover:text-[#5c1322] border border-slate-200 transition-colors cursor-pointer"
+                            className="p-2 rounded-xl bg-slate-50 hover:bg-[#F4EDE0] text-slate-600 hover:text-[#FF6B5B] border border-slate-200 transition-colors cursor-pointer"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
@@ -558,7 +558,7 @@ export default function CallCenterManagementModal({
                           <button
                             onClick={() => setDeletingUser(agent)}
                             title="Delete Agent ID"
-                            className="p-2 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
+                            className="p-2 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:rose-600 border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -574,13 +574,13 @@ export default function CallCenterManagementModal({
           {/* TAB 2: CREATE NEW CALL CENTER ID */}
           {activeTab === "create" && (
             <div className="max-w-2xl mx-auto py-2">
-              <div className="mb-6 bg-gradient-to-r from-[#fbf8f2] to-[#f7f2ea] p-4 rounded-2xl border border-[#eedfc8]">
+              <div className="mb-6 bg-gradient-to-r from-[#FAF7F2] to-[#F4EDE0] p-4 rounded-2xl border border-[#E5DAC8]">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-[#5c1322] text-[#eedfc8] flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#14213D] text-[#FF6B5B] flex items-center justify-center shrink-0 mt-0.5">
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold text-[#5c1322] uppercase tracking-wider">
+                    <h3 className="text-xs font-bold text-[#14213D] uppercase tracking-wider">
                       Marriage Scoping Guarantee
                     </h3>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -619,7 +619,7 @@ export default function CallCenterManagementModal({
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20 focus:border-[#5c1322]"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20 focus:border-[#FF6B5B]"
                       />
                     </div>
                   </div>
@@ -636,7 +636,7 @@ export default function CallCenterManagementModal({
                         placeholder="e.g. +91 98765 43210"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20 focus:border-[#5c1322]"
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20 focus:border-[#FF6B5B]"
                       />
                     </div>
                   </div>
@@ -652,7 +652,7 @@ export default function CallCenterManagementModal({
                       <button
                         type="button"
                         onClick={generateSuggestedCredentials}
-                        className="text-[11px] font-bold text-[#5c1322] hover:underline cursor-pointer flex items-center gap-1"
+                        className="text-[11px] font-bold text-[#FF6B5B] hover:underline cursor-pointer flex items-center gap-1"
                       >
                         <Sparkles className="w-3 h-3" /> Auto-Suggest
                       </button>
@@ -665,7 +665,7 @@ export default function CallCenterManagementModal({
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         required
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20 focus:border-[#5c1322]"
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20 focus:border-[#FF6B5B]"
                       />
                     </div>
                   </div>
@@ -683,7 +683,7 @@ export default function CallCenterManagementModal({
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         required
-                        className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20 focus:border-[#5c1322]"
+                        className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20 focus:border-[#FF6B5B]"
                       />
                       <button
                         type="button"
@@ -705,7 +705,7 @@ export default function CallCenterManagementModal({
                     <select
                       value={formData.wedding_id}
                       onChange={(e) => setFormData({ ...formData, wedding_id: e.target.value })}
-                      className="w-full appearance-none px-3.5 py-3 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20 focus:border-[#5c1322]"
+                      className="w-full appearance-none px-3.5 py-3 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20 focus:border-[#FF6B5B]"
                     >
                       <option value="all">🌟 All Marriages (Global Call Desk - Agent can access all)</option>
                       {weddings.map((w) => (
@@ -734,7 +734,7 @@ export default function CallCenterManagementModal({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="bg-[#5c1322] hover:bg-[#480e1b] active:scale-98 text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 transition-all"
+                    className="bg-[#FF6B5B] hover:bg-[#E85545] active:scale-98 text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md shadow-[#FF6B5B]/20 cursor-pointer disabled:opacity-50 transition-all"
                   >
                     {isSubmitting ? (
                       <>
@@ -743,7 +743,7 @@ export default function CallCenterManagementModal({
                       </>
                     ) : (
                       <>
-                        <UserPlus className="w-3.5 h-3.5 text-[#eedfc8]" />
+                        <UserPlus className="w-3.5 h-3.5 text-[#F4EDE0]" />
                         <span>Create Call Center Account</span>
                       </>
                     )}
@@ -757,10 +757,10 @@ export default function CallCenterManagementModal({
         {/* EDIT SUB-MODAL */}
         {editingUser && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-            <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-[#eedfc8] space-y-4">
+            <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-[#E5DAC8] space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <Edit3 className="w-4 h-4 text-[#5c1322]" />
+                  <Edit3 className="w-4 h-4 text-[#FF6B5B]" />
                   <h3 className="text-sm font-extrabold text-slate-900">
                     Edit Agent: {editingUser.name}
                   </h3>
@@ -788,7 +788,7 @@ export default function CallCenterManagementModal({
                     value={editFormData.name}
                     onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20"
+                    className="w-full px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20"
                   />
                 </div>
 
@@ -799,7 +799,7 @@ export default function CallCenterManagementModal({
                     value={editFormData.email}
                     onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20"
+                    className="w-full px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20"
                   />
                 </div>
 
@@ -809,7 +809,7 @@ export default function CallCenterManagementModal({
                     type="text"
                     value={editFormData.phone}
                     onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20"
+                    className="w-full px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20"
                   />
                 </div>
 
@@ -820,7 +820,7 @@ export default function CallCenterManagementModal({
                   <select
                     value={editFormData.wedding_id}
                     onChange={(e) => setEditFormData({ ...editFormData, wedding_id: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20"
+                    className="w-full px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20"
                   >
                     <option value="all">🌟 All Marriages (Global Call Desk)</option>
                     {weddings.map((w) => (
@@ -840,7 +840,7 @@ export default function CallCenterManagementModal({
                     placeholder="Enter new password if changing"
                     value={editFormData.newPassword}
                     onChange={(e) => setEditFormData({ ...editFormData, newPassword: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#e3d3be] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#5c1322]/20"
+                    className="w-full px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#E5DAC8] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/20"
                   />
                 </div>
 
@@ -855,7 +855,7 @@ export default function CallCenterManagementModal({
                   <button
                     type="submit"
                     disabled={isEditSubmitting}
-                    className="px-5 py-2 rounded-xl bg-[#5c1322] hover:bg-[#480e1b] text-white text-xs font-bold shadow-xs disabled:opacity-50"
+                    className="px-5 py-2 rounded-xl bg-[#FF6B5B] hover:bg-[#E85545] text-white text-xs font-bold shadow-md shadow-[#FF6B5B]/20 disabled:opacity-50"
                   >
                     {isEditSubmitting ? "Saving..." : "Save Changes"}
                   </button>

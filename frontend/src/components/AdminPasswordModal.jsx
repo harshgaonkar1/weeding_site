@@ -78,19 +78,19 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
         </button>
 
         {/* Modal Header */}
-        <div className="bg-gradient-to-br from-[#3b0b14] via-[#5c1322] to-[#4a0e17] p-4 sm:p-6 text-white text-center relative overflow-hidden">
-          {/* Ambient Gold/Green Glow */}
-          <div className="absolute top-0 right-0 w-36 h-36 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#eedfc8]/15 rounded-full blur-xl pointer-events-none" />
+        <div className="bg-gradient-to-br from-[#14213D] via-[#1c2d52] to-[#0b1324] border-b border-[#E5DAC8]/30 p-4 sm:p-6 text-[#F4EDE0] text-center relative overflow-hidden">
+          {/* Ambient Glow */}
+          <div className="absolute top-0 right-0 w-36 h-36 bg-[#FF6B5B]/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#FF6B5B]/15 rounded-full blur-xl pointer-events-none" />
 
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-amber-500/20 to-[#eedfc8]/20 border border-[#eedfc8]/40 flex items-center justify-center text-[#eedfc8] mb-3 shadow-sm animate-pulseGlowAmber">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-[#FF6B5B]/20 to-[#F4EDE0]/20 border border-[#E5DAC8]/40 flex items-center justify-center text-[#FF6B5B] mb-3 shadow-sm animate-pulseGlowAmber">
             <ShieldCheck className="w-7 h-7 stroke-[2.2]" />
           </div>
 
-          <h3 className="text-xl font-extrabold tracking-tight flex items-center justify-center gap-1.5">
+          <h3 className="text-xl font-extrabold tracking-tight flex items-center justify-center gap-1.5 text-[#F4EDE0]">
             <span>Super Admin Access</span>
           </h3>
-          <p className="text-xs text-[#eedfc8]/90 mt-1 font-normal max-w-xs mx-auto">
+          <p className="text-xs text-[#F4EDE0]/90 mt-1 font-normal max-w-xs mx-auto">
             Admin privileges are protected. Enter the Admin password to switch to Super Admin mode.
           </p>
         </div>
@@ -129,7 +129,7 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
                   setErrorMsg("");
                 }}
                 placeholder="Enter admin password"
-                className="w-full bg-[#f8fafc] border border-slate-200 rounded-2xl pl-10 pr-10 py-3 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#722233]/40 focus:border-[#722233] focus:bg-white transition-all shadow-2xs"
+                className="w-full bg-[#f8fafc] border border-slate-200 rounded-2xl pl-10 pr-10 py-3 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FF6B5B]/40 focus:border-[#FF6B5B] focus:bg-white transition-all shadow-2xs"
               />
               <button
                 type="button"
@@ -166,13 +166,13 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
             <button
               type="submit"
               disabled={isLoading || !password}
-              className="w-2/3 bg-[#5c1322] hover:bg-[#480e1b] text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all disabled:opacity-50 btn-interactive"
+              className="w-2/3 bg-[#FF6B5B] hover:bg-[#E85545] text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-[#FF6B5B]/20 cursor-pointer transition-all disabled:opacity-50 btn-interactive"
             >
               {isLoading ? (
                 <span>Verifying...</span>
               ) : (
                 <>
-                  <ShieldCheck className="w-4 h-4 text-[#eedfc8]" />
+                  <ShieldCheck className="w-4 h-4 text-[#F4EDE0]" />
                   <span>Verify & Enter Admin</span>
                 </>
               )}
