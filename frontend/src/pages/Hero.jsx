@@ -37,6 +37,7 @@ import WhatsAppMessageModal from "../components/WhatsAppMessageModal";
 import AnalyticsView from "../components/AnalyticsView";
 import ChatBotModal from "../components/ChatBotModal";
 import CircularChatWidget from "../components/CircularChatWidget";
+import CallCenterManagementModal from "../components/CallCenterManagementModal";
 import LoginPage from "./LoginPage";
 import { api, calculateStatsFromList } from "../services/api";
 import { socket } from "../services/socket";
@@ -112,6 +113,9 @@ export default function Hero() {
 
   // Live Chat Bot / Admin & Client Messenger State
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+
+  // Call Center Team & Allocation Modal State
+  const [isCallCenterModalOpen, setIsCallCenterModalOpen] = useState(false);
 
   // Toast Notification
   const [toast, setToast] = useState(null);
@@ -206,6 +210,16 @@ export default function Hero() {
       loadWeddings();
     }
   }, [isMarriageClient, user?.wedding_id, user?.role, loadWeddings]);
+
+  // 1c. Handle Call Center Scoping & Auto-Selection to Assigned Marriage
+  useEffect(() => {
+    if (isCallCenter && user?.wedding_id && user.wedding_id !== "all") {
+      const matched = weddings.find((w) => w.id === user.wedding_id);
+      if (matched) {
+        setSelectedWedding(matched);
+      }
+    }
+  }, [isCallCenter, user?.wedding_id, weddings]);
 
   // 2. Load Guests & Stats (scoped strictly to selected wedding)
   const selectedWeddingId = selectedWedding ? selectedWedding.id : null;
@@ -757,6 +771,7 @@ export default function Hero() {
           isMobileNavOpen={isMobileNavOpen}
           setIsMobileNavOpen={setIsMobileNavOpen}
           onOpenChat={() => setIsChatModalOpen(true)}
+          onOpenCallCenterModal={() => setIsCallCenterModalOpen(true)}
         />
 
         {/* Right Main Content */}
@@ -769,6 +784,7 @@ export default function Hero() {
             selectedWedding={selectedWedding}
             weddings={weddings}
             onOpenMobileNav={() => setIsMobileNavOpen(true)}
+            onOpenCallCenterModal={() => setIsCallCenterModalOpen(true)}
           />
 
           {/* Banner 1: Call Center Active Notice */}
@@ -780,10 +796,16 @@ export default function Hero() {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#5c1322]"></span>
                 </span>
                 <Headphones className="w-4 h-4 text-[#722233]" />
-                <span>Call Center Telecaller Desk • View-Only Guest Directory • Call Logging & WhatsApp Messaging Enabled</span>
+                <span>
+                  Call Center Telecaller Desk
+                  {user?.wedding_id && user.wedding_id !== "all"
+                    ? ` • Assigned: ${user.assigned_wedding_name || (selectedWedding ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}` : user.wedding_id)}`
+                    : " • Global Desk (All Marriages)"}
+                  {" • Call Logging & WhatsApp Enabled"}
+                </span>
               </div>
               <span className="text-[10px] font-extrabold bg-[#eedfc8] text-[#4a0e17] px-2.5 py-0.5 rounded-full border border-[#dfcbb1] shadow-2xs">
-                Call Desk & WhatsApp
+                {user?.wedding_id && user.wedding_id !== "all" ? "Assigned Marriage" : "Global Call Desk"}
               </span>
             </div>
           )}
@@ -840,6 +862,16 @@ export default function Hero() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {isAdmin && (
+                    <button
+                      onClick={() => setIsCallCenterModalOpen(true)}
+                      className="bg-[#f7f2ea] hover:bg-[#eedfc8]/60 border border-[#e3d3be] text-[#5c1322] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-2 cursor-pointer transition-all shadow-2xs btn-interactive"
+                      title="Manage Call Center User IDs and Marriage Allocations"
+                    >
+                      <Headphones className="w-4 h-4 text-[#722233]" />
+                      <span>Call Center IDs</span>
+                    </button>
+                  )}
                   {isAdmin && (
                     <button
                       onClick={handleOpenAddWeddingModal}
@@ -1193,6 +1225,14 @@ export default function Hero() {
         selectedWedding={selectedWedding || (weddings && weddings[0])}
         weddings={weddings}
         onSelectWedding={handleSelectWedding}
+      />
+
+      {/* 13. Call Center Team & Marriage Allocation Modal (Admin Only) */}
+      <CallCenterManagementModal
+        isOpen={isCallCenterModalOpen}
+        onClose={() => setIsCallCenterModalOpen(false)}
+        weddings={weddings}
+        onUserUpdated={loadWeddings}
       />
     </div>
   );

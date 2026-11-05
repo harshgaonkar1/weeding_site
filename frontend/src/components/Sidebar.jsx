@@ -13,6 +13,7 @@ import {
   MessageSquare,
   X,
   BarChart3,
+  Headphones,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -29,6 +30,7 @@ export default function Sidebar({
   isMobileNavOpen = false,
   setIsMobileNavOpen,
   onOpenChat,
+  onOpenCallCenterModal,
 }) {
   const {
     user,
@@ -336,6 +338,25 @@ export default function Sidebar({
               Graphs
             </span>
           </button>
+
+          {/* Action: Call Center Team & Assignments (Admin Only) */}
+          {isAdmin && (
+            <button
+              onClick={() => {
+                if (onOpenCallCenterModal) onOpenCallCenterModal();
+                closeMobile();
+              }}
+              className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-[#4a0e17] hover:bg-[#faf7f2] transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <Headphones className="w-4 h-4 text-[#5c1322] stroke-[2]" />
+                <span>Call Center Team</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f4ebe1] text-[#5c1322] group-hover:bg-[#eedfc8]">
+                Manage
+              </span>
+            </button>
+          )}
 
           {/* Action: Add Marriage Card (Admin Only) */}
           {!isViewOnly && isAdmin && (

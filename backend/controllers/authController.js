@@ -91,10 +91,114 @@ export const authController = {
   async getUsers(req, res) {
     try {
       const users = await UserModel.getAll();
-      res.status(200).json({ success: true, data: users });
+      res.status(200).json({ success: true, count: users.length, data: users });
     } catch (error) {
       console.error("GetUsers error:", error);
       res.status(500).json({ success: false, message: "Failed to fetch users" });
+    }
+  },
+
+  // POST /api/auth/users (Admin only - create new Call Center user or Admin)
+  async createUser(req, res) {
+    try {
+      const { name, email, username, password, role, phone, wedding_id, assigned_weddings } = req.body;
+      const userIdentifier = email || username;
+
+      if (!name || !userIdentifier || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Name, email/username, and password are required",
+        });
+      }
+
+      // Check if user already exists
+      const existing = await UserModel.findByIdentifier(userIdentifier);
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: `A user with email or username "${userIdentifier}" already exists`,
+        });
+      }
+
+      const created = await UserModel.create({
+        name: name.trim(),
+        email: userIdentifier.trim(),
+        password: password.trim(),
+        role: role || "call_center",
+        phone: phone ? String(phone).trim() : null,
+        wedding_id: wedding_id || "all",
+        assigned_weddings: Array.isArray(assigned_weddings) ? assigned_weddings : [wedding_id || "all"],
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Call center user "${created.name}" created successfully`,
+        data: created,
+      });
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to create user account",
+        error: error.message,
+      });
+    }
+  },
+
+  // PUT /api/auth/users/:id (Admin only - update user or assignment)
+  async updateUser(req, res) {
+    try {
+      const { id } = req.params;
+      const { name, email, username, password, role, phone, wedding_id, assigned_weddings } = req.body;
+
+      const user = await UserModel.findById(id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      const updated = await UserModel.update(id, {
+        name,
+        email: email || username,
+        password,
+        role,
+        phone,
+        wedding_id,
+        assigned_weddings,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: `User "${updated.name}" updated successfully`,
+        data: updated,
+      });
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update user account",
+        error: error.message,
+      });
+    }
+  },
+
+  // DELETE /api/auth/users/:id (Admin only)
+  async deleteUser(req, res) {
+    try {
+      const { id } = req.params;
+      await UserModel.delete(id);
+      res.status(200).json({
+        success: true,
+        message: "User account deleted successfully",
+      });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to delete user account",
+      });
     }
   },
 

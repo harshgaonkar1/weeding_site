@@ -12,7 +12,18 @@ export const weddingController = {
   // GET /api/weddings
   async getWeddings(req, res) {
     try {
-      const weddings = await WeddingModel.getAll();
+      let weddings = await WeddingModel.getAll();
+
+      // Role and wedding scoping for call center & marriage clients
+      const userRole = (req.headers["x-user-role"] || req.query.role || "").toLowerCase();
+      const userWeddingId = req.headers["x-user-wedding-id"] || req.query.wedding_id;
+
+      if (userRole === "call_center" && userWeddingId && userWeddingId !== "all") {
+        weddings = weddings.filter((w) => w.id === userWeddingId);
+      } else if (userRole === "marriage_client" && userWeddingId) {
+        weddings = weddings.filter((w) => w.id === userWeddingId);
+      }
+
       res.status(200).json({
         success: true,
         count: weddings.length,

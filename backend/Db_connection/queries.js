@@ -203,6 +203,22 @@ export const query = async (text, params = []) => {
     return formatResult(new Array(affected).fill({ id }));
   }
 
+  if (lowerSql.startsWith("delete from users")) {
+    const id = params[0];
+    const initialLen = store.users.length;
+    store.users = store.users.filter((u) => u.id !== id);
+
+    if (supabase) {
+      try {
+        Promise.resolve(supabase.from("users").delete().eq("id", id)).catch(() => {});
+      } catch (err) {
+        console.warn("Supabase user delete notice:", err.message);
+      }
+    }
+    const affected = Math.max(1, initialLen - store.users.length);
+    return formatResult(new Array(affected).fill({ id }));
+  }
+
   // ============================================================
   // B. INSERT OPERATIONS
   // ============================================================

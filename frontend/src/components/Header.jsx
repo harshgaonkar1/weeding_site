@@ -10,6 +10,7 @@ import {
   UserCheck,
   LogIn,
   Menu,
+  Headphones,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -20,6 +21,7 @@ export default function Header({
   selectedWedding,
   weddings = [],
   onOpenMobileNav,
+  onOpenCallCenterModal,
 }) {
   const {
     user,
@@ -281,6 +283,20 @@ export default function Header({
                     </span>
                   </div>
                 </div>
+
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      if (onOpenCallCenterModal) onOpenCallCenterModal();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[#5c1322] hover:bg-[#faf7f2] transition-colors cursor-pointer"
+                  >
+                    <Headphones className="w-3.5 h-3.5 text-[#5c1322]" />
+                    <span>Call Center Team</span>
+                  </button>
+                )}
 
                 <button
                   type="button"

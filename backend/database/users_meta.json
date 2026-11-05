@@ -1,0 +1,20 @@
+{
+  "user_admin_01": {
+    "wedding_id": "all",
+    "assigned_weddings": [
+      "all"
+    ]
+  },
+  "user_agent_01": {
+    "wedding_id": "all",
+    "assigned_weddings": [
+      "all"
+    ]
+  },
+  "callcenter@emitly.com": {
+    "wedding_id": "all",
+    "assigned_weddings": [
+      "all"
+    ]
+  }
+}

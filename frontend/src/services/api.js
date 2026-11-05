@@ -24,15 +24,20 @@ export const DEFAULT_USERS = {
   },
 };
 
-export const getCurrentUserRole = () => {
+export const getCurrentAuthUser = () => {
   try {
     const raw = localStorage.getItem("manish_auth_user");
-    if (raw) {
-      const u = JSON.parse(raw);
-      return u?.role || null;
-    }
+    if (raw) return JSON.parse(raw);
   } catch (e) {}
   return null;
+};
+
+export const getCurrentUserRole = () => {
+  return getCurrentAuthUser()?.role || null;
+};
+
+export const getCurrentUserWeddingId = () => {
+  return getCurrentAuthUser()?.wedding_id || null;
 };
 
 // Initial seed / fallback weddings (Empty by default)
@@ -500,7 +505,18 @@ export const api = {
   // ------------------- WEDDINGS (MARRIAGE CARDS) -------------------
   async fetchWeddings() {
     try {
-      const res = await fetch(`${API_BASE_URL}/weddings`);
+      const headers = {
+        Accept: "application/json",
+        "x-user-role": getCurrentUserRole() || "admin",
+      };
+      const userWeddingId = getCurrentUserWeddingId();
+      if (userWeddingId) {
+        headers["x-user-wedding-id"] = userWeddingId;
+      }
+      const token = localStorage.getItem("manish_auth_token");
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/weddings`, { headers });
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
@@ -1580,6 +1596,149 @@ function syncAllGuestsToDatabase() {
         }
       });
     } catch (e) {}
+  },
+
+  // ============================================================
+  // USER MANAGEMENT & CALL CENTER ALLOCATION API
+  // ============================================================
+  async getUsers() {
+    try {
+      const token = localStorage.getItem("manish_auth_token") || "";
+      const headers = {
+        Accept: "application/json",
+        "x-user-role": getCurrentUserRole() || "admin",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/auth/users`, { headers });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          return json.data;
+        }
+      }
+    } catch (e) {
+      console.warn("GetUsers API notice:", e.message);
+    }
+
+    // Fallback: Default users + localStorage users
+    try {
+      const local = localStorage.getItem("manish_custom_users");
+      const customUsers = local ? JSON.parse(local) : [];
+      return [
+        { ...DEFAULT_USERS.admin, wedding_id: "all", assigned_wedding_name: "All Marriages" },
+        { ...DEFAULT_USERS.callCenter, wedding_id: "all", assigned_wedding_name: "All Marriages" },
+        ...customUsers,
+      ];
+    } catch (e) {
+      return [DEFAULT_USERS.admin, DEFAULT_USERS.callCenter];
+    }
+  },
+
+  async createUser(userData) {
+    try {
+      const token = localStorage.getItem("manish_auth_token") || "";
+      const headers = {
+        "Content-Type": "application/json",
+        "x-user-role": getCurrentUserRole() || "admin",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/auth/users`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(userData),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        return json.data;
+      }
+      throw new Error(json.message || "Failed to create user account");
+    } catch (e) {
+      // If server error or offline, fallback to local storage
+      const local = localStorage.getItem("manish_custom_users");
+      const customUsers = local ? JSON.parse(local) : [];
+      const newId = `user_${Date.now().toString(36)}`;
+      const newUser = {
+        id: newId,
+        name: userData.name,
+        email: userData.email || userData.username,
+        role: userData.role || "call_center",
+        phone: userData.phone || null,
+        wedding_id: userData.wedding_id || "all",
+        assigned_weddings: Array.isArray(userData.assigned_weddings) ? userData.assigned_weddings : [userData.wedding_id || "all"],
+        assigned_wedding_name: userData.assigned_wedding_name || (userData.wedding_id === "all" ? "All Marriages" : userData.wedding_id),
+        created_at: new Date().toISOString(),
+      };
+      customUsers.push(newUser);
+      localStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
+      return newUser;
+    }
+  },
+
+  async updateUser(id, updateData) {
+    try {
+      const token = localStorage.getItem("manish_auth_token") || "";
+      const headers = {
+        "Content-Type": "application/json",
+        "x-user-role": getCurrentUserRole() || "admin",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/auth/users/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(updateData),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        return json.data;
+      }
+      throw new Error(json.message || "Failed to update user account");
+    } catch (e) {
+      const local = localStorage.getItem("manish_custom_users");
+      if (local) {
+        let customUsers = JSON.parse(local);
+        const idx = customUsers.findIndex((u) => u.id === id);
+        if (idx >= 0) {
+          customUsers[idx] = { ...customUsers[idx], ...updateData };
+          localStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
+          return customUsers[idx];
+        }
+      }
+      return { id, ...updateData };
+    }
+  },
+
+  async deleteUser(id) {
+    try {
+      const token = localStorage.getItem("manish_auth_token") || "";
+      const headers = {
+        "x-user-role": getCurrentUserRole() || "admin",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/auth/users/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        return true;
+      }
+      throw new Error(json.message || "Failed to delete user");
+    } catch (e) {
+      const local = localStorage.getItem("manish_custom_users");
+      if (local) {
+        let customUsers = JSON.parse(local);
+        customUsers = customUsers.filter((u) => u.id !== id);
+        localStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
+      }
+      return true;
+    }
   },
 };
 
