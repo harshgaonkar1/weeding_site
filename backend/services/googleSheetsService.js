@@ -1388,6 +1388,144 @@ export const GoogleSheetsService = {
 
   },
 
+  // 9b. Update a single guest row in Google Sheet directly (fast in-place row update for call count, call status, notes, RSVP)
+  async updateGuestRowInSheet(weddingId, guestOrId) {
+    if (!weddingId || !guestOrId) {
+      return { success: false, message: "Missing weddingId or guest" };
+    }
+
+    const wedding = await WeddingModel.getById(weddingId);
+    if (!wedding) return { success: false, message: "Wedding not found" };
+
+    const targetSheetUrl = wedding.google_sheet_url || wedding.google_sheet_id;
+    if (!targetSheetUrl || String(targetSheetUrl).startsWith("wed_")) {
+      return { success: false, message: "No active Google Sheet linked" };
+    }
+
+    const spreadsheetId = this.extractSheetId(targetSheetUrl);
+    if (!spreadsheetId) return { success: false, message: "Invalid Google Sheet ID" };
+
+    const guest = typeof guestOrId === "object" ? guestOrId : await GuestModel.getById(guestOrId);
+    if (!guest) return { success: false, message: "Guest not found" };
+
+    const { auth } = await this.getGoogleAuth();
+    const google = await getGoogleLib();
+    if (!auth || !google) {
+      return { success: false, message: "Google API not authenticated" };
+    }
+
+    try {
+      const sheets = google.sheets({ version: "v4", auth });
+
+      // Inspect spreadsheet tabs to target the correct tab (e.g. Groom tab vs Bride tab)
+      const metaRes = await sheets.spreadsheets.get({ spreadsheetId });
+      const sheetsList = metaRes.data.sheets || [];
+      if (sheetsList.length === 0) {
+        return { success: false, message: "No sheets found in document" };
+      }
+
+      const isBrideGuest = (guest.side || "").toLowerCase() === "bride";
+      let targetTab = null;
+
+      if (isBrideGuest) {
+        targetTab = sheetsList.find((s) => {
+          const t = (s.properties?.title || "").toLowerCase();
+          return t.includes("bride") || t.includes("ladki");
+        });
+      } else {
+        targetTab = sheetsList.find((s) => {
+          const t = (s.properties?.title || "").toLowerCase();
+          return t.includes("groom") || t.includes("ladka") || t.includes("ladke");
+        });
+      }
+
+      if (!targetTab) {
+        targetTab = sheetsList[0];
+      }
+
+      const tabTitle = targetTab.properties?.title || "Sheet1";
+
+      // Fetch Columns A to D to find the row index
+      const valRes = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `'${tabTitle}'!A:D`,
+      });
+
+      const rows = valRes.data.values || [];
+      const searchSrNo = guest.sr_no ? String(guest.sr_no).trim() : null;
+      const searchName = guest.guest_name ? String(guest.guest_name).toLowerCase().trim() : "";
+      const searchContact = guest.contact ? String(guest.contact).replace(/[^0-9]/g, "") : "";
+
+      let targetRowIndex = -1;
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i] || [];
+        const colA = String(row[0] || "").trim();
+        const colB = String(row[1] || "").toLowerCase().trim();
+        const colC = String(row[2] || "").replace(/[^0-9]/g, "");
+
+        if (
+          (searchName && colB === searchName) ||
+          (searchSrNo && colA === searchSrNo && (!colB || colB.includes(searchName) || searchName.includes(colB))) ||
+          (searchContact && searchContact.length >= 7 && (colC === searchContact || colC.includes(searchContact)))
+        ) {
+          targetRowIndex = i;
+          break;
+        }
+      }
+
+      const formatGuestRow = (g) => [
+        g.sr_no || "",
+        g.guest_name || "",
+        g.contact || "",
+        g.side || "Groom",
+        g.relation || "",
+        g.rsvp_status || "Confirmed",
+        g.id_card_received || "No",
+        g.arrival_date || "",
+        g.arrival_time || "",
+        g.arrival_location || "",
+        g.arrival_flight_train_no || "",
+        g.departure_date || "",
+        g.departure_time || "",
+        g.departure_location || "",
+        g.departure_flight_train_no || "",
+        g.special_request || "",
+        g.call_status || (Number(g.call_count) > 0 ? "Connected" : "Not Called"),
+        g.call_count !== undefined && !isNaN(Number(g.call_count)) ? Number(g.call_count) : 0,
+        g.last_call_summary || "",
+      ];
+
+      if (targetRowIndex !== -1) {
+        const sheetRowNum = targetRowIndex + 1; // 1-indexed row number in Google Sheets
+        const fullRow = formatGuestRow(guest);
+
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `'${tabTitle}'!A${sheetRowNum}:S${sheetRowNum}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [fullRow] },
+        });
+
+        console.log(`✅ In-place updated guest '${guest.guest_name}' (call_count: ${guest.call_count}) in Google Sheet '${tabTitle}' at Row ${sheetRowNum}`);
+        return { success: true, updatedRow: sheetRowNum, tabTitle };
+      } else {
+        // If not found in tab, append as new row
+        const fullRow = formatGuestRow(guest);
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `'${tabTitle}'!A:S`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [fullRow] },
+        });
+        console.log(`✅ Appended guest '${guest.guest_name}' to Google Sheet '${tabTitle}'`);
+        return { success: true, appended: true, tabTitle };
+      }
+    } catch (err) {
+      console.warn("⚠️ Error updating single guest row in Google Sheet:", err.message);
+      return this.pushGuestsToGoogleSheet(weddingId, targetSheetUrl).catch(() => {});
+    }
+  },
+
   // 9d. Delete exact guest row from Google Sheet using spreadsheets.batchUpdate & deleteDimension
   async deleteGuestRowFromSheet(weddingId, guestOrId) {
     if (!weddingId || !guestOrId) {

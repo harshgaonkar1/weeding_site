@@ -1,5 +1,6 @@
 import { CallLogModel } from "../models/callLogModel.js";
 import { GuestModel } from "../models/guestModel.js";
+import { GoogleSheetsService } from "../services/googleSheetsService.js";
 import { broadcastDataChange } from "../socket/chatSocket.js";
 
 export const callLogController = {
@@ -68,10 +69,17 @@ export const callLogController = {
       });
 
       const updatedGuest = await GuestModel.getById(guest_id);
+      const targetWId = wedding_id || updatedGuest?.wedding_id;
+
+      // Real-time synchronization of call count & notes to linked Google Sheet
+      if (targetWId && updatedGuest) {
+        GoogleSheetsService.updateGuestRowInSheet(targetWId, updatedGuest).catch((e) =>
+          console.warn("Auto Google Sheet sync note on call log create:", e.message)
+        );
+      }
 
       // Broadcast WebSocket mutation events so other users/call-desks update live without polling
       const io = req.app.get("io");
-      const targetWId = wedding_id || updatedGuest?.wedding_id;
       broadcastDataChange(io, {
         event: "call_logs_updated",
         weddingId: targetWId,
@@ -125,23 +133,34 @@ export const callLogController = {
         });
       }
 
+      const updatedGuest = await GuestModel.getById(updated.guest_id);
+      const targetWId = updated?.wedding_id || updatedGuest?.wedding_id;
+
+      // Sync updated notes/outcome to Google Sheet
+      if (targetWId && updatedGuest) {
+        GoogleSheetsService.updateGuestRowInSheet(targetWId, updatedGuest).catch((e) =>
+          console.warn("Auto Google Sheet sync note on call log update:", e.message)
+        );
+      }
+
       // Broadcast WebSocket mutation events
       const io = req.app.get("io");
       broadcastDataChange(io, {
         event: "call_logs_updated",
-        weddingId: updated?.wedding_id,
-        payload: { action: "update", log: updated },
+        weddingId: targetWId,
+        payload: { action: "update", log: updated, guest: updatedGuest },
       });
       broadcastDataChange(io, {
         event: "guests_updated",
-        weddingId: updated?.wedding_id,
-        payload: { action: "call_log_updated" },
+        weddingId: targetWId,
+        payload: { action: "call_log_updated", guest: updatedGuest },
       });
 
       res.status(200).json({
         success: true,
         message: "Call log notes updated successfully",
         data: updated,
+        guest: updatedGuest,
       });
     } catch (error) {
       console.error("Error updating call log:", error);
@@ -157,6 +176,7 @@ export const callLogController = {
   async deleteCallLog(req, res) {
     try {
       const { id } = req.params;
+      const log = await CallLogModel.getById(id);
       const success = await CallLogModel.delete(id);
       if (!success) {
         return res.status(404).json({
@@ -165,20 +185,33 @@ export const callLogController = {
         });
       }
 
+      const updatedGuest = log?.guest_id ? await GuestModel.getById(log.guest_id) : null;
+      const targetWId = log?.wedding_id || updatedGuest?.wedding_id;
+
+      // Sync recalculated count/status to Google Sheet
+      if (targetWId && updatedGuest) {
+        GoogleSheetsService.updateGuestRowInSheet(targetWId, updatedGuest).catch((e) =>
+          console.warn("Auto Google Sheet sync note on call log delete:", e.message)
+        );
+      }
+
       // Broadcast WebSocket mutation events
       const io = req.app.get("io");
       broadcastDataChange(io, {
         event: "call_logs_updated",
-        payload: { action: "delete", id },
+        weddingId: targetWId,
+        payload: { action: "delete", id, guest: updatedGuest },
       });
       broadcastDataChange(io, {
         event: "guests_updated",
-        payload: { action: "call_log_deleted" },
+        weddingId: targetWId,
+        payload: { action: "call_log_deleted", guest: updatedGuest },
       });
 
       res.status(200).json({
         success: true,
         message: "Call log entry removed and checkpoint recalculated",
+        guest: updatedGuest,
       });
     } catch (error) {
       console.error("Error deleting call log:", error);

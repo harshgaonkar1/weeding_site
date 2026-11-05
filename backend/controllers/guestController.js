@@ -210,7 +210,7 @@ export const guestController = {
 
       // Auto-sync updated guest to linked Google Sheet
       if (updatedGuest?.wedding_id) {
-        GoogleSheetsService.pushGuestsToGoogleSheet(updatedGuest.wedding_id).catch((e) =>
+        GoogleSheetsService.updateGuestRowInSheet(updatedGuest.wedding_id, updatedGuest).catch((e) =>
           console.warn("Auto Google Sheet sync note on update:", e.message)
         );
       }

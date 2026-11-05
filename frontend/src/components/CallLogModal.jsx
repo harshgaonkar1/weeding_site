@@ -169,7 +169,7 @@ export default function CallLogModal({
     setErrorMsg("");
 
     try {
-      await api.createCallLog({
+      const callResult = await api.createCallLog({
         guest_id: guest.id,
         wedding_id: guest.wedding_id || wedding?.id || "wedding_01",
         agent_id: user?.id,
@@ -180,6 +180,15 @@ export default function CallLogModal({
         update_rsvp: canEditGuests ? (updateRsvp || null) : null,
       });
 
+      const updatedGuestRecord = callResult?.guest || {
+        ...guest,
+        call_count: nextCallNumber,
+        call_status: outcome,
+        last_called_at: new Date().toISOString(),
+        last_call_summary: summary.trim(),
+        ...(updateRsvp ? { rsvp_status: updateRsvp } : {}),
+      };
+
       setSuccessMsg(`✓ Call #${nextCallNumber} recorded!`);
       setTimeout(() => setSuccessMsg(""), 3000);
       setSummary("");
@@ -187,7 +196,7 @@ export default function CallLogModal({
       await loadLogs(guest.id);
 
       if (onCallLogged) {
-        onCallLogged();
+        onCallLogged(updatedGuestRecord);
       }
     } catch (err) {
       setErrorMsg(err.message || "Failed to save call");

@@ -950,6 +950,7 @@ export const api = {
   async createCallLog(logData) {
     let createdCallLog = null;
     let callNumber = 1;
+    let serverUpdatedGuest = null;
     try {
       const res = await fetch(`${API_BASE_URL}/call-logs`, {
         method: "POST",
@@ -961,6 +962,7 @@ export const api = {
         if (json.success) {
           createdCallLog = json.data;
           callNumber = json.data?.call_number || 1;
+          serverUpdatedGuest = json.guest || null;
         }
       }
     } catch (e) { }
@@ -1003,7 +1005,7 @@ export const api = {
       setCachedGuests(guests);
     }
 
-    return { success: true, data: createdCallLog };
+    return { success: true, data: createdCallLog, guest: serverUpdatedGuest };
   },
 
   async updateCallLog(id, logData, guestId) {

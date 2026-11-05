@@ -323,6 +323,11 @@ export default function Hero() {
       const currentId = activeWeddingRef.current;
       // Only refresh if mutation belongs to current wedding or viewing all
       if (!eventWeddingId || !currentId || currentId === "all" || eventWeddingId === currentId) {
+        if (payload?.guest) {
+          setGuests((prev) =>
+            prev.map((g) => (g.id === payload.guest.id ? { ...g, ...payload.guest } : g))
+          );
+        }
         if (guestUpdateTimer) clearTimeout(guestUpdateTimer);
         guestUpdateTimer = setTimeout(() => {
           loadGuests();
@@ -338,6 +343,11 @@ export default function Hero() {
       const eventWeddingId = payload?.wedding_id;
       const currentId = activeWeddingRef.current;
       if (!eventWeddingId || !currentId || currentId === "all" || eventWeddingId === currentId) {
+        if (payload?.guest) {
+          setGuests((prev) =>
+            prev.map((g) => (g.id === payload.guest.id ? { ...g, ...payload.guest } : g))
+          );
+        }
         if (guestUpdateTimer) clearTimeout(guestUpdateTimer);
         guestUpdateTimer = setTimeout(() => {
           loadGuests();
@@ -636,8 +646,17 @@ export default function Hero() {
     }
   };
 
-  const handleCallLogged = async () => {
-    showToast("Call Checkpoint & Summary saved!");
+  const handleCallLogged = async (updatedGuest) => {
+    showToast("✓ Call checkpoint recorded & synchronized with Google Sheets!");
+    if (updatedGuest && updatedGuest.id) {
+      setGuests((prev) =>
+        prev.map((g) => (g.id === updatedGuest.id ? { ...g, ...updatedGuest } : g))
+      );
+      setStats((prev) => {
+        const nextList = guests.map((g) => (g.id === updatedGuest.id ? { ...g, ...updatedGuest } : g));
+        return calculateStatsFromList(nextList);
+      });
+    }
     await loadGuests();
   };
 
