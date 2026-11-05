@@ -28,7 +28,7 @@ export const getCurrentAuthUser = () => {
   try {
     const raw = localStorage.getItem("manish_auth_user");
     if (raw) return JSON.parse(raw);
-  } catch (e) {}
+  } catch (e) { }
   return null;
 };
 
@@ -66,8 +66,14 @@ const sanitizeWeddingFrontend = (w) => {
 const getCachedWeddings = () => {
   try {
     const cached = localStorage.getItem("manish_weddings_data");
-    const weddingList = (cached ? JSON.parse(cached) : INITIAL_FALLBACK_WEDDINGS).map(sanitizeWeddingFrontend);
+    let weddingList = (cached ? JSON.parse(cached) : INITIAL_FALLBACK_WEDDINGS).map(sanitizeWeddingFrontend);
     const guests = getCachedGuests();
+
+    const role = getCurrentUserRole();
+    const userWeddingId = getCurrentUserWeddingId();
+    if ((role === "call_center" || role === "marriage_client") && userWeddingId && userWeddingId !== "all") {
+      weddingList = weddingList.filter((w) => w.id === userWeddingId);
+    }
 
     return weddingList.map((w) => {
       const wGuests = guests.filter((g) => g.wedding_id === w.id);
@@ -153,9 +159,9 @@ const setCachedGuests = (guests) => {
       // preserve guests in cache without breaking local storage:
       const sanitized = Array.isArray(guests)
         ? guests.map((g) => ({
-            ...sanitizeGuestRecord(g),
-            id_card_copy: g.id_card_copy && g.id_card_copy.length > 50000 ? g.id_card_copy.slice(0, 100) : g.id_card_copy,
-          }))
+          ...sanitizeGuestRecord(g),
+          id_card_copy: g.id_card_copy && g.id_card_copy.length > 50000 ? g.id_card_copy.slice(0, 100) : g.id_card_copy,
+        }))
         : [];
       localStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
     } catch (e2) { }
@@ -505,11 +511,17 @@ export const api = {
   // ------------------- WEDDINGS (MARRIAGE CARDS) -------------------
   async fetchWeddings() {
     try {
+      const authUser = getCurrentAuthUser();
+      const userRole = getCurrentUserRole() || "admin";
+      const userWeddingId = getCurrentUserWeddingId();
+
       const headers = {
         Accept: "application/json",
-        "x-user-role": getCurrentUserRole() || "admin",
+        "x-user-role": userRole,
       };
-      const userWeddingId = getCurrentUserWeddingId();
+      if (authUser?.id) {
+        headers["x-user-id"] = authUser.id;
+      }
       if (userWeddingId) {
         headers["x-user-wedding-id"] = userWeddingId;
       }
@@ -520,8 +532,12 @@ export const api = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          const sanitized = json.data.map(sanitizeWeddingFrontend);
-          setCachedWeddings(sanitized);
+          let sanitized = json.data.map(sanitizeWeddingFrontend);
+          if ((userRole === "call_center" || userRole === "marriage_client") && userWeddingId && userWeddingId !== "all") {
+            sanitized = sanitized.filter((w) => w.id === userWeddingId);
+          } else if (userRole === "admin") {
+            setCachedWeddings(sanitized);
+          }
           return sanitized;
         }
       }
@@ -612,7 +628,7 @@ export const api = {
       if (savedSel === id) {
         localStorage.removeItem("manish_selected_wedding_id");
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // 2. Call backend endpoint to purge database store & Google Sheet
     try {
@@ -689,7 +705,16 @@ export const api = {
       if (callStatus && callStatus !== "All") params.append("callStatus", callStatus);
       if (callAttempts && callAttempts !== "All") params.append("callAttempts", callAttempts);
 
-      const res = await fetch(`${API_BASE_URL}/guests?${params.toString()}`);
+      const authUser = getCurrentAuthUser();
+      const userRole = getCurrentUserRole() || "admin";
+      const userWeddingId = getCurrentUserWeddingId();
+      const headers = {
+        "x-user-role": userRole,
+      };
+      if (authUser?.id) headers["x-user-id"] = authUser.id;
+      if (userWeddingId) headers["x-user-wedding-id"] = userWeddingId;
+
+      const res = await fetch(`${API_BASE_URL}/guests?${params.toString()}`, { headers });
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
@@ -756,8 +781,17 @@ export const api = {
 
   async fetchStats(weddingId = "all") {
     try {
+      const authUser = getCurrentAuthUser();
+      const userRole = getCurrentUserRole() || "admin";
+      const userWeddingId = getCurrentUserWeddingId();
+      const headers = {
+        "x-user-role": userRole,
+      };
+      if (authUser?.id) headers["x-user-id"] = authUser.id;
+      if (userWeddingId) headers["x-user-wedding-id"] = userWeddingId;
+
       const params = weddingId && weddingId !== "all" ? `?weddingId=${weddingId}` : "";
-      const res = await fetch(`${API_BASE_URL}/guests/stats${params}`);
+      const res = await fetch(`${API_BASE_URL}/guests/stats${params}`, { headers });
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) return json.data;
@@ -782,7 +816,7 @@ export const api = {
       call_status: guestData.call_status && isNaN(Number(guestData.call_status)) ? guestData.call_status : "Not Called",
       last_call_summary:
         guestData.last_call_summary &&
-        guestData.last_call_summary.trim().toLowerCase() !== (guestData.guest_name || "").trim().toLowerCase()
+          guestData.last_call_summary.trim().toLowerCase() !== (guestData.guest_name || "").trim().toLowerCase()
           ? guestData.last_call_summary
           : null,
     };
@@ -1383,10 +1417,10 @@ function syncAllGuestsToDatabase() {
         const rawList = Array.isArray(json)
           ? json
           : Array.isArray(json?.data)
-          ? json.data
-          : Array.isArray(json?.messages)
-          ? json.messages
-          : null;
+            ? json.data
+            : Array.isArray(json?.messages)
+              ? json.messages
+              : null;
 
         if (Array.isArray(rawList)) {
           const unique = [];
@@ -1402,7 +1436,7 @@ function syncAllGuestsToDatabase() {
           try {
             localStorage.setItem(`cached_messages_${cleanId}`, JSON.stringify(unique));
             localStorage.setItem(`cached_messages_${targetId}`, JSON.stringify(unique));
-          } catch (e) {}
+          } catch (e) { }
 
           return unique;
         }
@@ -1434,7 +1468,7 @@ function syncAllGuestsToDatabase() {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return [];
   },
@@ -1490,7 +1524,7 @@ function syncAllGuestsToDatabase() {
           try {
             const local = localStorage.getItem(`cached_messages_${safeWeddingId}`);
             if (local) list = JSON.parse(local);
-          } catch (e) {}
+          } catch (e) { }
 
           const seen = new Set(list.map((m) => m.id));
           if (!seen.has(json.data.id)) {
@@ -1502,7 +1536,7 @@ function syncAllGuestsToDatabase() {
           }
           try {
             localStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
-          } catch (e) {}
+          } catch (e) { }
         }
         return json;
       }
@@ -1526,7 +1560,7 @@ function syncAllGuestsToDatabase() {
     try {
       const local = localStorage.getItem(`cached_messages_${safeWeddingId}`);
       if (local) list = JSON.parse(local);
-    } catch (e) {}
+    } catch (e) { }
 
     // Avoid duplicate insertions
     const isDuplicate = list.some(
@@ -1536,7 +1570,7 @@ function syncAllGuestsToDatabase() {
       list.push(newMsg);
       try {
         localStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     return { success: true, data: newMsg };
@@ -1571,7 +1605,7 @@ function syncAllGuestsToDatabase() {
         .catch(() => {
           if (timeoutId) clearTimeout(timeoutId);
         });
-    } catch (e) {}
+    } catch (e) { }
 
     // 2. Update local storage cache for all possible key variants
     try {
@@ -1592,10 +1626,10 @@ function syncAllGuestsToDatabase() {
               return m;
             });
             localStorage.setItem(key, JSON.stringify(msgs));
-          } catch (err) {}
+          } catch (err) { }
         }
       });
-    } catch (e) {}
+    } catch (e) { }
   },
 
   // ============================================================

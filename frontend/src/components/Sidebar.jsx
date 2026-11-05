@@ -42,6 +42,7 @@ export default function Sidebar({
     setIsLoginModalOpen,
     setIsAdminPasswordModalOpen,
   } = useAuth();
+  const isScopedCaller = isCallCenter && user?.wedding_id && user.wedding_id !== "all";
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
 
   const closeMobile = () => {
@@ -138,12 +139,14 @@ export default function Sidebar({
         <div className="relative">
           <div
             onClick={() => {
-              if (!isMarriageClient) {
+              if (!isMarriageClient && !isScopedCaller) {
                 setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen);
               }
             }}
             className={`bg-[#f8fafc] border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between transition-all group select-none ${
-              isMarriageClient ? "cursor-default ring-1 ring-rose-200/50" : "hover:bg-[#f1f5f9] cursor-pointer hover:shadow-xs"
+              isMarriageClient || isScopedCaller
+                ? "cursor-default ring-1 ring-[#E5DAC8]/70"
+                : "hover:bg-[#f1f5f9] cursor-pointer hover:shadow-xs"
             }`}
           >
             <div className="flex items-center gap-2.5 overflow-hidden">
@@ -163,7 +166,7 @@ export default function Sidebar({
                 </p>
               </div>
             </div>
-            {!isMarriageClient && (
+            {!isMarriageClient && !isScopedCaller && (
               <ChevronDown
                 className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
                   isWorkspaceDropdownOpen ? "rotate-180 text-slate-700" : ""
@@ -172,8 +175,8 @@ export default function Sidebar({
             )}
           </div>
 
-          {/* Workspace Switcher Menu (Only accessible for Admin and Call Center) */}
-          {!isMarriageClient && isWorkspaceDropdownOpen && (
+          {/* Workspace Switcher Menu (Only accessible for Admin and Global Call Center) */}
+          {!isMarriageClient && !isScopedCaller && isWorkspaceDropdownOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-30 space-y-1 animate-fadeIn">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">
                 Select Wedding Workspace
@@ -255,8 +258,12 @@ export default function Sidebar({
           {!isMarriageClient && (
             <button
               onClick={() => {
-                onSelectWedding(null);
-                setActiveTab("weddings");
+                if (isScopedCaller) {
+                  setActiveTab("weddings");
+                } else {
+                  onSelectWedding(null);
+                  setActiveTab("weddings");
+                }
               }}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer ${
                 activeTab === "weddings"
@@ -266,7 +273,7 @@ export default function Sidebar({
             >
               <div className="flex items-center gap-3">
                 <Heart className={`w-4 h-4 stroke-[2.2] ${activeTab === "weddings" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
-                <span>Marriage Cards</span>
+                <span>{isScopedCaller ? "Assigned Marriage" : "Marriage Cards"}</span>
               </div>
               <span
                 className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${

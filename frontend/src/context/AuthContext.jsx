@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api, DEFAULT_USERS } from "../services/api";
+import { getSocket } from "../services/socket";
 
 const AuthContext = createContext(null);
 
@@ -43,6 +44,57 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+  // Keep Call Center user assignment strictly up-to-date with backend DB
+  useEffect(() => {
+    if (user?.id && user?.role === "call_center") {
+      api
+        .getMe(user.id)
+        .then((fresh) => {
+          if (
+            fresh &&
+            (fresh.wedding_id !== user.wedding_id ||
+              fresh.assigned_wedding_name !== user.assigned_wedding_name)
+          ) {
+            setUser((prev) => ({
+              ...prev,
+              ...fresh,
+            }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user?.id]);
+
+  // Listen for real-time user reassignment events from admin
+  useEffect(() => {
+    const handleDataChanged = (payload) => {
+      if (!payload) return;
+      if (
+        (payload.action === "user_updated" || payload.type === "user_updated") &&
+        user?.id &&
+        payload.userId === user.id
+      ) {
+        setUser((prev) => ({
+          ...prev,
+          ...(payload.user || {}),
+          wedding_id: payload.wedding_id || payload.user?.wedding_id || prev?.wedding_id,
+          assigned_wedding_name:
+            payload.user?.assigned_wedding_name || prev?.assigned_wedding_name,
+        }));
+      }
+    };
+
+    try {
+      const socket = getSocket();
+      if (socket) {
+        socket.on("data_changed", handleDataChanged);
+        return () => {
+          socket.off("data_changed", handleDataChanged);
+        };
+      }
+    } catch (e) {}
+  }, [user?.id]);
+
   const login = async (identifier, password) => {
     const result = await api.login(identifier, password);
     if (result && result.user) {
@@ -66,7 +118,16 @@ export const AuthProvider = ({ children }) => {
       setIsLoginModalOpen(false);
       setIsAdminPasswordModalOpen(false);
     } else if (roleType === "call_center") {
-      setUser(DEFAULT_USERS.callCenter);
+      const targetWId = wedding?.id || DEFAULT_USERS.callCenter.wedding_id || "all";
+      const callerUser = {
+        ...DEFAULT_USERS.callCenter,
+        wedding_id: targetWId,
+        assigned_weddings: [targetWId],
+        assigned_wedding_name: wedding
+          ? `${wedding.groom_name} & ${wedding.bride_name}`
+          : DEFAULT_USERS.callCenter.assigned_wedding_name || "All Marriages",
+      };
+      setUser(callerUser);
       setToken(`mock_callcenter_${Date.now()}`);
       setIsLoginModalOpen(false);
       setIsAdminPasswordModalOpen(false);

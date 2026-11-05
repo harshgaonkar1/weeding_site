@@ -1,6 +1,7 @@
 import { GuestModel } from "../models/guestModel.js";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
 import { broadcastDataChange } from "../socket/chatSocket.js";
+import { loadUsersMeta } from "../models/userModel.js";
 
 // Helper for CSV escaping
 const escapeCsvField = (field) => {
@@ -15,8 +16,29 @@ export const guestController = {
     try {
       const { weddingId, side, search, rsvp, idCard, callStatus, callAttempts, sortBy, order } =
         req.query;
+
+      let targetWeddingId = weddingId;
+      const userRole = (req.headers["x-user-role"] || req.query.role || "").toLowerCase();
+      let userWeddingId = req.headers["x-user-wedding-id"] || req.query.wedding_id;
+      const userId = req.headers["x-user-id"] || req.query.user_id;
+
+      if (userRole === "call_center") {
+        if (userId) {
+          try {
+            const meta = loadUsersMeta();
+            const userMeta = meta[userId] || {};
+            if (userMeta.wedding_id) userWeddingId = userMeta.wedding_id;
+          } catch (e) {}
+        }
+        if (userWeddingId && userWeddingId !== "all") {
+          targetWeddingId = userWeddingId;
+        }
+      } else if (userRole === "marriage_client" && userWeddingId) {
+        targetWeddingId = userWeddingId;
+      }
+
       const guests = await GuestModel.getAll({
-        weddingId,
+        weddingId: targetWeddingId,
         side,
         search,
         rsvp,
@@ -45,7 +67,28 @@ export const guestController = {
   async getStats(req, res) {
     try {
       const { weddingId } = req.query;
-      const stats = await GuestModel.getStatistics(weddingId);
+
+      let targetWeddingId = weddingId;
+      const userRole = (req.headers["x-user-role"] || req.query.role || "").toLowerCase();
+      let userWeddingId = req.headers["x-user-wedding-id"] || req.query.wedding_id;
+      const userId = req.headers["x-user-id"] || req.query.user_id;
+
+      if (userRole === "call_center") {
+        if (userId) {
+          try {
+            const meta = loadUsersMeta();
+            const userMeta = meta[userId] || {};
+            if (userMeta.wedding_id) userWeddingId = userMeta.wedding_id;
+          } catch (e) {}
+        }
+        if (userWeddingId && userWeddingId !== "all") {
+          targetWeddingId = userWeddingId;
+        }
+      } else if (userRole === "marriage_client" && userWeddingId) {
+        targetWeddingId = userWeddingId;
+      }
+
+      const stats = await GuestModel.getStatistics(targetWeddingId);
       res.status(200).json({
         success: true,
         data: stats,

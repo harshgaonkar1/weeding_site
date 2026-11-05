@@ -164,7 +164,7 @@ export default function Hero() {
     try {
       const data = await api.fetchWeddings();
       setWeddings(data || []);
-      if (!isMarriageClient && Array.isArray(data) && data.length > 0) {
+      if (!isMarriageClient && (!isCallCenter || !user?.wedding_id || user.wedding_id === "all") && Array.isArray(data) && data.length > 0) {
         const savedId = localStorage.getItem("manish_selected_wedding_id");
         if (savedId) {
           const matched = data.find((w) => w.id === savedId);
@@ -180,7 +180,7 @@ export default function Hero() {
     } catch (e) {
       console.error("Error fetching weddings:", e);
     }
-  }, [isMarriageClient]);
+  }, [isMarriageClient, isCallCenter, user?.wedding_id]);
 
   useEffect(() => {
     if (selectedWedding?.id && selectedWedding.id !== "all") {
@@ -211,15 +211,59 @@ export default function Hero() {
     }
   }, [isMarriageClient, user?.wedding_id, user?.role, loadWeddings]);
 
-  // 1c. Handle Call Center Scoping & Auto-Selection to Assigned Marriage
+  // 1c. Strict Scoping: Compute visible weddings strictly based on caller/client assignment
+  const visibleWeddings = useMemo(() => {
+    if (isCallCenter && user?.wedding_id && user.wedding_id !== "all") {
+      const matched = weddings.filter((w) => w.id === user.wedding_id);
+      if (matched.length > 0) return matched;
+      if (selectedWedding && selectedWedding.id === user.wedding_id) return [selectedWedding];
+      if (user.assigned_wedding_name) {
+        const parts = user.assigned_wedding_name.split("&");
+        return [
+          {
+            id: user.wedding_id,
+            groom_name: parts[0]?.trim() || "Groom",
+            bride_name: parts[1]?.trim() || "Bride",
+            total_guests: 0,
+            confirmed_guests: 0,
+            wedding_date: user.wedding_date || "",
+            venue: user.venue || "",
+            city: user.city || "",
+            cover_theme: "emerald",
+          },
+        ];
+      }
+      return [];
+    }
+    if (isMarriageClient && user?.wedding_id) {
+      return weddings.filter((w) => w.id === user.wedding_id);
+    }
+    return weddings;
+  }, [weddings, isCallCenter, isMarriageClient, user?.wedding_id, user?.assigned_wedding_name, selectedWedding]);
+
+  // Handle Call Center Scoping & Auto-Lock to Assigned Marriage
   useEffect(() => {
     if (isCallCenter && user?.wedding_id && user.wedding_id !== "all") {
-      const matched = weddings.find((w) => w.id === user.wedding_id);
+      const matched =
+        weddings.find((w) => w.id === user.wedding_id) ||
+        (user.assigned_wedding_name
+          ? {
+              id: user.wedding_id,
+              groom_name: user.assigned_wedding_name.split("&")[0]?.trim() || "Groom",
+              bride_name: user.assigned_wedding_name.split("&")[1]?.trim() || "Bride",
+              wedding_date: user.wedding_date || "",
+              venue: user.venue || "",
+              city: user.city || "",
+              cover_theme: "emerald",
+            }
+          : null);
+
       if (matched) {
         setSelectedWedding(matched);
       }
+      setActiveTab((prev) => (prev === "weddings" ? "directory" : prev));
     }
-  }, [isCallCenter, user?.wedding_id, weddings]);
+  }, [isCallCenter, user?.wedding_id, user?.assigned_wedding_name, weddings]);
 
   // 2. Load Guests & Stats (scoped strictly to selected wedding)
   const selectedWeddingId = selectedWedding ? selectedWedding.id : null;
@@ -369,10 +413,19 @@ export default function Hero() {
       }
     };
 
+    const handleDataChanged = (payload) => {
+      if (!payload) return;
+      if (payload.action === "user_updated" || payload.type === "user_updated") {
+        loadWeddings();
+        loadGuests();
+      }
+    };
+
     socket.on("connect", joinActiveRooms);
     socket.on("guests_updated", handleGuestsUpdated);
     socket.on("weddings_updated", handleWeddingsUpdated);
     socket.on("call_logs_updated", handleCallLogsUpdated);
+    socket.on("data_changed", handleDataChanged);
 
     return () => {
       if (guestUpdateTimer) clearTimeout(guestUpdateTimer);
@@ -380,12 +433,20 @@ export default function Hero() {
       socket.off("guests_updated", handleGuestsUpdated);
       socket.off("weddings_updated", handleWeddingsUpdated);
       socket.off("call_logs_updated", handleCallLogsUpdated);
+      socket.off("data_changed", handleDataChanged);
     };
   }, [selectedWeddingId, user?.role, user?.wedding_id, user?.name, loadGuests, loadWeddings]);
 
   // ------------------- WEDDING ACTIONS -------------------
   const handleSelectWedding = (wedding) => {
     if (wedding) {
+      if (isCallCenter && user?.wedding_id && user.wedding_id !== "all" && wedding.id !== user.wedding_id) {
+        showToast(
+          `Access restricted: You are assigned strictly to ${user.assigned_wedding_name || user.wedding_id}`,
+          "error"
+        );
+        return;
+      }
       activeWeddingRef.current = wedding.id;
       // Immediately reset guests and stats so no stale data from another marriage flashes
       setGuests([]);
@@ -400,6 +461,10 @@ export default function Hero() {
       setSelectedWedding(wedding);
       setActiveTab("directory");
     } else {
+      if (isCallCenter && user?.wedding_id && user.wedding_id !== "all") {
+        setActiveTab("weddings");
+        return;
+      }
       activeWeddingRef.current = null;
       setSelectedWedding(null);
       setGuests([]);
@@ -714,11 +779,11 @@ export default function Hero() {
       ? Math.max(...displayedGuests.map((g) => Number(g.sr_no) || 0)) + 1
       : 1;
 
-  const totalGlobalGuests = weddings.reduce(
+  const totalGlobalGuests = visibleWeddings.reduce(
     (acc, w) => acc + (w.total_guests || 0),
     0
   );
-  const totalGlobalConfirmed = weddings.reduce(
+  const totalGlobalConfirmed = visibleWeddings.reduce(
     (acc, w) => acc + (w.confirmed_guests || 0),
     0
   );
@@ -748,7 +813,7 @@ export default function Hero() {
               ? stats.totalRegistered ?? displayedGuests.length
               : totalGlobalGuests
           }
-          totalWeddingsCount={weddings.length}
+          totalWeddingsCount={visibleWeddings.length}
           activeTab={activeTab}
           setActiveTab={(tab) => {
             setActiveTab(tab);
@@ -763,7 +828,7 @@ export default function Hero() {
             handleOpenAddWeddingModal();
           }}
           selectedWedding={selectedWedding}
-          weddings={weddings}
+          weddings={visibleWeddings}
           onSelectWedding={(w) => {
             setIsMobileNavOpen(false);
             handleSelectWedding(w);
@@ -782,7 +847,7 @@ export default function Hero() {
             setSearchQuery={setSearchQuery}
             onOpenAddModal={handleOpenAddGuestModal}
             selectedWedding={selectedWedding}
-            weddings={weddings}
+            weddings={visibleWeddings}
             onOpenMobileNav={() => setIsMobileNavOpen(true)}
             onOpenCallCenterModal={() => setIsCallCenterModalOpen(true)}
           />
@@ -854,10 +919,19 @@ export default function Hero() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-                    Marriage Cards
+                    {isCallCenter && user?.wedding_id && user.wedding_id !== "all"
+                      ? "Assigned Marriage Desk"
+                      : "Marriage Cards"}
                   </h1>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Select a wedding to manage its guest directory, view client login credentials, and manage call center logs.
+                    {isCallCenter && user?.wedding_id && user.wedding_id !== "all"
+                      ? `Workspace assigned strictly to ${
+                          user.assigned_wedding_name ||
+                          (selectedWedding
+                            ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
+                            : "your assigned wedding")
+                        }. Only this wedding's guests and logs are displayed.`
+                      : "Select a wedding to manage its guest directory, view client login credentials, and manage call center logs."}
                   </p>
                 </div>
 
@@ -886,7 +960,7 @@ export default function Hero() {
 
               {/* Marriage Cards Grid */}
               <div ref={weddingGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
-                {weddings.map((wedding) => (
+                {visibleWeddings.map((wedding) => (
                   <WeddingCard
                     key={wedding.id}
                     wedding={wedding}
@@ -916,7 +990,7 @@ export default function Hero() {
               {/* Back to All Weddings Bar & Wedding Info */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="min-w-0">
-                  {!isMarriageClient && (
+                  {!isMarriageClient && (!isCallCenter || !user?.wedding_id || user.wedding_id === "all") ? (
                     <button
                       type="button"
                       onClick={() => handleSelectWedding(null)}
@@ -925,7 +999,12 @@ export default function Hero() {
                       <ArrowLeft className="w-3.5 h-3.5 text-[#FF6B5B]" />
                       <span>← All Weddings</span>
                     </button>
-                  )}
+                  ) : isCallCenter && user?.wedding_id && user.wedding_id !== "all" ? (
+                    <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-[#FF6B5B]" />
+                      <span>Assigned Marriage Workspace</span>
+                    </div>
+                  ) : null}
 
                   <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#14213D] tracking-tight flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <span className="truncate">

@@ -24,6 +24,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function CallCenterManagementModal({
   isOpen,
@@ -31,6 +32,7 @@ export default function CallCenterManagementModal({
   weddings = [],
   onUserUpdated,
 }) {
+  const { user: currentAuthUser, setUser: setAuthUser } = useAuth();
   const [activeTab, setActiveTab] = useState("team"); // 'team' | 'create'
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -202,6 +204,19 @@ export default function CallCenterManagementModal({
         assigned_wedding_name: newWeddingName,
       });
 
+      if (
+        currentAuthUser &&
+        (user.id === currentAuthUser.id ||
+          (user.email && user.email.toLowerCase() === currentAuthUser.email?.toLowerCase()))
+      ) {
+        setAuthUser((prev) => ({
+          ...prev,
+          wedding_id: newWeddingId,
+          assigned_weddings: [newWeddingId],
+          assigned_wedding_name: newWeddingName,
+        }));
+      }
+
       showNotification(`Assigned ${user.name} to ${newWeddingName}`);
       if (onUserUpdated) onUserUpdated();
     } catch (err) {
@@ -254,6 +269,23 @@ export default function CallCenterManagementModal({
       }
 
       await api.updateUser(editingUser.id, payload);
+
+      if (
+        currentAuthUser &&
+        (editingUser.id === currentAuthUser.id ||
+          (editingUser.email && editingUser.email.toLowerCase() === currentAuthUser.email?.toLowerCase()))
+      ) {
+        setAuthUser((prev) => ({
+          ...prev,
+          name: payload.name,
+          email: payload.email,
+          phone: payload.phone,
+          wedding_id: payload.wedding_id,
+          assigned_weddings: payload.assigned_weddings,
+          assigned_wedding_name: payload.assigned_wedding_name,
+        }));
+      }
+
       setEditingUser(null);
       await loadUsers();
       if (onUserUpdated) onUserUpdated();

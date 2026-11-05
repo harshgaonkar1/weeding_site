@@ -1,6 +1,7 @@
 import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
 import { MessageModel } from "../models/messageModel.js";
+import { UserModel, loadUsersMeta } from "../models/userModel.js";
 import { ExcelService } from "../services/excelService.js";
 import { GoogleSheetsService } from "../services/googleSheetsService.js";
 import { broadcastDataChange } from "../socket/chatSocket.js";
@@ -16,10 +17,23 @@ export const weddingController = {
 
       // Role and wedding scoping for call center & marriage clients
       const userRole = (req.headers["x-user-role"] || req.query.role || "").toLowerCase();
-      const userWeddingId = req.headers["x-user-wedding-id"] || req.query.wedding_id;
+      let userWeddingId = req.headers["x-user-wedding-id"] || req.query.wedding_id;
+      const userId = req.headers["x-user-id"] || req.query.user_id;
 
-      if (userRole === "call_center" && userWeddingId && userWeddingId !== "all") {
-        weddings = weddings.filter((w) => w.id === userWeddingId);
+      if (userRole === "call_center") {
+        if (userId) {
+          try {
+            const meta = loadUsersMeta();
+            const userMeta = meta[userId] || {};
+            if (userMeta.wedding_id) {
+              userWeddingId = userMeta.wedding_id;
+            }
+          } catch (e) {}
+        }
+
+        if (userWeddingId && userWeddingId !== "all") {
+          weddings = weddings.filter((w) => w.id === userWeddingId);
+        }
       } else if (userRole === "marriage_client" && userWeddingId) {
         weddings = weddings.filter((w) => w.id === userWeddingId);
       }
@@ -43,6 +57,34 @@ export const weddingController = {
   async getWeddingById(req, res) {
     try {
       const { id } = req.params;
+      const userRole = (req.headers["x-user-role"] || req.query.role || "").toLowerCase();
+      let userWeddingId = req.headers["x-user-wedding-id"] || req.query.wedding_id;
+      const userId = req.headers["x-user-id"] || req.query.user_id;
+
+      if (userRole === "call_center") {
+        if (userId) {
+          try {
+            const meta = loadUsersMeta();
+            const userMeta = meta[userId] || {};
+            if (userMeta.wedding_id) {
+              userWeddingId = userMeta.wedding_id;
+            }
+          } catch (e) {}
+        }
+
+        if (userWeddingId && userWeddingId !== "all" && id !== userWeddingId) {
+          return res.status(403).json({
+            success: false,
+            message: "Access restricted: You are assigned exclusively to a specific wedding event.",
+          });
+        }
+      } else if (userRole === "marriage_client" && userWeddingId && id !== userWeddingId) {
+        return res.status(403).json({
+          success: false,
+          message: "Access restricted: You may only view your own wedding portal.",
+        });
+      }
+
       const wedding = await WeddingModel.getById(id);
       if (!wedding) {
         return res.status(404).json({

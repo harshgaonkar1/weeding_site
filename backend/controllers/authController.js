@@ -1,5 +1,6 @@
 import { UserModel } from "../models/userModel.js";
 import { WeddingModel } from "../models/weddingModel.js";
+import { broadcastDataChange } from "../socket/chatSocket.js";
 
 export const authController = {
   // POST /api/auth/login
@@ -130,6 +131,14 @@ export const authController = {
         assigned_weddings: Array.isArray(assigned_weddings) ? assigned_weddings : [wedding_id || "all"],
       });
 
+      broadcastDataChange({
+        type: "user_created",
+        action: "user_created",
+        userId: created.id,
+        wedding_id: created.wedding_id,
+        user: created,
+      });
+
       res.status(201).json({
         success: true,
         message: `Call center user "${created.name}" created successfully`,
@@ -169,6 +178,14 @@ export const authController = {
         assigned_weddings,
       });
 
+      broadcastDataChange({
+        type: "user_updated",
+        action: "user_updated",
+        userId: id,
+        wedding_id: updated.wedding_id,
+        user: updated,
+      });
+
       res.status(200).json({
         success: true,
         message: `User "${updated.name}" updated successfully`,
@@ -189,6 +206,12 @@ export const authController = {
     try {
       const { id } = req.params;
       await UserModel.delete(id);
+      broadcastDataChange({
+        type: "user_deleted",
+        action: "user_deleted",
+        userId: id,
+      });
+
       res.status(200).json({
         success: true,
         message: "User account deleted successfully",
