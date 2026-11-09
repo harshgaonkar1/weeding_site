@@ -502,8 +502,8 @@ export default function RsvpAnalyticsView({
             </div>
 
             {/* SVG Pie Chart Canvas */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-4">
-              <div className="relative w-52 h-52 shrink-0">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 py-2 sm:py-4">
+              <div className="relative w-44 h-44 sm:w-52 sm:h-52 shrink-0 mx-auto sm:mx-0">
                 <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-sm">
                   {pieSlices.length === 0 ? (
                     <circle cx="100" cy="100" r="80" fill="#f1f5f9" />
@@ -640,8 +640,8 @@ export default function RsvpAnalyticsView({
             </div>
 
             {/* SVG Bubble Canvas */}
-            <div className="w-full h-56 sm:h-60 bg-gradient-to-b from-slate-50/70 to-slate-100/40 rounded-2xl border border-slate-100 flex items-center justify-center relative overflow-hidden">
-              <svg viewBox="0 0 380 250" className="w-full h-full">
+            <div className="w-full h-48 sm:h-60 bg-gradient-to-b from-slate-50/70 to-slate-100/40 rounded-2xl border border-slate-100 flex items-center justify-center relative overflow-hidden">
+              <svg viewBox="0 0 380 265" className="w-full h-full">
                 <defs>
                   {bubbles.map((b) => (
                     <linearGradient
