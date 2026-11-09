@@ -22,6 +22,29 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
+const getAirlineInfo = (flightNo = "") => {
+  const clean = (flightNo || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const code = clean.substring(0, 2);
+  switch (code) {
+    case "6E":
+      return { name: "IndiGo", color: "bg-blue-50 text-blue-700 border-blue-200" };
+    case "AI":
+      return { name: "Air India", color: "bg-red-50 text-red-700 border-red-200" };
+    case "UK":
+      return { name: "Vistara", color: "bg-purple-50 text-purple-700 border-purple-200" };
+    case "QP":
+      return { name: "Akasa Air", color: "bg-amber-50 text-amber-700 border-amber-200" };
+    case "SG":
+      return { name: "SpiceJet", color: "bg-orange-50 text-orange-700 border-orange-200" };
+    case "IX":
+      return { name: "Air India Express", color: "bg-rose-50 text-rose-700 border-rose-200" };
+    case "I5":
+      return { name: "AirAsia India", color: "bg-red-50 text-red-700 border-red-200" };
+    default:
+      return { name: "Flight", color: "bg-slate-100 text-slate-700 border-slate-200" };
+  }
+};
+
 export default function AnalyticsView({
   guests = [],
   wedding,
@@ -32,7 +55,8 @@ export default function AnalyticsView({
   onBack,
 }) {
   const [timeRange, setTimeRange] = useState("all"); // 'all', 'bride', 'groom'
-  const [hoveredArrivalPoint, setHoveredArrivalPoint] = useState(null);
+  const [flightLogisticsType, setFlightLogisticsType] = useState("arrival"); // 'arrival' | 'departure'
+  const [selectedFlight, setSelectedFlight] = useState(null);
 
   // Filter guests based on active side filter
   const filteredGuests = useMemo(() => {
@@ -80,89 +104,80 @@ export default function AnalyticsView({
   const calledThrice = filteredGuests.filter((g) => Number(g.call_count) >= 3).length;
   const calledNone = filteredGuests.filter((g) => !g.call_count || Number(g.call_count) === 0).length;
 
-  // Timeline / Date Aggregation for Line Graph
-  const dateMap = useMemo(() => {
-    const map = {};
+  // Flight Grouping & Passenger Influx Aggregation (Same Flight Distribution)
+  const flightData = useMemo(() => {
+    const isArrival = flightLogisticsType === "arrival";
+    const countsMap = {};
+    let totalTrackedPassengers = 0;
 
-    guests.forEach((g) => {
-      if (g.arrival_date) {
-        const d = g.arrival_date.trim();
-        if (!map[d]) map[d] = { date: d, arrivals: 0, departures: 0 };
-        map[d].arrivals += 1;
+    filteredGuests.forEach((g) => {
+      const flightRaw = isArrival ? g.arrival_flight_train_no : g.departure_flight_train_no;
+      if (!flightRaw || !flightRaw.trim()) return;
+
+      const flightKey = flightRaw.trim().toUpperCase();
+      if (!countsMap[flightKey]) {
+        countsMap[flightKey] = {
+          flightNumber: flightKey,
+          count: 0,
+          passengers: [],
+          dates: new Set(),
+          times: new Set(),
+          locations: new Set(),
+        };
       }
-      if (g.departure_date) {
-        const d = g.departure_date.trim();
-        if (!map[d]) map[d] = { date: d, arrivals: 0, departures: 0 };
-        map[d].departures += 1;
-      }
+
+      countsMap[flightKey].count += 1;
+      countsMap[flightKey].passengers.push(g);
+      const dateVal = isArrival ? g.arrival_date : g.departure_date;
+      const timeVal = isArrival ? g.arrival_time : g.departure_time;
+      const locVal = isArrival ? g.arrival_location : g.departure_location;
+      if (dateVal) countsMap[flightKey].dates.add(dateVal);
+      if (timeVal) countsMap[flightKey].times.add(timeVal);
+      if (locVal) countsMap[flightKey].locations.add(locVal);
+      totalTrackedPassengers += 1;
     });
 
-    // If no real dates entered yet, provide realistic preview timeline based on wedding date
-    const sorted = Object.values(map).sort((a, b) => new Date(a.date) - new Date(b.date));
-    if (sorted.length >= 2) return sorted;
+    let flights = Object.values(countsMap).map((f) => ({
+      flightNumber: f.flightNumber,
+      count: f.count,
+      passengers: f.passengers,
+      date: Array.from(f.dates)[0] || "",
+      time: Array.from(f.times)[0] || "",
+      location: Array.from(f.locations)[0] || "",
+    }));
 
-    const baseYear = wedding?.wedding_date ? new Date(wedding.wedding_date) : new Date(2026, 10, 28);
-    const mockDates = [];
-    for (let i = -2; i <= 2; i++) {
-      const d = new Date(baseYear);
-      d.setDate(baseYear.getDate() + i);
-      const str = d.toISOString().split("T")[0];
-      mockDates.push({
-        date: str,
-        arrivals: i === -1 ? Math.max(2, Math.round(totalGuests * 0.4)) : i === 0 ? Math.max(3, Math.round(totalGuests * 0.45)) : i === 1 ? 1 : 0,
-        departures: i === 1 ? Math.max(2, Math.round(totalGuests * 0.35)) : i === 2 ? Math.max(2, Math.round(totalGuests * 0.55)) : 0,
-      });
+    // If no real flight details entered yet in guests data, provide realistic preview data
+    if (flights.length === 0) {
+      const sampleArrivals = [
+        { flightNumber: "6E-2411", count: 18, date: "21/11/2026", time: "10:40 AM", location: "GOX (Mopa)" },
+        { flightNumber: "AI-682", count: 14, date: "21/11/2026", time: "12:15 PM", location: "GOX (Mopa)" },
+        { flightNumber: "QP-1414", count: 11, date: "21/11/2026", time: "02:30 PM", location: "GOI (Dabolim)" },
+        { flightNumber: "UK-815", count: 8, date: "22/11/2026", time: "09:15 AM", location: "GOX (Mopa)" },
+        { flightNumber: "6E-512", count: 6, date: "22/11/2026", time: "04:50 PM", location: "GOI (Dabolim)" },
+        { flightNumber: "SG-302", count: 4, date: "22/11/2026", time: "06:10 PM", location: "GOX (Mopa)" },
+      ];
+      const sampleDepartures = [
+        { flightNumber: "QP-1414", count: 19, date: "30/11/2026", time: "11:20 AM", location: "GOX (Mopa)" },
+        { flightNumber: "6E-2412", count: 15, date: "30/11/2026", time: "01:45 PM", location: "GOX (Mopa)" },
+        { flightNumber: "AI-683", count: 10, date: "30/11/2026", time: "04:10 PM", location: "GOI (Dabolim)" },
+        { flightNumber: "UK-816", count: 7, date: "01/12/2026", time: "10:30 AM", location: "GOX (Mopa)" },
+        { flightNumber: "SG-303", count: 5, date: "01/12/2026", time: "05:00 PM", location: "GOI (Dabolim)" },
+      ];
+      flights = isArrival ? sampleArrivals : sampleDepartures;
+      totalTrackedPassengers = flights.reduce((sum, f) => sum + f.count, 0);
     }
-    return mockDates;
-  }, [guests, wedding, totalGuests]);
 
-  // Max value for line chart scaling
-  const maxTimelineVal = useMemo(() => {
-    let max = 1;
-    dateMap.forEach((pt) => {
-      if (pt.arrivals > max) max = pt.arrivals;
-      if (pt.departures > max) max = pt.departures;
-    });
-    return Math.max(max + 2, 6);
-  }, [dateMap]);
+    // Sort descending: flight with largest group first
+    flights.sort((a, b) => b.count - a.count);
 
-  // SVG Line Chart Coordinate Generator
-  const chartWidth = 650;
-  const chartHeight = 220;
-  const paddingX = 40;
-  const paddingY = 30;
-  const innerW = chartWidth - paddingX * 2;
-  const innerH = chartHeight - paddingY * 2;
+    const maxCount = Math.max(...flights.map((f) => f.count), 1);
 
-  const pointsArrival = dateMap.map((pt, i) => {
-    const x = paddingX + (i / Math.max(dateMap.length - 1, 1)) * innerW;
-    const y = chartHeight - paddingY - (pt.arrivals / maxTimelineVal) * innerH;
-    return { x, y, ...pt };
-  });
-
-  const pointsDeparture = dateMap.map((pt, i) => {
-    const x = paddingX + (i / Math.max(dateMap.length - 1, 1)) * innerW;
-    const y = chartHeight - paddingY - (pt.departures / maxTimelineVal) * innerH;
-    return { x, y, ...pt };
-  });
-
-  const pathArrival = pointsArrival.reduce(
-    (acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`),
-    ""
-  );
-
-  const pathArrivalArea = pointsArrival.length > 0
-    ? `${pathArrival} L ${pointsArrival[pointsArrival.length - 1].x} ${chartHeight - paddingY} L ${pointsArrival[0].x} ${chartHeight - paddingY} Z`
-    : "";
-
-  const pathDeparture = pointsDeparture.reduce(
-    (acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`),
-    ""
-  );
-
-  const pathDepartureArea = pointsDeparture.length > 0
-    ? `${pathDeparture} L ${pointsDeparture[pointsDeparture.length - 1].x} ${chartHeight - paddingY} L ${pointsDeparture[0].x} ${chartHeight - paddingY} Z`
-    : "";
+    return {
+      flights,
+      totalTrackedPassengers,
+      maxCount,
+    };
+  }, [filteredGuests, flightLogisticsType]);
 
   // Food / Special Request breakdown
   const vegCount = filteredGuests.filter((g) => (g.special_request || "").toLowerCase().includes("veg") && !(g.special_request || "").toLowerCase().includes("non-veg")).length;
@@ -622,176 +637,268 @@ export default function AnalyticsView({
         </div>
       </div>
 
-      {/* 4. ROW 3: INTERACTIVE LINE GRAPH (Arrival & Departure Flow Over Time) */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/90 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* 4. ROW 3: SAME FLIGHT GUEST INFLUX (BAR GRAPH + SIDE TABLE) */}
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/90 shadow-2xs space-y-5">
+        {/* Header with Title and Mode Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-600" />
-              <span>Arrival & Departure Timeline (Line Graph)</span>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FF6574] animate-pulse"></span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#FF6574]">
+                Flight Manifest & Group Influx
+              </span>
+            </div>
+            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2 mt-0.5">
+              <PlaneLanding className="w-5 h-5 text-[#1E3A8A]" />
+              <span>
+                {flightLogisticsType === "arrival"
+                  ? "Guests Coming on Same Flight (Inbound Influx)"
+                  : "Guests Departing on Same Flight (Outbound Departure)"}
+              </span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Daily arrival peaks for airport shuttles and hotel check-in planning
+              Displays how many guests are arriving on the same flight for airport shuttle scheduling
             </p>
           </div>
 
-          {/* Legend */}
-          <div className="flex items-center gap-4 text-xs font-bold">
-            <span className="flex items-center gap-1.5 text-emerald-800">
-              <span className="w-3 h-1.5 rounded-full bg-emerald-600"></span>
-              <span>Daily Arrivals (Check-ins)</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-purple-800">
-              <span className="w-3 h-1.5 rounded-full bg-purple-600"></span>
-              <span>Daily Departures (Check-outs)</span>
-            </span>
+          {/* Toggle Arrival / Departure Flights */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center p-1 bg-slate-100 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => {
+                  setFlightLogisticsType("arrival");
+                  setSelectedFlight(null);
+                }}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  flightLogisticsType === "arrival"
+                    ? "bg-white text-emerald-800 shadow-xs font-extrabold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <PlaneLanding className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Arrival Flights</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFlightLogisticsType("departure");
+                  setSelectedFlight(null);
+                }}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  flightLogisticsType === "departure"
+                    ? "bg-white text-purple-800 shadow-xs font-extrabold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <PlaneTakeoff className="w-3.5 h-3.5 text-purple-600" />
+                <span>Departure Flights</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* SVG Curved Line Graph */}
-        <div className="relative overflow-x-auto pt-2">
-          <div className="min-w-[550px] w-full">
-            <svg
-              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              className="w-full h-56 sm:h-64 overflow-visible"
-            >
-              <defs>
-                {/* Emerald Gradient for Arrivals */}
-                <linearGradient id="arrivalGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
-                </linearGradient>
+        {/* Main Grid: Bar Graph (Left) + Table with Flight Name and Count (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          {/* ================= BAR GRAPH FORMAT ================= */}
+          <div className="lg:col-span-7 xl:col-span-8 bg-[#FAF9F6] border border-slate-200/90 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-[#1E3A8A]" />
+                  <span>Passenger Volume Bar Graph</span>
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Height represents total guests arriving on each flight
+                </p>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-700 shadow-2xs">
+                Peak: <b className="text-[#FF6574]">{flightData.maxCount} Guests</b> on {flightData.flights[0]?.flightNumber}
+              </span>
+            </div>
 
-                {/* Purple Gradient for Departures */}
-                <linearGradient id="departureGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.30" />
-                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.02" />
-                </linearGradient>
-              </defs>
+            {/* Bars Canvas with Background Scale Grid */}
+            <div className="relative pt-6 pb-2">
+              {/* Background Grid Lines with values */}
+              <div className="absolute inset-x-0 top-6 bottom-16 flex flex-col justify-between pointer-events-none opacity-40">
+                {[1, 0.75, 0.5, 0.25, 0].map((ratio, idx) => (
+                  <div key={idx} className="flex items-center gap-2 border-b border-dashed border-slate-300 w-full">
+                    <span className="text-[9px] font-mono text-slate-500 font-bold w-6 text-right">
+                      {Math.round(ratio * flightData.maxCount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
 
-              {/* Grid Lines */}
-              {[0, 0.25, 0.5, 0.75, 1].map((pct, idx) => {
-                const y = chartHeight - paddingY - pct * innerH;
-                const val = Math.round(pct * maxTimelineVal);
-                return (
-                  <g key={idx}>
-                    <line
-                      x1={paddingX}
-                      y1={y}
-                      x2={chartWidth - paddingX}
-                      y2={y}
-                      stroke="#e2e8f0"
-                      strokeDasharray="4 4"
-                      strokeWidth="1"
-                    />
-                    <text
-                      x={paddingX - 10}
-                      y={y + 3}
-                      textAnchor="end"
-                      fontSize="9"
-                      fill="#94a3b8"
-                      fontWeight="bold"
+              {/* Scrollable Bar Columns Container */}
+              <div className="relative z-10 flex items-end justify-between sm:justify-around gap-3 sm:gap-4 overflow-x-auto pt-4 pb-2 px-6 min-h-[250px]">
+                {flightData.flights.map((flight, idx) => {
+                  const pct = Math.max(Math.round((flight.count / flightData.maxCount) * 100), 12);
+                  const isSelected = selectedFlight?.flightNumber === flight.flightNumber;
+                  const airline = getAirlineInfo(flight.flightNumber);
+
+                  return (
+                    <div
+                      key={flight.flightNumber || idx}
+                      onClick={() => setSelectedFlight(flight)}
+                      className="flex flex-col items-center justify-end h-full flex-1 min-w-[58px] max-w-[84px] group cursor-pointer transition-all"
                     >
-                      {val}
-                    </text>
-                  </g>
-                );
-              })}
+                      {/* Passenger Count Badge on Top of Bar */}
+                      <div
+                        className={`text-[11px] font-black px-2 py-0.5 rounded-full mb-2 transition-all shadow-2xs whitespace-nowrap ${
+                          isSelected
+                            ? "bg-[#FF6574] text-white scale-110 shadow-md shadow-[#FF6574]/30"
+                            : "bg-slate-900 text-white group-hover:bg-[#FF6574] group-hover:scale-105"
+                        }`}
+                      >
+                        {flight.count} {flight.count === 1 ? "Guest" : "Guests"}
+                      </div>
 
-              {/* Area Fills */}
-              <path d={pathArrivalArea} fill="url(#arrivalGradient)" />
-              <path d={pathDepartureArea} fill="url(#departureGradient)" />
+                      {/* Bar Pillar */}
+                      <div className="w-full flex justify-center h-[160px] items-end">
+                        <div
+                          style={{ height: `${pct}%` }}
+                          className={`w-11 sm:w-13 rounded-t-xl transition-all duration-300 relative group-hover:brightness-110 shadow-sm ${
+                            isSelected
+                              ? "bg-gradient-to-t from-[#FF6574] via-[#e05463] to-[#FF8A96] ring-3 ring-[#FF6574]/40"
+                              : "bg-gradient-to-t from-[#1E3A8A] via-[#2a4ea2] to-[#FF6574]"
+                          }`}
+                        >
+                          {/* Inner soft highlight */}
+                          <div className="w-full h-2 bg-white/25 rounded-t-xl"></div>
+                        </div>
+                      </div>
 
-              {/* Lines */}
-              <path
-                d={pathArrival}
-                fill="none"
-                stroke="#059669"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d={pathDeparture}
-                fill="none"
-                stroke="#7c3aed"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+                      {/* Flight Number & Airline Label */}
+                      <div className="mt-2 text-center">
+                        <p className={`font-mono text-xs font-black tracking-tight ${
+                          isSelected ? "text-[#FF6574]" : "text-slate-800 group-hover:text-[#1E3A8A]"
+                        }`}>
+                          {flight.flightNumber}
+                        </p>
+                        <p className="text-[10px] text-slate-500 font-semibold truncate max-w-[70px]">
+                          {airline.name}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-              {/* Interactive Data Points (Arrivals) */}
-              {pointsArrival.map((pt, idx) => (
-                <g key={`arr-${idx}`} className="group cursor-pointer">
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r="5"
-                    fill="#059669"
-                    stroke="#ffffff"
-                    strokeWidth="2.5"
-                    className="transition-transform group-hover:scale-150"
-                    onMouseEnter={() => setHoveredArrivalPoint({ type: "Arrival", ...pt })}
-                    onMouseLeave={() => setHoveredArrivalPoint(null)}
-                  />
-                  {/* Tooltip Value Label */}
-                  <text
-                    x={pt.x}
-                    y={pt.y - 10}
-                    textAnchor="middle"
-                    fontSize="10"
-                    fontWeight="bold"
-                    fill="#065f46"
-                  >
-                    {pt.arrivals}
-                  </text>
-                  {/* X-axis date labels */}
-                  <text
-                    x={pt.x}
-                    y={chartHeight - 8}
-                    textAnchor="middle"
-                    fontSize="9.5"
-                    fontWeight="bold"
-                    fill="#64748b"
-                  >
-                    {pt.date}
-                  </text>
-                </g>
-              ))}
-
-              {/* Data Points (Departures) */}
-              {pointsDeparture.map((pt, idx) => (
-                <g key={`dep-${idx}`} className="group cursor-pointer">
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r="4.5"
-                    fill="#7c3aed"
-                    stroke="#ffffff"
-                    strokeWidth="2.5"
-                    className="transition-transform group-hover:scale-150"
-                  />
-                  <text
-                    x={pt.x}
-                    y={pt.y + 14}
-                    textAnchor="middle"
-                    fontSize="9"
-                    fontWeight="bold"
-                    fill="#6d28d9"
-                  >
-                    {pt.departures > 0 ? pt.departures : ""}
-                  </text>
-                </g>
-              ))}
-            </svg>
+            {/* Bottom Insight Footer */}
+            <div className="mt-4 pt-3 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600">
+              <span className="flex items-center gap-1.5 font-medium">
+                <span>🚌</span>
+                <span>
+                  Recommended Shuttles: <b>{Math.ceil(flightData.totalTrackedPassengers / 6)} Airport Vans</b> (6 seats / van)
+                </span>
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Click any bar or row to inspect flight passengers
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
-          <span>* Peaks indicate high arrival influx requiring airport shuttle readiness.</span>
-          <span className="font-semibold text-emerald-800">
-            Total Arrivals: {arrivalCapturedCount} • Total Departures: {filteredGuests.filter((g) => g.departure_date).length}
-          </span>
+          {/* ================= SIDE TABLE: FLIGHT NAME & COUNT ================= */}
+          <div className="lg:col-span-5 xl:col-span-4 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <PlaneLanding className="w-4 h-4 text-[#FF6574]" />
+                  <span>Flight Passenger Manifest</span>
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Flight name and passenger count
+                </p>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                {flightData.flights.length} Flights
+              </span>
+            </div>
+
+            {/* The Table */}
+            <div className="overflow-x-auto flex-1 max-h-[300px] overflow-y-auto pr-1">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                    <th className="py-2 px-2">Flight Name</th>
+                    <th className="py-2 px-2 text-center">Count</th>
+                    <th className="py-2 px-2 text-right">Schedule</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {flightData.flights.map((flight, idx) => {
+                    const isSelected = selectedFlight?.flightNumber === flight.flightNumber;
+                    const airline = getAirlineInfo(flight.flightNumber);
+                    const sharePct = Math.round((flight.count / Math.max(flightData.totalTrackedPassengers, 1)) * 100);
+
+                    return (
+                      <tr
+                        key={flight.flightNumber || idx}
+                        onClick={() => setSelectedFlight(flight)}
+                        className={`transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-[#FFF2F4] font-bold"
+                            : "hover:bg-slate-50"
+                        }`}
+                      >
+                        {/* Flight Name / Number Column */}
+                        <td className="py-2.5 px-2">
+                          <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-slate-100 text-[#1E3A8A]">
+                              ✈️
+                            </span>
+                            <div className="min-w-0">
+                              <span className="font-mono font-extrabold text-slate-900 block text-xs">
+                                {flight.flightNumber}
+                              </span>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${airline.color}`}>
+                                {airline.name}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Count Column */}
+                        <td className="py-2.5 px-2 text-center">
+                          <span className={`inline-flex items-center gap-1 font-black px-2.5 py-1 rounded-full text-xs shadow-2xs ${
+                            isSelected
+                              ? "bg-[#FF6574] text-white"
+                              : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                          }`}>
+                            <Users className="w-3 h-3" />
+                            <span>{flight.count}</span>
+                          </span>
+                          <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
+                            {sharePct}% share
+                          </span>
+                        </td>
+
+                        {/* Schedule / Airport Column */}
+                        <td className="py-2.5 px-2 text-right">
+                          <span className="font-bold text-slate-800 block text-[11px]">
+                            {flight.time || "TBD"}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block truncate max-w-[90px] ml-auto">
+                            {flight.location || flight.date || "Arrival Airport"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table Footer Totals */}
+            <div className="pt-2.5 border-t border-slate-200/90 flex items-center justify-between text-xs bg-slate-50/80 p-2.5 rounded-xl">
+              <span className="font-bold text-slate-700">Total Tracked Passengers:</span>
+              <span className="font-black text-[#1E3A8A] text-sm">
+                {flightData.totalTrackedPassengers} Guests
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

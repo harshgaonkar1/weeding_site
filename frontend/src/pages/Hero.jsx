@@ -40,6 +40,7 @@ import AnalyticsView from "../components/AnalyticsView";
 import RsvpAnalyticsView from "../components/RsvpAnalyticsView";
 import CallDeskLogsView from "../components/CallDeskLogsView";
 import WhatsAppOverviewView from "../components/WhatsAppOverviewView";
+import VenuesMapView from "../components/VenuesMapView";
 import ChatBotModal from "../components/ChatBotModal";
 import CircularChatWidget from "../components/CircularChatWidget";
 import CallCenterManagementModal from "../components/CallCenterManagementModal";
@@ -1433,6 +1434,23 @@ export default function Hero() {
                 setWhatsAppModalInitialGuest(g || null);
                 setIsWhatsAppModalOpen(true);
               } : null}
+            />
+          )}
+
+          {/* ================= VIEW 7: VENUES OPENFREEMAP (ROLE-BASED LOCATIONS) ================= */}
+          {activeTab === "venues" && (
+            <VenuesMapView
+              weddings={visibleWeddings}
+              selectedWedding={selectedWedding}
+              isAdmin={isAdmin}
+              isMarriageClient={isMarriageClient}
+              isViewOnly={isViewOnly}
+              onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
+              onSelectWedding={(w) => {
+                handleSelectWedding(w);
+                setActiveTab("directory");
+              }}
+              onOpenDirectory={() => setActiveTab("directory")}
             />
           )}
         </main>

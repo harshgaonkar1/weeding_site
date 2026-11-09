@@ -238,16 +238,22 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => {
-                  setActiveTab("directory");
+                  setActiveTab("venues");
                   closeMobile();
                 }}
                 title={isCollapsed ? "Venues" : undefined}
                 className={`flex items-center transition-all cursor-pointer ${isCollapsed
-                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-100 hover:text-[#1E3A8A]"
-                    : "w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-[#1E3A8A]"
+                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${activeTab === "venues"
+                      ? "bg-[#FF6574] text-white shadow-md shadow-[#FF6574]/30"
+                      : "text-slate-500 hover:bg-slate-100 hover:text-[#1E3A8A]"
+                    }`
+                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${activeTab === "venues"
+                      ? "bg-[#FF6574] text-white shadow-md shadow-[#FF6574]/30"
+                      : "text-slate-700 hover:bg-slate-100 hover:text-[#1E3A8A]"
+                    }`
                   }`}
               >
-                <Target className="w-4 h-4 shrink-0 text-slate-400" />
+                <Target className={`w-4 h-4 shrink-0 ${activeTab === "venues" ? "text-white" : "text-slate-400"}`} />
                 {!isCollapsed && <span>Venues</span>}
               </button>
             </div>
