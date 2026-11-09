@@ -1402,10 +1402,10 @@ export default function Hero() {
               weddings={visibleWeddings}
               onSelectWedding={handleSelectWedding}
               onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
-              onUpdateRsvp={(guestId, newRsvp) => {
+              onUpdateRsvp={!isViewOnly ? (guestId, newRsvp) => {
                 const target = displayedGuests.find((g) => g.id === guestId);
                 if (target) handleQuickUpdateRsvp(target, newRsvp);
-              }}
+              } : null}
             />
           )}
 
@@ -1417,7 +1417,7 @@ export default function Hero() {
               weddings={visibleWeddings}
               onSelectWedding={handleSelectWedding}
               onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
-              onOpenCallLogModal={handleOpenCallLogs}
+              onOpenCallLogModal={!isViewOnly ? handleOpenCallLogs : null}
             />
           )}
 
@@ -1429,10 +1429,10 @@ export default function Hero() {
               weddings={visibleWeddings}
               onSelectWedding={handleSelectWedding}
               onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
-              onOpenWhatsAppModal={(g) => {
+              onOpenWhatsAppModal={canSendWhatsApp ? (g) => {
                 setWhatsAppModalInitialGuest(g || null);
                 setIsWhatsAppModalOpen(true);
-              }}
+              } : null}
             />
           )}
         </main>

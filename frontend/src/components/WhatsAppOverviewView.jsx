@@ -16,6 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { normalizePhoneNumber } from "../utils/whatsappUtils";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * WhatsAppOverviewView
@@ -30,6 +31,7 @@ export default function WhatsAppOverviewView({
   onBack,
   onOpenWhatsAppModal,
 }) {
+  const { canSendWhatsApp, isViewOnly, isMarriageClient } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'done' | 'opened' | 'pending'
 
@@ -197,7 +199,7 @@ export default function WhatsAppOverviewView({
           </h1>
         </div>
 
-        {onOpenWhatsAppModal && (
+        {canSendWhatsApp && onOpenWhatsAppModal ? (
           <button
             type="button"
             onClick={onOpenWhatsAppModal}
@@ -206,7 +208,11 @@ export default function WhatsAppOverviewView({
             <Send className="w-3.5 h-3.5" />
             <span>+ Compose WhatsApp</span>
           </button>
-        )}
+        ) : isViewOnly ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs font-semibold self-start sm:self-auto border border-slate-200 shadow-2xs">
+            <span>Client View (Read Only)</span>
+          </span>
+        ) : null}
       </div>
 
       {/* 2. HERO METRIC CARD: EXACTLY HOW MANY MESSAGES DONE */}
@@ -389,7 +395,7 @@ export default function WhatsAppOverviewView({
                     </div>
                   </div>
 
-                  {guest.hasPhone && (
+                  {canSendWhatsApp && guest.hasPhone && (
                     <div className="flex items-center justify-end pt-1">
                       <button
                         type="button"
@@ -416,13 +422,13 @@ export default function WhatsAppOverviewView({
                 <th className="py-3 px-4">WhatsApp Contact</th>
                 <th className="py-3 px-4">Side</th>
                 <th className="py-3 px-4">Message Status</th>
-                <th className="py-3 px-4 text-right">Action</th>
+                {canSendWhatsApp && <th className="py-3 px-4 text-right">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filteredGuests.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-8 text-center text-slate-400">
+                  <td colSpan={canSendWhatsApp ? 5 : 4} className="py-8 text-center text-slate-400">
                     No guests found matching your search.
                   </td>
                 </tr>
@@ -475,21 +481,23 @@ export default function WhatsAppOverviewView({
                         )}
                       </td>
 
-                      {/* Action */}
-                      <td className="py-3 px-4 text-right">
-                        {guest.hasPhone ? (
-                          <button
-                            type="button"
-                            onClick={() => onOpenWhatsAppModal && onOpenWhatsAppModal(guest)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-all cursor-pointer"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>{guest.isDone ? "Resend" : "Send WhatsApp"}</span>
-                          </button>
-                        ) : (
-                          <span className="text-[11px] text-slate-300 italic">Missing phone</span>
-                        )}
-                      </td>
+                      {/* Action (Only visible for Admin & Call Center) */}
+                      {canSendWhatsApp && (
+                        <td className="py-3 px-4 text-right">
+                          {guest.hasPhone ? (
+                            <button
+                              type="button"
+                              onClick={() => onOpenWhatsAppModal && onOpenWhatsAppModal(guest)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-all cursor-pointer"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>{guest.isDone ? "Resend" : "Send WhatsApp"}</span>
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-300 italic">Missing phone</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })

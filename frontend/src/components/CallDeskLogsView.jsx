@@ -414,16 +414,18 @@ export default function CallDeskLogsView({
                     </p>
                   )}
 
-                  <div className="flex items-center justify-end pt-1">
-                    <button
-                      type="button"
-                      onClick={() => onOpenCallLogModal && onOpenCallLogModal(guest)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FF6574] hover:bg-[#e05463] active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-                    >
-                      <PhoneOutgoing className="w-3.5 h-3.5" />
-                      <span>{count > 0 ? "Add Notes" : "Log Call"}</span>
-                    </button>
-                  </div>
+                  {onOpenCallLogModal && (
+                    <div className="flex items-center justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => onOpenCallLogModal(guest)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FF6574] hover:bg-[#e05463] active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      >
+                        <PhoneOutgoing className="w-3.5 h-3.5" />
+                        <span>{count > 0 ? "Add Notes" : "Log Call"}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })
@@ -440,13 +442,13 @@ export default function CallDeskLogsView({
                 <th className="py-3 px-4 text-center">Attempts</th>
                 <th className="py-3 px-4">Call Outcome</th>
                 <th className="py-3 px-4">Last Call Summary / Notes</th>
-                <th className="py-3 px-4 text-right">Action</th>
+                {onOpenCallLogModal && <th className="py-3 px-4 text-right">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="py-8 text-center text-slate-400">
+                  <td colSpan={onOpenCallLogModal ? 6 : 5} className="py-8 text-center text-slate-400">
                     No call records found matching your filters.
                   </td>
                 </tr>
@@ -557,16 +559,18 @@ export default function CallDeskLogsView({
                       </td>
 
                       {/* Action */}
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => onOpenCallLogModal && onOpenCallLogModal(guest)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FF6574] hover:bg-[#e05463] active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-                        >
-                          <PhoneOutgoing className="w-3.5 h-3.5" />
-                          <span>Log Call</span>
-                        </button>
-                      </td>
+                      {onOpenCallLogModal && (
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => onOpenCallLogModal(guest)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FF6574] hover:bg-[#e05463] active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                          >
+                            <PhoneOutgoing className="w-3.5 h-3.5" />
+                            <span>Log Call</span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
