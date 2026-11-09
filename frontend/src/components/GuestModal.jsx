@@ -328,7 +328,7 @@ export default function GuestModal({
                     value={formData.guest_name}
                     onChange={handleChange}
                     placeholder="e.g. James Passaquindici"
-                    className={`w-full bg-white border rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#84e030] shadow-2xs transition-all ${
+                    className={`w-full bg-white border rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] shadow-2xs transition-all ${
                       errors.guest_name ? "border-rose-400 bg-rose-50/30" : "border-slate-200"
                     }`}
                   />
@@ -355,7 +355,7 @@ export default function GuestModal({
                     value={formData.contact}
                     onChange={handleChange}
                     placeholder="e.g. +1 (555) 234-8901/james@emi.com"
-                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#84e030] shadow-2xs transition-all"
+                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] shadow-2xs transition-all"
                   />
                 </div>
               </div>
@@ -416,7 +416,7 @@ export default function GuestModal({
                         ? "e.g. Sister, Best Friend, Cousin, Aunt, Colleague..."
                         : "e.g. Brother, Best Friend, Colleague, Uncle, Cousin..."
                     }
-                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#84e030] shadow-2xs transition-all"
+                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] shadow-2xs transition-all"
                   />
                   <datalist id="relation-options">
                     <option value="Friend" />
@@ -465,7 +465,7 @@ export default function GuestModal({
                   name="rsvp_status"
                   value={formData.rsvp_status}
                   onChange={handleChange}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#84e030] shadow-2xs cursor-pointer"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] shadow-2xs cursor-pointer"
                 >
                   <option value="Confirmed">✓ Confirmed (Attending)</option>
                   <option value="Pending">⏳ Pending Response</option>
@@ -713,8 +713,8 @@ export default function GuestModal({
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
                     isDragging
-                      ? "border-[#84e030] bg-[#eef9e8] scale-[1.01]"
-                      : "border-slate-300 hover:border-[#84e030] bg-[#f8fafc] hover:bg-[#f3faf0]"
+                      ? "border-[#FF6574] bg-[#FF6574]/10 scale-[1.01]"
+                      : "border-slate-300 hover:border-[#1E3A8A] bg-[#f8fafc] hover:bg-slate-100"
                   }`}
                 >
                   <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center mx-auto text-emerald-700 mb-3">
@@ -800,7 +800,7 @@ export default function GuestModal({
                 onChange={handleChange}
                 rows={3}
                 placeholder="e.g. Quiet room preference, vegetarian breakfast, airport shuttle pickup..."
-                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#84e030] shadow-2xs leading-relaxed"
+                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] shadow-2xs leading-relaxed"
               />
             </div>
           </div>
@@ -820,7 +820,7 @@ export default function GuestModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-[#0f2922] hover:bg-[#163a30] active:scale-98 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-full flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+            className="bg-[#1E3A8A] hover:bg-[#172554] active:scale-98 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-full flex items-center gap-2 shadow-sm transition-all cursor-pointer"
           >
             {isSubmitting ? (
               <span>Saving...</span>

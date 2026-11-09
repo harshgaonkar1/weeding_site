@@ -481,7 +481,7 @@ export default function GuestDetailsDrawer({
                 onClose();
                 onEdit(guest);
               }}
-              className="bg-[#0f2922] hover:bg-[#163a30] text-white text-xs font-semibold px-4 py-2 rounded-full transition-colors cursor-pointer"
+              className="bg-[#1E3A8A] hover:bg-[#172554] text-white text-xs font-semibold px-4 py-2 rounded-full transition-colors cursor-pointer"
             >
               Edit Guest Logistics
             </button>

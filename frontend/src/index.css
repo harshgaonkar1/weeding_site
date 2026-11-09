@@ -9,14 +9,14 @@
 
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #14213D;
-    color: #14213D;
+    background-color: #FAF9F6;
+    color: #1E293B;
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background-color: rgba(255, 107, 91, 0.25);
-    color: #14213D;
+    background-color: rgba(255, 101, 116, 0.35);
+    color: #1E3A8A;
   }
 }
 
@@ -79,10 +79,10 @@
 
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(255, 107, 91, 0.4);
+    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(255, 107, 91, 0);
+    box-shadow: 0 0 0 10px rgba(124, 58, 237, 0);
   }
 }
 
@@ -212,4 +212,28 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ------------------- FOREST GREEN + PURPLE NEBULA + STARDUST ------------------- */
+.bg-forest-stardust {
+  background-color: #0c2117;
+  background-image:
+    radial-gradient(ellipse 75% 65% at 50% 68%, rgba(124, 58, 237, 0.5) 0%, rgba(91, 33, 182, 0.3) 45%, rgba(12, 33, 23, 0.96) 85%),
+    radial-gradient(rgba(255, 255, 255, 0.28) 1.2px, transparent 1.2px),
+    radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 18px 18px;
+  background-position: 0 0, 0 0, 9px 9px;
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 24s linear infinite;
 }

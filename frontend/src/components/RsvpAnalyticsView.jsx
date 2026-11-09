@@ -63,10 +63,10 @@ export default function RsvpAnalyticsView({
               <div
                 key={w.id}
                 onClick={() => onSelectWedding && onSelectWedding(w, "rsvp")}
-                className="bg-white rounded-3xl p-5 border border-slate-200/80 hover:border-[#e11d48]/50 hover:shadow-md cursor-pointer transition-all flex items-center justify-between group"
+                className="bg-white rounded-3xl p-5 border border-slate-200/80 hover:border-[#7c3aed]/50 hover:shadow-md cursor-pointer transition-all flex items-center justify-between group"
               >
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-[#e11d48] transition-colors">
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-[#7c3aed] transition-colors">
                     {w.groom_name} & {w.bride_name}
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
@@ -345,16 +345,16 @@ export default function RsvpAnalyticsView({
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#e11d48] mb-1.5 cursor-pointer transition-colors group"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#7c3aed] mb-1.5 cursor-pointer transition-colors group"
             >
-              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform text-[#e11d48]" />
+              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform text-[#7c3aed]" />
               <span>Back to Overview</span>
             </button>
           )}
 
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#fdf2f4] text-[#e11d48] px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-[#fce7eb]">
-              <Sparkles className="w-3 h-3 text-[#e11d48]" />
+            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#f5f3ff] text-[#7c3aed] px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-[#ede9fe]">
+              <Sparkles className="w-3 h-3 text-[#7c3aed]" />
               <span>RSVP Intelligence</span>
             </span>
             {weddings && weddings.length > 1 && onSelectWedding ? (
@@ -365,7 +365,7 @@ export default function RsvpAnalyticsView({
                     const match = weddings.find((w) => w.id === e.target.value);
                     if (match) onSelectWedding(match, "rsvp");
                   }}
-                  className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border-none rounded-xl px-2.5 py-1 pr-6 cursor-pointer focus:ring-2 focus:ring-[#e11d48]/20 focus:outline-none appearance-none"
+                  className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border-none rounded-xl px-2.5 py-1 pr-6 cursor-pointer focus:ring-2 focus:ring-[#7c3aed]/20 focus:outline-none appearance-none"
                 >
                   {weddings.map((w) => (
                     <option key={w.id} value={w.id}>

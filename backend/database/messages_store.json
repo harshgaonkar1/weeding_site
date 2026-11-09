@@ -458,5 +458,15 @@
     "message": "Airport shuttle & cab status update?",
     "is_read": true,
     "created_at": "2026-10-31T12:21:05.153037+00:00"
+  },
+  {
+    "id": "msg_be748128-d8e9-4a07-9018-ff5e405e72b8",
+    "wedding_id": "wedding_97c13fc2",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "hey",
+    "is_read": false,
+    "created_at": "2026-11-09T09:33:33.284Z"
   }
 ]

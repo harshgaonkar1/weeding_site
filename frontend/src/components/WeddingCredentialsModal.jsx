@@ -67,8 +67,8 @@ export default function WeddingCredentialsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
       <div className="bg-white rounded-2xl sm:rounded-[28px] w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden relative animate-scaleUp my-auto max-h-[94vh] flex flex-col">
         {/* Top Banner */}
-        <div className="bg-[#0f2922] p-4 sm:p-6 text-white text-center relative overflow-hidden shrink-0">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#84e030]/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-[#1E3A8A] p-4 sm:p-6 text-white text-center relative overflow-hidden shrink-0">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6574]/20 rounded-full blur-2xl pointer-events-none" />
 
           <button
             onClick={onClose}
@@ -77,18 +77,18 @@ export default function WeddingCredentialsModal({
             <X className="w-4 h-4" />
           </button>
 
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#84e030]/20 border border-[#84e030]/40 flex items-center justify-center text-[#84e030] mb-3 shadow-sm">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#172554] border border-[#2563EB]/40 flex items-center justify-center text-[#FF6574] mb-3 shadow-sm">
             <KeyRound className="w-6 h-6" />
           </div>
 
-          <span className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#84e030]/20 text-[#84e030] border border-[#84e030]/40 uppercase tracking-wider mb-1">
+          <span className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#172554] text-[#FF6574] border border-[#FF6574]/40 uppercase tracking-wider mb-1">
             {isNewlyCreated ? "Created Successfully" : "Portal Access"}
           </span>
 
           <h3 className="text-lg font-extrabold tracking-tight text-white">
             {wedding.groom_name} & {wedding.bride_name}
           </h3>
-          <p className="text-xs text-emerald-100/80 mt-0.5 font-normal">
+          <p className="text-xs text-blue-100/90 mt-0.5 font-normal">
             Client View-Only Dashboard Credentials & Google Sheet
           </p>
         </div>
@@ -185,16 +185,16 @@ export default function WeddingCredentialsModal({
             <button
               type="button"
               onClick={handleCopyAll}
-              className="w-full bg-[#0f2922] hover:bg-[#163a30] active:scale-98 text-white py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all btn-interactive"
+              className="w-full bg-[#1E3A8A] hover:bg-[#172554] active:scale-98 text-white py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all btn-interactive"
             >
               {copiedField === "all" ? (
                 <>
-                  <Check className="w-4 h-4 text-[#84e030]" />
-                  <span className="text-[#84e030]">✓ Full Message Copied!</span>
+                  <Check className="w-4 h-4 text-[#FF6574]" />
+                  <span className="text-[#FF6574]">✓ Full Message Copied!</span>
                 </>
               ) : (
                 <>
-                  <Share2 className="w-4 h-4 text-[#84e030]" />
+                  <Share2 className="w-4 h-4 text-[#FF6574]" />
                   <span>Copy Complete Login Message</span>
                 </>
               )}

@@ -65,10 +65,10 @@ export default function WhatsAppOverviewView({
               <div
                 key={w.id}
                 onClick={() => onSelectWedding && onSelectWedding(w, "whatsapp")}
-                className="bg-white rounded-3xl p-5 border border-slate-200/80 hover:border-[#e11d48]/50 hover:shadow-md cursor-pointer transition-all flex items-center justify-between group"
+                className="bg-white rounded-3xl p-5 border border-slate-200/80 hover:border-[#7c3aed]/50 hover:shadow-md cursor-pointer transition-all flex items-center justify-between group"
               >
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-[#e11d48] transition-colors">
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-[#7c3aed] transition-colors">
                     {w.groom_name} & {w.bride_name}
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
@@ -152,9 +152,9 @@ export default function WhatsAppOverviewView({
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#e11d48] mb-1.5 cursor-pointer transition-colors group"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#7c3aed] mb-1.5 cursor-pointer transition-colors group"
             >
-              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform text-[#e11d48]" />
+              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform text-[#7c3aed]" />
               <span>Back to Overview</span>
             </button>
           )}
@@ -172,7 +172,7 @@ export default function WhatsAppOverviewView({
                     const match = weddings.find((w) => w.id === e.target.value);
                     if (match) onSelectWedding(match, "whatsapp");
                   }}
-                  className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border-none rounded-xl px-2.5 py-1 pr-6 cursor-pointer focus:ring-2 focus:ring-[#e11d48]/20 focus:outline-none appearance-none"
+                  className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border-none rounded-xl px-2.5 py-1 pr-6 cursor-pointer focus:ring-2 focus:ring-[#7c3aed]/20 focus:outline-none appearance-none"
                 >
                   {weddings.map((w) => (
                     <option key={w.id} value={w.id}>

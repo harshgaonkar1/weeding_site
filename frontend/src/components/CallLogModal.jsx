@@ -271,9 +271,9 @@ export default function CallLogModal({
         className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-slate-200 my-4 relative flex flex-col max-h-[90vh] animate-bounceIn"
       >
         {/* Simple Header */}
-        <div className="bg-gradient-to-r from-[#0f2922] via-[#163a30] to-[#0f2922] p-5 text-white relative shrink-0 overflow-hidden">
+        <div className="bg-gradient-to-r from-[#1E3A8A] via-[#172554] to-[#1E3A8A] p-5 text-white relative shrink-0 overflow-hidden">
           {/* Ambient light */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#84e030]/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6574]/15 rounded-full blur-2xl pointer-events-none" />
 
           {/* Close Button - High z-index, generous clickable area */}
           <button
@@ -286,7 +286,7 @@ export default function CallLogModal({
           </button>
 
           <div className="flex items-center gap-3 pr-12 relative z-10">
-            <div className="w-11 h-11 rounded-2xl bg-[#84e030]/20 border border-[#84e030]/40 flex items-center justify-center text-[#84e030] font-black text-lg shrink-0 shadow-xs">
+            <div className="w-11 h-11 rounded-2xl bg-[#172554] border border-[#2563EB]/40 flex items-center justify-center text-[#FF6574] font-black text-lg shrink-0 shadow-xs">
               {(guestFormData.guest_name || guest.guest_name || "G").charAt(0).toUpperCase()}
             </div>
             <div>
@@ -294,10 +294,10 @@ export default function CallLogModal({
                 <h3 className="text-base font-extrabold tracking-tight">
                   {guestFormData.guest_name || guest.guest_name}
                 </h3>
-                <span className="text-[10px] bg-white/15 backdrop-blur-sm px-2 py-0.5 rounded-full text-emerald-100 border border-white/10">
+                <span className="text-[10px] bg-white/15 backdrop-blur-sm px-2 py-0.5 rounded-full text-blue-100 border border-white/10">
                   {guestFormData.side || guest.side || "Groom"} Side
                 </span>
-                <span className="text-[10px] font-extrabold bg-[#84e030] text-[#0f2922] px-2.5 py-0.5 rounded-full shadow-2xs">
+                <span className="text-[10px] font-extrabold bg-[#FF6574] text-white px-2.5 py-0.5 rounded-full shadow-2xs">
                   {currentCallCount > 0 ? `✓ ${currentCallCount} Call${currentCallCount === 1 ? "" : "s"} Done` : "0 Calls"}
                 </span>
               </div>
@@ -305,9 +305,9 @@ export default function CallLogModal({
               {guestFormData.contact && (
                 <a
                   href={`tel:${guestFormData.contact}`}
-                  className="text-xs text-emerald-200 hover:text-white font-mono inline-flex items-center gap-1.5 mt-1 transition-colors"
+                  className="text-xs text-blue-200 hover:text-white font-mono inline-flex items-center gap-1.5 mt-1 transition-colors"
                 >
-                  <PhoneCall className="w-3.5 h-3.5 text-[#84e030]" />
+                  <PhoneCall className="w-3.5 h-3.5 text-[#FF6574]" />
                   <span>{guestFormData.contact}</span>
                 </a>
               )}
@@ -321,7 +321,7 @@ export default function CallLogModal({
               onClick={() => setActiveTab("call_desk")}
               className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer btn-interactive ${
                 activeTab === "call_desk"
-                  ? "bg-white text-[#0f2922] shadow-xs"
+                  ? "bg-white text-[#1E3A8A] shadow-xs"
                   : "bg-white/10 text-white hover:bg-white/20"
               }`}
             >
@@ -461,7 +461,7 @@ export default function CallLogModal({
                       value={summary}
                       onChange={(e) => setSummary(e.target.value)}
                       placeholder="Type discussion points, travel confirmation, room requests, or follow-up notes..."
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#84e030]"
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
                     />
                   </div>
 
@@ -476,9 +476,9 @@ export default function CallLogModal({
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="bg-[#0f2922] hover:bg-[#163a30] text-white px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                      className="bg-[#1E3A8A] hover:bg-[#172554] text-white px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                     >
-                      <PhoneCall className="w-3.5 h-3.5 text-[#84e030]" />
+                      <PhoneCall className="w-3.5 h-3.5 text-[#FF6574]" />
                       <span>{isSubmitting ? "Saving..." : `Save Call #${nextCallNumber}`}</span>
                     </button>
                   </div>
@@ -718,9 +718,9 @@ export default function CallLogModal({
                 <button
                   type="submit"
                   disabled={isSavingGuest}
-                  className="bg-[#0f2922] hover:bg-[#163a30] text-white px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  className="bg-[#1E3A8A] hover:bg-[#172554] text-white px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
-                  <Save className="w-3.5 h-3.5 text-[#84e030]" />
+                  <Save className="w-3.5 h-3.5 text-[#FF6574]" />
                   <span>{isSavingGuest ? "Saving..." : "Save Guest Details"}</span>
                 </button>
               </div>

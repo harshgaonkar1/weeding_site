@@ -746,6 +746,34 @@ export default function Hero() {
     }
   };
 
+  // Update Wedding Cover Photo
+  const handleUpdateWeddingCover = async (weddingId, coverThemeOrUrl) => {
+    try {
+      const updated = await api.updateWedding(weddingId, {
+        cover_theme: coverThemeOrUrl,
+        cover_image: coverThemeOrUrl,
+      });
+      setWeddings((prev) =>
+        prev.map((w) =>
+          w.id === weddingId
+            ? { ...w, cover_theme: coverThemeOrUrl, cover_image: coverThemeOrUrl, ...(updated || {}) }
+            : w
+        )
+      );
+      if (selectedWedding?.id === weddingId) {
+        setSelectedWedding((prev) => ({
+          ...prev,
+          cover_theme: coverThemeOrUrl,
+          cover_image: coverThemeOrUrl,
+          ...(updated || {}),
+        }));
+      }
+      showToast("Cover photo updated!");
+    } catch (err) {
+      showToast("Failed to update cover photo", "error");
+    }
+  };
+
   // ------------------- GUEST ACTIONS -------------------
   const handleOpenAddGuestModal = () => {
     if (!canEditGuests) {
@@ -968,7 +996,7 @@ export default function Hero() {
   );
 
   return (
-    <div className="h-screen max-h-screen w-full flex flex-col bg-[#F4F5FA] text-slate-900 font-sans antialiased selection:bg-[#e11d48]/20 selection:text-[#e11d48] overflow-hidden">
+    <div className="h-screen max-h-screen w-full flex flex-col bg-[#FAF9F6] text-[#1E293B] font-sans antialiased selection:bg-[#FF6574]/30 selection:text-[#1E3A8A] overflow-hidden">
       {/* Toast Notification */}
       {toast && (
         <div
@@ -976,7 +1004,7 @@ export default function Hero() {
           className={`fixed top-4 right-4 sm:top-5 sm:right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold ${
             toast.type === "error"
               ? "bg-rose-900 text-white"
-              : "bg-[#14213D] text-[#F4EDE0] border border-[#FF6B5B]/50 shadow-2xl"
+              : "bg-white text-[#1E293B] border border-[#FF6574]/50 shadow-2xl"
           }`}
         >
           <span>{toast.message}</span>
@@ -1037,7 +1065,7 @@ export default function Hero() {
           />
 
           {/* Right Main Content */}
-          <main ref={mainViewRef} className="flex-1 flex flex-col bg-[#F4F5FA] overflow-y-auto min-w-0 scroll-smooth">
+          <main ref={mainViewRef} className="flex-1 flex flex-col bg-[#FAF9F6] overflow-y-auto min-w-0 scroll-smooth">
             {/* Top Header Bar */}
             <Header
               searchQuery={searchQuery}
@@ -1051,13 +1079,13 @@ export default function Hero() {
 
           {/* Banner 1: Call Center Active Notice */}
           {isCallCenter && (
-            <div className="bg-gradient-to-r from-[#14213D] via-[#1b2b4d] to-[#14213D] border-b border-[#14213D]/20 px-6 py-2.5 flex items-center justify-between text-xs text-[#F4EDE0] animate-fadeIn shadow-inner">
+            <div className="bg-[#1E3A8A] border-b border-[#2563EB]/40 px-6 py-2.5 flex items-center justify-between text-xs text-white animate-fadeIn shadow-inner">
               <div className="flex items-center gap-2 font-semibold">
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6B5B] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FF6B5B]"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6574] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FF6574]"></span>
                 </span>
-                <Headphones className="w-4 h-4 text-[#FF6B5B]" />
+                <Headphones className="w-4 h-4 text-[#FF6574]" />
                 <span>
                   Call Center Telecaller Desk
                   {user?.wedding_id && user.wedding_id !== "all"
@@ -1066,7 +1094,7 @@ export default function Hero() {
                   {" • Call Logging & WhatsApp Enabled"}
                 </span>
               </div>
-              <span className="text-[10px] font-extrabold bg-[#FF6B5B] text-white px-2.5 py-0.5 rounded-full shadow-xs">
+              <span className="text-[10px] font-extrabold bg-[#FF6574] text-white px-2.5 py-0.5 rounded-full shadow-xs">
                 {user?.wedding_id && user.wedding_id !== "all" ? "Assigned Marriage" : "Global Call Desk"}
               </span>
             </div>
@@ -1074,17 +1102,17 @@ export default function Hero() {
 
           {/* Banner 2: Marriage Client View-Only Notice */}
           {isMarriageClient && (
-            <div className="bg-[#F4EDE0] border-b border-[#E5DAC8] px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-[#14213D] animate-fadeIn">
+            <div className="bg-[#1E3A8A] border-b border-[#2563EB]/40 px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-white animate-fadeIn">
               <div className="flex items-center gap-2 font-bold">
-                <span className="w-6 h-6 rounded-lg bg-[#FF6B5B]/15 text-[#FF6B5B] flex items-center justify-center text-xs shadow-2xs">
+                <span className="w-6 h-6 rounded-lg bg-[#FF6574]/20 text-[#FF6574] flex items-center justify-center text-xs shadow-2xs">
                   <Heart className="w-3.5 h-3.5" />
                 </span>
-                <span>
+                <span className="text-white">
                   {selectedWedding
                     ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}'s Private Wedding Portal`
                     : "Wedding Client Portal"}
                 </span>
-                <span className="text-[10px] bg-[#14213D] text-[#F4EDE0] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                <span className="text-[10px] bg-[#2563EB] text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                   View Only Dashboard
                 </span>
               </div>
@@ -1092,17 +1120,17 @@ export default function Hero() {
                 <button
                   type="button"
                   onClick={() => setActiveTab((prev) => (prev === "analytics" ? "directory" : "analytics"))}
-                  className="bg-white hover:bg-[#FAF7F2] text-[#14213D] border border-[#E5DAC8] px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white border border-white/20 px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
                 >
-                  <BarChart3 className="w-3.5 h-3.5 text-[#FF6B5B]" />
+                  <BarChart3 className="w-3.5 h-3.5 text-[#FF6574]" />
                   <span>{activeTab === "analytics" ? "Guest Directory Table" : "Analytics & Graphs"}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsChatModalOpen(true)}
-                  className="bg-[#FF6B5B] hover:bg-[#E85545] active:scale-98 text-white px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                  className="bg-[#FF6574] hover:bg-[#e05463] active:scale-98 text-white px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-[#F4EDE0]" />
+                  <MessageSquare className="w-3.5 h-3.5 text-white" />
                   <span>Chat with Admin</span>
                 </button>
               </div>
@@ -1112,10 +1140,10 @@ export default function Hero() {
           {/* ================= VIEW 1: MARRIAGE CARDS HUB (ALL WEDDINGS) ================= */}
           {!isMarriageClient && activeTab === "weddings" && (
             <div className="p-3.5 sm:p-5 md:p-7 space-y-4 sm:space-y-5 flex-1 animate-fadeIn">
-              {/* Header Title & Action */}
+              {/* Header Title & Action (Matches Reference Image 1) */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+                  <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
                     {isCallCenter && user?.wedding_id && user.wedding_id !== "all"
                       ? "Assigned Marriage Desk"
                       : "Marriage Cards"}
@@ -1136,19 +1164,19 @@ export default function Hero() {
                   {isAdmin && (
                     <button
                       onClick={() => setIsCallCenterModalOpen(true)}
-                      className="bg-[#F4EDE0] hover:bg-[#EFE6D6] border border-[#E5DAC8] text-[#14213D] text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-2 cursor-pointer transition-all shadow-2xs btn-interactive"
+                      className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs btn-interactive"
                       title="Manage Call Center User IDs and Marriage Allocations"
                     >
-                      <Headphones className="w-4 h-4 text-[#FF6B5B]" />
+                      <Headphones className="w-3.5 h-3.5 text-amber-500" />
                       <span>Call Center IDs</span>
                     </button>
                   )}
                   {isAdmin && (
                     <button
                       onClick={handleOpenAddWeddingModal}
-                      className="bg-[#FF6B5B] hover:bg-[#E85545] active:scale-98 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 cursor-pointer transition-all self-start sm:self-auto shadow-sm btn-interactive"
+                      className="bg-[#FF6574] hover:bg-[#e05463] active:scale-98 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 cursor-pointer transition-all self-start sm:self-auto shadow-sm btn-interactive"
                     >
-                      <PlusCircle className="w-4 h-4 text-[#F4EDE0]" />
+                      <PlusCircle className="w-3.5 h-3.5 text-white" />
                       <span>+ New Wedding</span>
                     </button>
                   )}
@@ -1199,6 +1227,15 @@ export default function Hero() {
                     setActiveTab("analytics");
                   }}
                   onOpenGoogleSheet={() => setGoogleSheetModalWedding(selectedWedding)}
+                  onUpdateCoverImage={handleUpdateWeddingCover}
+                  onOpenCallDesk={() => {
+                    setPreviousTab(activeTab);
+                    setActiveTab("call_logs");
+                  }}
+                  onOpenWhatsApp={() => {
+                    setPreviousTab(activeTab);
+                    setActiveTab("whatsapp_overview");
+                  }}
                 />
               )}
 
@@ -1211,25 +1248,25 @@ export default function Hero() {
                     <button
                       type="button"
                       onClick={() => handleSelectWedding(null)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#14213D] hover:text-[#FF6B5B] mb-1 cursor-pointer transition-all hover:-translate-x-1"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#FF6574] mb-1 cursor-pointer transition-all hover:-translate-x-1"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5 text-[#FF6B5B]" />
+                      <ArrowLeft className="w-3.5 h-3.5 text-[#FF6574]" />
                       <span>← All Weddings</span>
                     </button>
                   ) : isCallCenter && user?.wedding_id && user.wedding_id !== "all" ? (
-                    <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 mb-1">
-                      <span className="w-2 h-2 rounded-full bg-[#FF6B5B]" />
+                    <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-[#FF6574]" />
                       <span>Assigned Marriage Workspace</span>
                     </div>
                   ) : null}
 
-                  <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#14213D] tracking-tight flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <span className="truncate">
                       {selectedWedding
                         ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
                         : "Guest Directory"}
                     </span>
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#F4EDE0] text-[#14213D] border border-[#E5DAC8] shadow-2xs shrink-0">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs shrink-0">
                       {stats?.totalRegistered !== undefined
                         ? `${stats.totalRegistered} Guests`
                         : selectedWedding?.total_guests !== undefined
@@ -1237,12 +1274,12 @@ export default function Hero() {
                         : `${displayedGuests.length} Guests`}
                     </span>
                     {isMarriageClient && (
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#14213D] text-[#F4EDE0] border border-[#14213D] shrink-0">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
                         View Only
                       </span>
                     )}
                   </h1>
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  <p className="text-xs text-slate-600 mt-0.5 truncate">
                     {selectedWedding?.wedding_date && `${selectedWedding.wedding_date} • `}
                     {selectedWedding?.venue || selectedWedding?.city || "Venue"}
                   </p>
@@ -1257,10 +1294,10 @@ export default function Hero() {
                           selectedWedding || (weddings && weddings[0])
                         )
                       }
-                      className="bg-[#F4EDE0] hover:bg-[#EFE6D6] border border-[#E5DAC8] text-[#14213D] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                      className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
                       title="Live Google Sheet Two-Way Sync Settings"
                     >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#FF6B5B]" />
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#FF6574]" />
                       <span>Google Sheet Sync</span>
                     </button>
                   )}
@@ -1271,10 +1308,10 @@ export default function Hero() {
                         setWhatsAppModalInitialGuest(null);
                         setIsWhatsAppModalOpen(true);
                       }}
-                      className="bg-[#25d366]/15 hover:bg-[#25d366]/25 border border-[#25d366]/40 text-[#0f532a] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                      className="bg-[#25d366]/15 hover:bg-[#25d366]/25 border border-[#25d366]/40 text-[#128c7e] text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
                       title="Open WhatsApp Message Desk for this Marriage"
                     >
-                      <MessageSquare className="w-3.5 h-3.5 text-[#16a34a]" />
+                      <MessageSquare className="w-3.5 h-3.5 text-[#25d366]" />
                       <span>WhatsApp Messages</span>
                     </button>
                   )}
@@ -1282,7 +1319,7 @@ export default function Hero() {
                   <button
                     onClick={handleExportCsv}
                     disabled={isExporting}
-                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
+                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-2xs btn-interactive"
                   >
                     <Download className="w-3.5 h-3.5 text-slate-500" />
                     <span>Export CSV</span>
@@ -1291,7 +1328,7 @@ export default function Hero() {
                   <button
                     onClick={handleSyncData}
                     disabled={isSyncing}
-                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs btn-interactive"
+                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1 cursor-pointer shadow-2xs btn-interactive"
                     title="Refresh data"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isSyncing ? "animate-spin" : ""}`} />
@@ -1300,9 +1337,9 @@ export default function Hero() {
                   {!isViewOnly && (
                     <button
                       onClick={handleOpenAddGuestModal}
-                      className="bg-[#FF6B5B] hover:bg-[#E85545] active:scale-98 text-white text-[11px] sm:text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-sm btn-interactive"
+                      className="bg-[#FF6574] hover:bg-[#e05463] active:scale-98 text-white text-[11px] sm:text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 cursor-pointer shadow-sm btn-interactive"
                     >
-                      <Plus className="w-3.5 h-3.5 text-[#F4EDE0]" />
+                      <Plus className="w-3.5 h-3.5 text-white" />
                       <span>Add Guest</span>
                     </button>
                   )}

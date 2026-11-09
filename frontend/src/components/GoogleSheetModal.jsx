@@ -164,9 +164,9 @@ export default function GoogleSheetModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
       <div className="bg-white rounded-2xl sm:rounded-[28px] w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden relative animate-scaleUp my-auto max-h-[94vh] flex flex-col">
         {/* Top Header Banner */}
-        <div className="bg-gradient-to-br from-[#0f2922] via-[#14362a] to-[#1c4d25] p-4 sm:p-6 text-white text-center relative overflow-hidden shrink-0">
-          <div className="absolute top-0 right-0 w-36 h-36 bg-[#84e030]/15 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-400/10 rounded-full blur-xl pointer-events-none" />
+        <div className="bg-gradient-to-br from-[#1E3A8A] via-[#172554] to-[#1E3A8A] p-4 sm:p-6 text-white text-center relative overflow-hidden shrink-0">
+          <div className="absolute top-0 right-0 w-36 h-36 bg-[#FF6574]/15 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/10 rounded-full blur-xl pointer-events-none" />
 
           <button
             onClick={onClose}
@@ -175,11 +175,11 @@ export default function GoogleSheetModal({
             <X className="w-4 h-4" />
           </button>
 
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#84e030]/20 border border-[#84e030]/40 flex items-center justify-center text-[#84e030] mb-3 shadow-sm">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#172554] border border-[#2563EB]/40 flex items-center justify-center text-[#FF6574] mb-3 shadow-sm">
             <FileSpreadsheet className="w-6 h-6" />
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#84e030]/20 text-[#84e030] border border-[#84e030]/40 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#172554] text-[#FF6574] border border-[#FF6574]/40 text-[10px] font-bold uppercase tracking-wider mb-1.5">
             <Zap className="w-3 h-3" />
             <span>Google Sheets Sync</span>
           </div>
@@ -187,7 +187,7 @@ export default function GoogleSheetModal({
           <h3 className="text-lg font-black tracking-tight text-white">
             {wedding.groom_name} & {wedding.bride_name}
           </h3>
-          <p className="text-xs text-emerald-100/80 mt-0.5 font-normal">
+          <p className="text-xs text-blue-100/90 mt-0.5 font-normal">
             Automated spreadsheet integration & live database synchronization
           </p>
 
@@ -198,8 +198,8 @@ export default function GoogleSheetModal({
               onClick={() => setActiveTab("sync")}
               className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeTab === "sync"
-                  ? "bg-white text-[#0f2922] font-bold shadow-xs"
-                  : "text-emerald-100 hover:text-white"
+                  ? "bg-white text-[#1E3A8A] font-bold shadow-xs"
+                  : "text-blue-100 hover:text-white"
               }`}
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -211,8 +211,8 @@ export default function GoogleSheetModal({
               onClick={() => setActiveTab("link")}
               className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeTab === "link"
-                  ? "bg-[#84e030] text-[#0f2922] font-bold shadow-xs"
-                  : "text-emerald-100 hover:text-white"
+                  ? "bg-[#FF6574] text-white font-bold shadow-xs"
+                  : "text-blue-100 hover:text-white"
               }`}
             >
               <Link2 className="w-3.5 h-3.5" />
@@ -483,13 +483,13 @@ export default function GoogleSheetModal({
                 <button
                   type="submit"
                   disabled={isSavingLink || !customSheetUrl.trim()}
-                  className="bg-[#0f2922] hover:bg-[#163a30] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 transition-all"
+                  className="bg-[#1E3A8A] hover:bg-[#172554] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {isSavingLink ? (
                     <span>Saving...</span>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-4 h-4 text-[#84e030]" />
+                      <CheckCircle2 className="w-4 h-4 text-[#FF6574]" />
                       <span>Save & Link</span>
                     </>
                   )}
