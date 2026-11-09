@@ -1398,7 +1398,7 @@ export default function Hero() {
           {activeTab === "rsvp" && (
             <RsvpAnalyticsView
               guests={displayedGuests}
-              wedding={selectedWedding}
+              wedding={selectedWedding || (weddings && weddings[0])}
               weddings={visibleWeddings}
               onSelectWedding={handleSelectWedding}
               onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
@@ -1413,7 +1413,7 @@ export default function Hero() {
           {activeTab === "call_logs" && (
             <CallDeskLogsView
               guests={displayedGuests}
-              wedding={selectedWedding}
+              wedding={selectedWedding || (weddings && weddings[0])}
               weddings={visibleWeddings}
               onSelectWedding={handleSelectWedding}
               onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
@@ -1425,7 +1425,7 @@ export default function Hero() {
           {activeTab === "whatsapp" && (
             <WhatsAppOverviewView
               guests={displayedGuests}
-              wedding={selectedWedding}
+              wedding={selectedWedding || (weddings && weddings[0])}
               weddings={visibleWeddings}
               onSelectWedding={handleSelectWedding}
               onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}

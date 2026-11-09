@@ -97,8 +97,18 @@ export default function Header({
     <header className="px-3 sm:px-6 py-2 sm:py-3.5 flex flex-col gap-2 sm:gap-2.5 border-b border-slate-200 bg-[#FAF9F6]/95 backdrop-blur-md sticky top-0 z-20 transition-all text-[#1E293B]">
       {/* Main Search & Role Controls Row */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 sm:gap-2.5 md:gap-3.5 w-full">
-        {/* Search Bar + Mobile Add Guest */}
+        {/* Search Bar + Mobile Hamburger + Mobile Add Guest */}
         <div className="flex items-center gap-2 w-full md:w-80">
+          {onOpenMobileNav && (
+            <button
+              type="button"
+              onClick={onOpenMobileNav}
+              aria-label="Open navigation menu"
+              className="md:hidden w-8 h-8 rounded-xl bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center cursor-pointer border border-slate-200 shrink-0 shadow-2xs active:scale-95 transition-all"
+            >
+              <Menu className="w-4 h-4 text-slate-700" />
+            </button>
+          )}
           <div className="relative flex-1 group">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none group-focus-within:text-[#1E3A8A] transition-colors" />
             <input
@@ -124,15 +134,15 @@ export default function Header({
           )}
         </div>
 
-        {/* Right Controls: Role Switcher & (Desktop) Profile */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end flex-wrap">
+        {/* Right Controls: Role Switcher & Profile */}
+        <div className="flex items-center gap-2 sm:gap-2.5 w-full md:w-auto justify-between md:justify-end flex-wrap">
           {/* Clean Segmented Role Switcher Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shadow-2xs w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shadow-2xs flex-1 sm:flex-initial justify-between sm:justify-start">
             <button
               type="button"
               onClick={() => handleRoleToggle("admin")}
               title="Super Admin Mode"
-              className={`flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 isAdmin
                   ? "bg-[#1E3A8A] text-white font-bold shadow-xs border border-[#1E3A8A]"
                   : "text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
@@ -146,7 +156,7 @@ export default function Header({
               type="button"
               onClick={() => handleRoleToggle("call_center")}
               title="Call Desk Telecaller Mode"
-              className={`flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 isCallCenter
                   ? "bg-[#1E3A8A] text-white font-bold shadow-xs border border-[#1E3A8A]"
                   : "text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
@@ -160,7 +170,7 @@ export default function Header({
               type="button"
               onClick={() => handleRoleToggle("marriage_client")}
               title="Marriage Client User View"
-              className={`flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 isMarriageClient
                   ? "bg-[#1E3A8A] text-white font-bold shadow-xs border border-[#1E3A8A]"
                   : "text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
@@ -182,8 +192,8 @@ export default function Header({
             </button>
           )}
 
-          {/* User Profile Pill & Dropdown (Desktop) */}
-          <div className="hidden md:block">
+          {/* User Profile Pill & Dropdown (Desktop & Mobile) */}
+          <div className="shrink-0">
         {user ? (
           <div className="relative" ref={dropdownRef}>
             <button

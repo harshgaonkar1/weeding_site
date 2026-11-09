@@ -55,9 +55,13 @@ export default function Sidebar({
       // Already in a particular marriage -> display that marriage data directly
       setActiveTab(tabKey);
       closeMobile();
+    } else if (weddings && weddings.length > 0) {
+      // Smoothly navigate directly to the celebration data on mobile & desktop
+      onSelectWedding(weddings[0], tabKey);
+      closeMobile();
     } else {
-      // In overview section of admin panel -> must select the marriage first!
-      setSelectMarriageModalTab(tabKey);
+      setActiveTab(tabKey);
+      closeMobile();
     }
   };
 
@@ -447,73 +451,9 @@ export default function Sidebar({
           </div>
         </div>
       )}
-
-      {/* ================= MODAL: SELECT MARRIAGE FIRST ================= */}
-      {selectMarriageModalTab && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-100 max-w-md w-full space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-base font-extrabold text-slate-900">
-                  Select Marriage First
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Choose a marriage to open its{" "}
-                  <span className="font-bold text-[#7c3aed]">
-                    {selectMarriageModalTab === "rsvp"
-                      ? "RSVP Analytics"
-                      : selectMarriageModalTab === "call_logs"
-                        ? "Call Desk Logs"
-                        : "WhatsApp Messages"}
-                  </span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectMarriageModalTab(null)}
-                aria-label="Close marriage selection"
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* List of Marriages */}
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto no-scrollbar py-1">
-              {weddings.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-4">No marriages found.</p>
-              ) : (
-                weddings.map((w) => (
-                  <div
-                    key={w.id}
-                    onClick={() => {
-                      onSelectWedding(w, selectMarriageModalTab);
-                      setSelectMarriageModalTab(null);
-                      closeMobile();
-                    }}
-                    className="p-3 sm:p-3.5 rounded-2xl border border-slate-100 hover:border-[#7c3aed]/40 hover:bg-[#f5f3ff]/60 cursor-pointer transition-all flex items-center justify-between group"
-                  >
-                    <div className="min-w-0 pr-2">
-                      <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-[#7c3aed] truncate transition-colors">
-                        {w.groom_name} & {w.bride_name}
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-0.5 truncate">
-                        {w.wedding_date || "Upcoming"} {w.city ? `• ${w.city}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
-                        {w.total_guests || 0} Guests
-                      </span>
-                      <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-[#7c3aed] group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+    </>
+  );
+}
     </>
   );
 }

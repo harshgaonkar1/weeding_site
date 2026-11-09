@@ -310,10 +310,10 @@ export default function WhatsAppMessageModal({
         </div>
 
         {/* ================= MODAL BODY ================= */}
-        <div className="p-5 md:p-6 overflow-y-auto space-y-5 text-xs">
+        <div className="p-3.5 sm:p-5 md:p-6 overflow-y-auto space-y-4 sm:space-y-5 text-xs">
           {/* 1. RECIPIENT TARGETING SELECTION */}
-          <div className="bg-[#f8fafc] p-4 rounded-2xl border border-slate-200/90 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1 space-y-1.5">
+          <div className="bg-[#f8fafc] p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex-1 space-y-1.5 min-w-0">
               <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Users className="w-4 h-4 text-emerald-700" />
                 <span>Select Target Recipients:</span>
@@ -322,7 +322,7 @@ export default function WhatsAppMessageModal({
                 <select
                   value={targetMode}
                   onChange={(e) => setTargetMode(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 shadow-2xs focus:ring-2 focus:ring-emerald-500/30 cursor-pointer min-w-[240px]"
+                  className="w-full sm:w-auto bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 shadow-2xs focus:ring-2 focus:ring-emerald-500/30 cursor-pointer min-w-0 max-w-full"
                 >
                   <option value="all">👥 Send to All Guests ({processedGuests.length} Guests)</option>
                   <option value="single">🎯 Send to a Particular Person</option>
@@ -335,7 +335,7 @@ export default function WhatsAppMessageModal({
 
                 {/* If "Particular Person" is selected -> render search & selection dropdown */}
                 {targetMode === "single" && (
-                  <div className="flex-1 min-w-[240px] animate-fadeIn">
+                  <div className="flex-1 min-w-0 w-full sm:w-auto animate-fadeIn">
                     <select
                       value={selectedGuestId}
                       onChange={(e) => setSelectedGuestId(e.target.value)}
@@ -353,12 +353,12 @@ export default function WhatsAppMessageModal({
             </div>
 
             {/* Quick Summary Badges */}
-            <div className="flex items-center gap-2 flex-wrap self-start md:self-auto text-xs">
-              <span className="bg-emerald-100 text-emerald-900 px-3 py-1.5 rounded-xl font-bold border border-emerald-200 shadow-2xs">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap self-start md:self-auto text-xs">
+              <span className="bg-emerald-100 text-emerald-900 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl font-bold border border-emerald-200 shadow-2xs text-[11px] sm:text-xs">
                 {stats.valid} Valid Contacts
               </span>
               {stats.total - stats.valid > 0 && (
-                <span className="bg-amber-100 text-amber-900 px-3 py-1.5 rounded-xl font-bold border border-amber-200 shadow-2xs">
+                <span className="bg-amber-100 text-amber-900 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl font-bold border border-amber-200 shadow-2xs text-[11px] sm:text-xs">
                   {stats.total - stats.valid} Missing Phone
                 </span>
               )}

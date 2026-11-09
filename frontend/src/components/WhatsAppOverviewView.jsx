@@ -144,17 +144,17 @@ export default function WhatsAppOverviewView({
     totalWithPhone > 0 ? Math.round((messagesDoneCount / totalWithPhone) * 100) : 0;
 
   return (
-    <div className="p-3.5 sm:p-6 md:p-8 space-y-5 animate-fadeIn min-w-0 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-5 md:p-8 space-y-4 sm:space-y-5 animate-fadeIn min-w-0 max-w-7xl mx-auto">
       {/* 1. Header Navigation & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs">
         <div className="min-w-0">
           {onBack && (
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#7c3aed] mb-1.5 cursor-pointer transition-colors group"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-emerald-700 mb-1.5 cursor-pointer transition-colors group"
             >
-              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform text-[#7c3aed]" />
+              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform text-emerald-600" />
               <span>Back to Overview</span>
             </button>
           )}
@@ -172,7 +172,7 @@ export default function WhatsAppOverviewView({
                     const match = weddings.find((w) => w.id === e.target.value);
                     if (match) onSelectWedding(match, "whatsapp");
                   }}
-                  className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border-none rounded-xl px-2.5 py-1 pr-6 cursor-pointer focus:ring-2 focus:ring-[#7c3aed]/20 focus:outline-none appearance-none"
+                  className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border-none rounded-xl px-2.5 py-1 pr-6 cursor-pointer focus:ring-2 focus:ring-emerald-500/20 focus:outline-none appearance-none"
                 >
                   {weddings.map((w) => (
                     <option key={w.id} value={w.id}>
@@ -210,7 +210,7 @@ export default function WhatsAppOverviewView({
       </div>
 
       {/* 2. HERO METRIC CARD: EXACTLY HOW MANY MESSAGES DONE */}
-      <div className="bg-gradient-to-br from-[#0c1e14] via-[#0f2e1d] to-[#0a1810] text-white p-6 sm:p-8 rounded-3xl border border-emerald-900/60 shadow-lg relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#0c1e14] via-[#0f2e1d] to-[#0a1810] text-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-emerald-900/60 shadow-lg relative overflow-hidden">
         {/* Glow Effects */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#25d366]/10 rounded-full blur-2xl pointer-events-none" />
@@ -221,11 +221,11 @@ export default function WhatsAppOverviewView({
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
                 Outreach Progress So Far
               </span>
-              <div className="flex items-baseline gap-3">
-                <span className="text-4xl sm:text-5xl font-black tracking-tight text-white font-sans">
+              <div className="flex items-baseline gap-2.5 sm:gap-3 flex-wrap">
+                <span className="text-3xl sm:text-5xl font-black tracking-tight text-white font-sans">
                   {messagesDoneCount}
                 </span>
-                <span className="text-lg font-bold text-emerald-300">
+                <span className="text-base sm:text-lg font-bold text-emerald-300">
                   Messages Done so far
                 </span>
               </div>
@@ -234,21 +234,21 @@ export default function WhatsAppOverviewView({
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 self-end sm:self-auto">
               <div className="text-right">
-                <span className="text-2xl font-black text-white">{donePercentage}%</span>
+                <span className="text-xl sm:text-2xl font-black text-white">{donePercentage}%</span>
                 <span className="text-[10px] text-emerald-400 block font-semibold">Done Rate</span>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-[#25d366] shrink-0">
-                <CheckCheck className="w-7 h-7 stroke-[2.2]" />
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-[#25d366] shrink-0">
+                <CheckCheck className="w-5 h-5 sm:w-7 sm:h-7 stroke-[2.2]" />
               </div>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-white/10 rounded-full h-2.5 sm:h-3 overflow-hidden">
             <div
-              className="h-3 rounded-full bg-gradient-to-r from-emerald-500 via-[#25d366] to-teal-300 transition-all duration-700"
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-[#25d366] to-teal-300 transition-all duration-700"
               style={{ width: `${Math.min(100, Math.max(donePercentage, 4))}%` }}
             />
           </div>
@@ -256,46 +256,46 @@ export default function WhatsAppOverviewView({
       </div>
 
       {/* 3. Sub-metrics 4-Card Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Messages Done */}
-        <div className="bg-white border border-emerald-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs">
+        <div className="bg-white border border-emerald-100 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs">
           <span className="text-xs font-semibold text-emerald-700 block">Messages Done</span>
           <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1 block">
             {messagesDoneCount}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Dispatched via WhatsApp</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">Dispatched via WhatsApp</span>
         </div>
 
         {/* Opened / In Progress */}
-        <div className="bg-white border border-blue-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs">
+        <div className="bg-white border border-blue-100 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs">
           <span className="text-xs font-semibold text-blue-700 block">Opened / In Chat</span>
           <span className="text-2xl sm:text-3xl font-extrabold text-blue-600 mt-1 block">
             {messagesOpenedCount}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Conversations launched</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">Conversations launched</span>
         </div>
 
         {/* Pending to Send */}
-        <div className="bg-white border border-amber-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs">
+        <div className="bg-white border border-amber-100 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs">
           <span className="text-xs font-semibold text-amber-700 block">Pending to Send</span>
           <span className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1 block">
             {messagesPendingCount}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Waiting to be messaged</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">Waiting to be messaged</span>
         </div>
 
         {/* Total Valid Contacts */}
-        <div className="bg-white border border-slate-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs">
+        <div className="bg-white border border-slate-100 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs">
           <span className="text-xs font-semibold text-slate-500 block">Valid Phone Contacts</span>
           <span className="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1 block">
             {totalWithPhone}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Out of {totalGuests} guests</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">Out of {totalGuests} guests</span>
         </div>
       </div>
 
-      {/* 4. Guest Outreach Directory & Status Table */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-6 shadow-2xs space-y-4">
+      {/* 4. Guest Outreach Directory: Mobile Cards + Desktop Table */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
@@ -307,15 +307,15 @@ export default function WhatsAppOverviewView({
           </div>
 
           {/* Quick Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-initial">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search guest or phone..."
-                className="bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
 
@@ -331,8 +331,84 @@ export default function WhatsAppOverviewView({
           </div>
         </div>
 
-        {/* Outreach Table */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+        {/* Mobile View: Guest Message Cards (< md) */}
+        <div className="md:hidden space-y-2.5">
+          {filteredGuests.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs">
+              No guests found matching your search.
+            </div>
+          ) : (
+            filteredGuests.map((guest) => {
+              return (
+                <div
+                  key={guest.id}
+                  className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 space-y-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-slate-900 text-xs">
+                          {guest.guest_name}
+                        </span>
+                        {(guest.side || "").toLowerCase().includes("bride") ? (
+                          <span className="text-[9px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-100">
+                            👰 Bride
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                            🤵 Groom
+                          </span>
+                        )}
+                      </div>
+
+                      {guest.phone ? (
+                        <a
+                          href={`tel:${guest.phone}`}
+                          className="font-mono text-xs text-slate-600 hover:text-emerald-600 font-semibold inline-flex items-center gap-1 mt-0.5"
+                        >
+                          <Phone className="w-3 h-3 text-emerald-600" />
+                          <span>+{guest.phone}</span>
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 italic block mt-0.5">No valid phone</span>
+                      )}
+                    </div>
+
+                    <div>
+                      {guest.isDone ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Done</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          <span>Pending</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {guest.hasPhone && (
+                    <div className="flex items-center justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => onOpenWhatsAppModal && onOpenWhatsAppModal(guest)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>{guest.isDone ? "Resend Message" : "Send WhatsApp"}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop View: Outreach Table (>= md) */}
+        <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-100">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b border-slate-100">
               <tr>

@@ -337,9 +337,9 @@ export default function RsvpAnalyticsView({
   }, [groomConfirmed, brideConfirmed, groomPending, bridePending, regretsCount, total]);
 
   return (
-    <div className="p-3.5 sm:p-6 md:p-8 space-y-5 animate-fadeIn min-w-0 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-5 md:p-8 space-y-4 sm:space-y-5 animate-fadeIn min-w-0 max-w-7xl mx-auto">
       {/* 1. Header Navigation & Scoped Wedding Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs">
         <div className="min-w-0">
           {onBack && (
             <button
@@ -391,11 +391,11 @@ export default function RsvpAnalyticsView({
         </div>
 
         {/* Side Filter Segmented Buttons */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80 text-xs shadow-2xs self-start sm:self-auto">
+        <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80 text-xs shadow-2xs w-full sm:w-auto justify-between sm:justify-start">
           <button
             type="button"
             onClick={() => setSideFilter("all")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer text-center ${
               sideFilter === "all"
                 ? "bg-white text-slate-900 shadow-xs"
                 : "text-slate-500 hover:text-slate-900"
@@ -406,7 +406,7 @@ export default function RsvpAnalyticsView({
           <button
             type="button"
             onClick={() => setSideFilter("groom")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer text-center ${
               sideFilter === "groom"
                 ? "bg-white text-indigo-700 shadow-xs"
                 : "text-slate-500 hover:text-slate-900"
@@ -417,7 +417,7 @@ export default function RsvpAnalyticsView({
           <button
             type="button"
             onClick={() => setSideFilter("bride")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer text-center ${
               sideFilter === "bride"
                 ? "bg-white text-rose-700 shadow-xs"
                 : "text-slate-500 hover:text-slate-900"
@@ -429,55 +429,55 @@ export default function RsvpAnalyticsView({
       </div>
 
       {/* 2. Top Metric Summary Cards (Confirmed, Pending, Regrets) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Confirmed */}
-        <div className="bg-white border border-emerald-100 rounded-3xl p-5 shadow-xs flex items-center justify-between">
+        <div className="bg-white border border-emerald-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-emerald-700 block">Confirmed (Attending)</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-3xl font-extrabold text-emerald-600">{confirmedCount}</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600">{confirmedCount}</span>
               <span className="text-xs font-bold text-emerald-700/80">({confirmedPct}%)</span>
             </div>
             <span className="text-[11px] text-slate-400 mt-0.5 block">
               Groom: {groomConfirmed} • Bride: {brideConfirmed}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-6 h-6 stroke-[2.2]" />
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
           </div>
         </div>
 
         {/* Pending */}
-        <div className="bg-white border border-amber-100 rounded-3xl p-5 shadow-xs flex items-center justify-between">
+        <div className="bg-white border border-amber-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-amber-700 block">Pending (Awaiting)</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-3xl font-extrabold text-amber-600">{pendingCount}</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-amber-600">{pendingCount}</span>
               <span className="text-xs font-bold text-amber-700/80">({pendingPct}%)</span>
             </div>
             <span className="text-[11px] text-slate-400 mt-0.5 block">
               Groom: {groomPending} • Bride: {bridePending}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <Clock className="w-6 h-6 stroke-[2.2]" />
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
           </div>
         </div>
 
         {/* Regrets (Declined) */}
-        <div className="bg-white border border-rose-100 rounded-3xl p-5 shadow-xs flex items-center justify-between">
+        <div className="bg-white border border-rose-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-rose-700 block">Regrets (Declined)</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-3xl font-extrabold text-rose-600">{regretsCount}</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-rose-600">{regretsCount}</span>
               <span className="text-xs font-bold text-rose-700/80">({regretsPct}%)</span>
             </div>
             <span className="text-[11px] text-slate-400 mt-0.5 block">
               Groom: {groomRegrets} • Bride: {brideRegrets}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-            <XCircle className="w-6 h-6 stroke-[2.2]" />
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+            <XCircle className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
           </div>
         </div>
       </div>
@@ -727,7 +727,7 @@ export default function RsvpAnalyticsView({
       </div>
 
       {/* 4. Guest RSVP Action List */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-2xs space-y-4">
+      <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-extrabold text-slate-900">
@@ -739,21 +739,107 @@ export default function RsvpAnalyticsView({
           </div>
 
           {/* Status Counter Badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <span className="text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
               ✓ {confirmedCount} Confirmed
             </span>
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
               ⏳ {pendingCount} Pending
             </span>
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
               ✕ {regretsCount} Regrets
             </span>
           </div>
         </div>
 
-        {/* Guests Table */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+        {/* Mobile View: Guest RSVP Cards (< sm) */}
+        <div className="sm:hidden space-y-2.5">
+          {filteredGuests.length === 0 ? (
+            <div className="py-6 text-center text-slate-400 text-xs">
+              No guests found matching your filter.
+            </div>
+          ) : (
+            filteredGuests.slice(0, 30).map((g) => {
+              const s = (g.rsvp_status || "").toLowerCase();
+              const isConf = s === "confirmed" || s.includes("attend");
+              const isReg = s === "declined" || s.includes("regret");
+              return (
+                <div
+                  key={g.id}
+                  className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 space-y-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 text-xs truncate">
+                        {g.guest_name}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[11px]">
+                        {(g.side || "").toLowerCase().includes("bride") ? (
+                          <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-100">
+                            👰 Bride
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                            🤵 Groom
+                          </span>
+                        )}
+                        {g.contact && (
+                          <a
+                            href={`tel:${g.contact}`}
+                            className="font-mono text-slate-500 hover:text-emerald-600"
+                          >
+                            {g.contact}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      {isConf ? (
+                        <span className="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Confirmed</span>
+                        </span>
+                      ) : isReg ? (
+                        <span className="inline-flex items-center gap-1 font-bold text-[10px] text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                          <XCircle className="w-3 h-3 text-rose-600" />
+                          <span>Regrets</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 font-bold text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          <span>Pending</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {onUpdateRsvp && (
+                    <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-200/60">
+                      <button
+                        type="button"
+                        onClick={() => onUpdateRsvp(g.id, "Confirmed")}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-colors"
+                      >
+                        ✓ Mark Confirmed
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onUpdateRsvp(g.id, "Declined")}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-100 hover:bg-rose-200 text-rose-800 transition-colors"
+                      >
+                        ✕ Mark Regrets
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop View: Guests Table (>= sm) */}
+        <div className="hidden sm:block overflow-x-auto rounded-2xl border border-slate-100">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b border-slate-100">
               <tr>
