@@ -308,5 +308,155 @@
     "message": "hoi",
     "is_read": false,
     "created_at": "2026-11-02T17:24:18.953Z"
+  },
+  {
+    "id": "msg_387bb394-7",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "marriage_wedding_98fd25ef",
+    "sender_name": "manish & nnppy",
+    "sender_role": "client",
+    "message": "the most lamest joke in the world,",
+    "is_read": true,
+    "created_at": "2026-10-28T10:19:44.798+00:00"
+  },
+  {
+    "id": "msg_34646dd1-8",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "terminal_test",
+    "sender_name": "Terminal Runner",
+    "sender_role": "client",
+    "message": "End-to-end test message from terminal",
+    "is_read": true,
+    "created_at": "2026-10-28T11:43:09.8+00:00"
+  },
+  {
+    "id": "msg_1793239575654_f253bf",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "uguoypiup[",
+    "is_read": false,
+    "created_at": "2026-10-29T02:06:15.654+00:00"
+  },
+  {
+    "id": "msg_b54ec12a-2a68-4b20-90fa-48fda81d3720",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "Noted! The telecaller desk is contacting the guests right now.",
+    "is_read": false,
+    "created_at": "2026-10-29T05:10:38.97777+00:00"
+  },
+  {
+    "id": "msg_c02e04a1-80f5-410f-9046-825811185c47",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "marriage_wedding_98fd25ef",
+    "sender_name": "manish & nnppy",
+    "sender_role": "client",
+    "message": "Can we extend the RSVP deadline by 2 days?",
+    "is_read": true,
+    "created_at": "2026-10-29T05:19:25.579267+00:00"
+  },
+  {
+    "id": "msg_73d1d2ce-6718-44d6-a4c1-693685d6ed86",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "marriage_wedding_98fd25ef",
+    "sender_name": "manish & nnppy",
+    "sender_role": "client",
+    "message": "How many guests confirmed their flight tickets?",
+    "is_read": true,
+    "created_at": "2026-10-29T05:19:43.683124+00:00"
+  },
+  {
+    "id": "msg_10db4c65-24bc-481a-adf5-64688769a1d9",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "no it cannot be done",
+    "is_read": false,
+    "created_at": "2026-10-29T09:13:52.705474+00:00"
+  },
+  {
+    "id": "msg_0919493f-7940-4b2b-be15-c9bb9dc1d73a",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "he yo",
+    "is_read": false,
+    "created_at": "2026-10-29T11:10:05.607696+00:00"
+  },
+  {
+    "id": "msg_a3ba794a-bd64-41f6-a104-e9d2bd07e67f",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "i think u know",
+    "is_read": false,
+    "created_at": "2026-10-29T14:06:14.509735+00:00"
+  },
+  {
+    "id": "msg_bc81c22a-2afc-44ca-b1be-39a60fe1564f",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "marriage_wedding_98fd25ef",
+    "sender_name": "manish & nnppy",
+    "sender_role": "client",
+    "message": "Hey good evening",
+    "is_read": true,
+    "created_at": "2026-10-29T14:13:08.457543+00:00"
+  },
+  {
+    "id": "msg_fc188eb3-a589-4a2f-b622-2ee305603fa0",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "hey bro",
+    "is_read": false,
+    "created_at": "2026-10-29T14:13:21.334396+00:00"
+  },
+  {
+    "id": "msg_aea49e30-9502-47c4-86ee-cf1eb192a399",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "marriage_wedding_98fd25ef",
+    "sender_name": "manish & nnppy",
+    "sender_role": "client",
+    "message": "How are u doing",
+    "is_read": true,
+    "created_at": "2026-10-29T14:13:30.489468+00:00"
+  },
+  {
+    "id": "msg_26247eae-0540-4c13-863c-907cc38078a9",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "im doing good how about u",
+    "is_read": false,
+    "created_at": "2026-10-29T14:13:47.386734+00:00"
+  },
+  {
+    "id": "msg_e54ce32b-95b4-40dc-a6ff-416a49d2fd6f",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "user_admin_01",
+    "sender_name": "Manish",
+    "sender_role": "admin",
+    "message": "Noted! The telecaller desk is contacting the guests right now.",
+    "is_read": false,
+    "created_at": "2026-10-29T14:13:57.525982+00:00"
+  },
+  {
+    "id": "msg_35949857-d83a-45ac-af6c-68e950ed465d",
+    "wedding_id": "wedding_98fd25ef",
+    "sender_id": "marriage_wedding_98fd25ef",
+    "sender_name": "manish & nnppy",
+    "sender_role": "client",
+    "message": "Airport shuttle & cab status update?",
+    "is_read": true,
+    "created_at": "2026-10-31T12:21:05.153037+00:00"
   }
 ]

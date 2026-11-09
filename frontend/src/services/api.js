@@ -28,7 +28,7 @@ export const getCurrentAuthUser = () => {
   try {
     const raw = localStorage.getItem("manish_auth_user");
     if (raw) return JSON.parse(raw);
-  } catch (e) { }
+  } catch (e) {}
   return null;
 };
 
@@ -159,9 +159,9 @@ const setCachedGuests = (guests) => {
       // preserve guests in cache without breaking local storage:
       const sanitized = Array.isArray(guests)
         ? guests.map((g) => ({
-          ...sanitizeGuestRecord(g),
-          id_card_copy: g.id_card_copy && g.id_card_copy.length > 50000 ? g.id_card_copy.slice(0, 100) : g.id_card_copy,
-        }))
+            ...sanitizeGuestRecord(g),
+            id_card_copy: g.id_card_copy && g.id_card_copy.length > 50000 ? g.id_card_copy.slice(0, 100) : g.id_card_copy,
+          }))
         : [];
       localStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
     } catch (e2) { }
@@ -628,7 +628,7 @@ export const api = {
       if (savedSel === id) {
         localStorage.removeItem("manish_selected_wedding_id");
       }
-    } catch (e) { }
+    } catch (e) {}
 
     // 2. Call backend endpoint to purge database store & Google Sheet
     try {
@@ -816,7 +816,7 @@ export const api = {
       call_status: guestData.call_status && isNaN(Number(guestData.call_status)) ? guestData.call_status : "Not Called",
       last_call_summary:
         guestData.last_call_summary &&
-          guestData.last_call_summary.trim().toLowerCase() !== (guestData.guest_name || "").trim().toLowerCase()
+        guestData.last_call_summary.trim().toLowerCase() !== (guestData.guest_name || "").trim().toLowerCase()
           ? guestData.last_call_summary
           : null,
     };
@@ -1417,10 +1417,10 @@ function syncAllGuestsToDatabase() {
         const rawList = Array.isArray(json)
           ? json
           : Array.isArray(json?.data)
-            ? json.data
-            : Array.isArray(json?.messages)
-              ? json.messages
-              : null;
+          ? json.data
+          : Array.isArray(json?.messages)
+          ? json.messages
+          : null;
 
         if (Array.isArray(rawList)) {
           const unique = [];
@@ -1436,7 +1436,7 @@ function syncAllGuestsToDatabase() {
           try {
             localStorage.setItem(`cached_messages_${cleanId}`, JSON.stringify(unique));
             localStorage.setItem(`cached_messages_${targetId}`, JSON.stringify(unique));
-          } catch (e) { }
+          } catch (e) {}
 
           return unique;
         }
@@ -1468,7 +1468,7 @@ function syncAllGuestsToDatabase() {
           }
         }
       }
-    } catch (e) { }
+    } catch (e) {}
 
     return [];
   },
@@ -1524,7 +1524,7 @@ function syncAllGuestsToDatabase() {
           try {
             const local = localStorage.getItem(`cached_messages_${safeWeddingId}`);
             if (local) list = JSON.parse(local);
-          } catch (e) { }
+          } catch (e) {}
 
           const seen = new Set(list.map((m) => m.id));
           if (!seen.has(json.data.id)) {
@@ -1536,7 +1536,7 @@ function syncAllGuestsToDatabase() {
           }
           try {
             localStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
-          } catch (e) { }
+          } catch (e) {}
         }
         return json;
       }
@@ -1560,7 +1560,7 @@ function syncAllGuestsToDatabase() {
     try {
       const local = localStorage.getItem(`cached_messages_${safeWeddingId}`);
       if (local) list = JSON.parse(local);
-    } catch (e) { }
+    } catch (e) {}
 
     // Avoid duplicate insertions
     const isDuplicate = list.some(
@@ -1570,7 +1570,7 @@ function syncAllGuestsToDatabase() {
       list.push(newMsg);
       try {
         localStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
-      } catch (e) { }
+      } catch (e) {}
     }
 
     return { success: true, data: newMsg };
@@ -1605,7 +1605,7 @@ function syncAllGuestsToDatabase() {
         .catch(() => {
           if (timeoutId) clearTimeout(timeoutId);
         });
-    } catch (e) { }
+    } catch (e) {}
 
     // 2. Update local storage cache for all possible key variants
     try {
@@ -1626,10 +1626,10 @@ function syncAllGuestsToDatabase() {
               return m;
             });
             localStorage.setItem(key, JSON.stringify(msgs));
-          } catch (err) { }
+          } catch (err) {}
         }
       });
-    } catch (e) { }
+    } catch (e) {}
   },
 
   // ============================================================

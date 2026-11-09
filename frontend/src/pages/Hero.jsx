@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import ChromeTabBar from "../components/ChromeTabBar";
+import WeddingHeroBanner from "../components/WeddingHeroBanner";
 import StatsCards from "../components/StatsCards";
 import FilterBar from "../components/FilterBar";
 import GuestTable from "../components/GuestTable";
@@ -68,9 +70,34 @@ export default function Hero() {
 
   // Navigation & Workspace State
   const [activeTab, setActiveTab] = useState(isMarriageClient ? "directory" : "weddings"); // 'weddings' or 'directory'
+  const [previousTab, setPreviousTab] = useState("directory");
   const [weddings, setWeddings] = useState([]);
   const [selectedWedding, setSelectedWedding] = useState(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // Collapsible Sidebar State (persists preference)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("wedding_sidebar_collapsed") === "true";
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("wedding_sidebar_collapsed", String(next));
+      } catch (e) {}
+      return next;
+    });
+  }, []);
+
+  // Chrome-Style Open Tabs State (hub tab + opened wedding tabs)
+  const [openWeddingTabs, setOpenWeddingTabs] = useState(() => [
+    { id: "all", title: "All Marriages", isHub: true, isFixed: true },
+  ]);
 
   // Guests & Statistics State
   const [guests, setGuests] = useState([]);
@@ -460,6 +487,33 @@ export default function Hero() {
       setCallAttemptsFilter("All");
       setSelectedWedding(wedding);
       setActiveTab("directory");
+
+      // Synchronously open wedding in Chrome Tab Bar
+      setOpenWeddingTabs((prev) => {
+        if (prev.some((t) => t.id === wedding.id)) {
+          return prev.map((t) =>
+            t.id === wedding.id
+              ? {
+                  ...t,
+                  wedding,
+                  title: `${wedding.groom_name} & ${wedding.bride_name}`,
+                  count: wedding.total_guests,
+                }
+              : t
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: wedding.id,
+            title: `${wedding.groom_name} & ${wedding.bride_name}`,
+            wedding,
+            isHub: false,
+            isFixed: false,
+            count: wedding.total_guests,
+          },
+        ];
+      });
     } else {
       if (isCallCenter && user?.wedding_id && user.wedding_id !== "all") {
         setActiveTab("weddings");
@@ -475,6 +529,116 @@ export default function Hero() {
       } catch (e) {}
     }
   };
+
+  // Chrome Tabs computed list
+  const chromeTabsList = useMemo(() => {
+    if (isCallCenter && user?.wedding_id && user.wedding_id !== "all") {
+      const callerWedding = selectedWedding || visibleWeddings[0];
+      return [
+        {
+          id: user.wedding_id,
+          title: callerWedding
+            ? `${callerWedding.groom_name} & ${callerWedding.bride_name}`
+            : user.assigned_wedding_name || "Assigned Marriage",
+          wedding: callerWedding,
+          isHub: false,
+          isFixed: true,
+          count: callerWedding?.total_guests,
+        },
+      ];
+    }
+    if (isMarriageClient) {
+      const clientWedding = selectedWedding || visibleWeddings[0];
+      return [
+        {
+          id: user.wedding_id || clientWedding?.id || "client",
+          title: clientWedding
+            ? `${clientWedding.groom_name} & ${clientWedding.bride_name}`
+            : user.name || "Wedding Portal",
+          wedding: clientWedding,
+          isHub: false,
+          isFixed: true,
+          count: clientWedding?.total_guests,
+        },
+      ];
+    }
+    const hubTab = {
+      id: "all",
+      title: "All Marriages",
+      isHub: true,
+      isFixed: true,
+      count: visibleWeddings.length,
+    };
+    const openTabsWithoutHub = openWeddingTabs.filter((t) => !t.isHub && t.id !== "all");
+    return [hubTab, ...openTabsWithoutHub];
+  }, [
+    isCallCenter,
+    isMarriageClient,
+    user?.wedding_id,
+    user?.assigned_wedding_name,
+    user?.name,
+    selectedWedding,
+    visibleWeddings,
+    openWeddingTabs,
+  ]);
+
+  const activeTabId = useMemo(() => {
+    if (activeTab === "weddings" || !selectedWedding) return "all";
+    return selectedWedding.id;
+  }, [activeTab, selectedWedding]);
+
+  const unopenedWeddings = useMemo(() => {
+    const openIds = new Set(chromeTabsList.map((t) => t.id));
+    return visibleWeddings.filter((w) => !openIds.has(w.id));
+  }, [visibleWeddings, chromeTabsList]);
+
+  const handleSelectChromeTab = useCallback(
+    (tabId) => {
+      if (tabId === "all") {
+        handleSelectWedding(null);
+      } else {
+        const targetTab = openWeddingTabs.find((t) => t.id === tabId);
+        if (targetTab?.wedding) {
+          handleSelectWedding(targetTab.wedding);
+        } else {
+          const found = visibleWeddings.find((w) => w.id === tabId);
+          if (found) handleSelectWedding(found);
+        }
+      }
+    },
+    [openWeddingTabs, visibleWeddings]
+  );
+
+  const handleCloseChromeTab = useCallback(
+    (tabIdToClose) => {
+      setOpenWeddingTabs((prev) => {
+        const idx = prev.findIndex((t) => t.id === tabIdToClose);
+        const filtered = prev.filter((t) => t.id !== tabIdToClose);
+
+        if (selectedWedding?.id === tabIdToClose) {
+          const remainingWeddings = filtered.filter((t) => !t.isHub && t.id !== "all");
+          if (remainingWeddings.length > 0) {
+            const nextTab = remainingWeddings[Math.max(0, idx - 2)] || remainingWeddings[0];
+            setTimeout(() => {
+              if (nextTab?.wedding) {
+                handleSelectWedding(nextTab.wedding);
+              } else {
+                handleSelectWedding(null);
+              }
+            }, 0);
+          } else {
+            setTimeout(() => handleSelectWedding(null), 0);
+          }
+        }
+        return filtered;
+      });
+    },
+    [selectedWedding]
+  );
+
+  const handleNewChromeTab = useCallback(() => {
+    handleSelectWedding(null);
+  }, []);
 
   const handleOpenAddWeddingModal = () => {
     if (!isAdmin) {
@@ -507,6 +671,17 @@ export default function Hero() {
         if (selectedWedding?.id === editingWedding.id) {
           setSelectedWedding((prev) => ({ ...prev, ...mergedWedding }));
         }
+        setOpenWeddingTabs((prev) =>
+          prev.map((t) =>
+            t.id === editingWedding.id
+              ? {
+                  ...t,
+                  wedding: mergedWedding,
+                  title: `${mergedWedding.groom_name} & ${mergedWedding.bride_name}`,
+                }
+              : t
+          )
+        );
       } else {
         const created = await api.createWedding(formData);
         showToast("New Marriage Card & Client Portal Created!");
@@ -558,6 +733,7 @@ export default function Hero() {
       if (selectedWedding?.id === delId) {
         handleSelectWedding(null);
       }
+      setOpenWeddingTabs((prev) => prev.filter((t) => t.id !== delId));
       setDeletingWedding(null);
     } catch (err) {
       showToast("Failed to delete marriage card", "error");
@@ -789,7 +965,7 @@ export default function Hero() {
   );
 
   return (
-    <div className="min-h-screen bg-[#14213D] p-0 sm:p-2 md:p-6 text-slate-900 flex justify-center font-sans antialiased selection:bg-[#FF6B5B]/20 selection:text-[#14213D]">
+    <div className="h-screen max-h-screen w-full flex flex-col bg-[#F4F5FA] text-slate-900 font-sans antialiased selection:bg-[#e11d48]/20 selection:text-[#e11d48] overflow-hidden">
       {/* Toast Notification */}
       {toast && (
         <div
@@ -804,53 +980,71 @@ export default function Hero() {
         </div>
       )}
 
-      {/* Main App Container */}
-      <div className="w-full max-w-[1440px] bg-[#FAF7F2] rounded-none sm:rounded-[28px] shadow-2xl border-0 sm:border border-[#14213D]/20 ring-1 ring-white/10 flex flex-col md:flex-row overflow-hidden min-h-screen md:min-h-[92vh]">
-        {/* Left Sidebar (Desktop Static + Mobile Slide-Out Drawer) */}
-        <Sidebar
-          totalCount={
-            selectedWedding
-              ? stats.totalRegistered ?? displayedGuests.length
-              : totalGlobalGuests
-          }
-          totalWeddingsCount={visibleWeddings.length}
-          activeTab={activeTab}
-          setActiveTab={(tab) => {
-            setActiveTab(tab);
-            setIsMobileNavOpen(false);
-          }}
-          onOpenAddModal={() => {
-            setIsMobileNavOpen(false);
-            handleOpenAddGuestModal();
-          }}
-          onOpenAddWeddingModal={() => {
-            setIsMobileNavOpen(false);
-            handleOpenAddWeddingModal();
-          }}
-          selectedWedding={selectedWedding}
-          weddings={visibleWeddings}
-          onSelectWedding={(w) => {
-            setIsMobileNavOpen(false);
-            handleSelectWedding(w);
-          }}
-          isMobileNavOpen={isMobileNavOpen}
-          setIsMobileNavOpen={setIsMobileNavOpen}
-          onOpenChat={() => setIsChatModalOpen(true)}
-          onOpenCallCenterModal={() => setIsCallCenterModalOpen(true)}
-        />
+      {/* TOP CHROME TAB BAR (Full-screen edge-to-edge navbar as in reference image) */}
+      <ChromeTabBar
+        tabs={chromeTabsList}
+        activeTabId={activeTabId}
+        onSelectTab={handleSelectChromeTab}
+        onCloseTab={handleCloseChromeTab}
+        onNewTab={handleNewChromeTab}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onToggleSidebar={toggleSidebar}
+        unopenedWeddings={unopenedWeddings}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onOpenAddGuestModal={handleOpenAddGuestModal}
+        onOpenMobileNav={() => setIsMobileNavOpen(true)}
+      />
 
-        {/* Right Main Content */}
-        <main ref={mainViewRef} className="flex-1 flex flex-col bg-[#fcfdfc] overflow-y-auto min-w-0">
-          {/* Top Header Bar */}
-          <Header
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onOpenAddModal={handleOpenAddGuestModal}
+      {/* Full Page Body: Sidebar on Left + Main Content on Right */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+          {/* Left Sidebar (Desktop Static + Mobile Slide-Out Drawer) */}
+          <Sidebar
+            totalCount={
+              selectedWedding
+                ? stats.totalRegistered ?? displayedGuests.length
+                : totalGlobalGuests
+            }
+            totalWeddingsCount={visibleWeddings.length}
+            activeTab={activeTab}
+            setActiveTab={(tab) => {
+              setActiveTab(tab);
+              setIsMobileNavOpen(false);
+            }}
+            onOpenAddModal={() => {
+              setIsMobileNavOpen(false);
+              handleOpenAddGuestModal();
+            }}
+            onOpenAddWeddingModal={() => {
+              setIsMobileNavOpen(false);
+              handleOpenAddWeddingModal();
+            }}
             selectedWedding={selectedWedding}
             weddings={visibleWeddings}
-            onOpenMobileNav={() => setIsMobileNavOpen(true)}
+            onSelectWedding={(w) => {
+              setIsMobileNavOpen(false);
+              handleSelectWedding(w);
+            }}
+            isMobileNavOpen={isMobileNavOpen}
+            setIsMobileNavOpen={setIsMobileNavOpen}
+            onOpenChat={() => setIsChatModalOpen(true)}
             onOpenCallCenterModal={() => setIsCallCenterModalOpen(true)}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={toggleSidebar}
           />
+
+          {/* Right Main Content */}
+          <main ref={mainViewRef} className="flex-1 flex flex-col bg-[#F4F5FA] overflow-y-auto min-w-0 scroll-smooth">
+            {/* Top Header Bar */}
+            <Header
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onOpenAddModal={handleOpenAddGuestModal}
+              selectedWedding={selectedWedding}
+              weddings={visibleWeddings}
+              onOpenMobileNav={() => setIsMobileNavOpen(true)}
+              onOpenCallCenterModal={() => setIsCallCenterModalOpen(true)}
+            />
 
           {/* Banner 1: Call Center Active Notice */}
           {isCallCenter && (
@@ -914,7 +1108,7 @@ export default function Hero() {
 
           {/* ================= VIEW 1: MARRIAGE CARDS HUB (ALL WEDDINGS) ================= */}
           {!isMarriageClient && activeTab === "weddings" && (
-            <div className="p-5 md:p-7 space-y-5 flex-1 animate-fadeIn">
+            <div className="p-3.5 sm:p-5 md:p-7 space-y-4 sm:space-y-5 flex-1 animate-fadeIn">
               {/* Header Title & Action */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -986,8 +1180,28 @@ export default function Hero() {
 
           {/* ================= VIEW 2: GUEST DIRECTORY & CALL DESK ================= */}
           {activeTab === "directory" && (
-            <div className="p-3 sm:p-5 md:p-7 space-y-3.5 sm:space-y-4 flex-1 animate-fadeIn min-w-0">
-              {/* Back to All Weddings Bar & Wedding Info */}
+            <div className="p-3 sm:p-6 md:p-8 space-y-3.5 sm:space-y-4 flex-1 animate-fadeIn min-w-0">
+              {/* Luxury Wedding Hero Banner & Executive Summary Cards (Reference Design) */}
+              {selectedWedding && (
+                <WeddingHeroBanner
+                  wedding={selectedWedding}
+                  stats={stats}
+                  displayedGuests={displayedGuests}
+                  onScrollToTable={() => {
+                    const el = document.getElementById("guest-directory-table");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  onOpenAnalytics={() => {
+                    setPreviousTab(activeTab);
+                    setActiveTab("analytics");
+                  }}
+                  onOpenGoogleSheet={() => setGoogleSheetModalWedding(selectedWedding)}
+                />
+              )}
+
+              {/* Guest Directory Controls & Table */}
+              <div id="guest-directory-table" className="space-y-4">
+                {/* Back to All Weddings Bar & Wedding Info */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="min-w-0">
                   {!isMarriageClient && (!isCallCenter || !user?.wedding_id || user.wedding_id === "all") ? (
@@ -1123,6 +1337,7 @@ export default function Hero() {
                 }}
                 onUpdateRsvp={handleQuickUpdateRsvp}
               />
+              </div>
             </div>
           )}
 
@@ -1135,10 +1350,11 @@ export default function Hero() {
               onSelectWedding={handleSelectWedding}
               isAdmin={isAdmin}
               isMarriageClient={isMarriageClient}
+              onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
             />
           )}
         </main>
-      </div>
+        </div>
 
       {/* ================= MODALS ================= */}
 

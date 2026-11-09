@@ -1,19 +1,17 @@
 import React, { useState } from "react";
 import {
+  LayoutTemplate,
+  Target,
   Users,
-  UserPlus,
+  Home,
+  CheckCircle2,
+  PhoneCall,
+  MessageCircle,
   ChevronDown,
   ChevronsUpDown,
-  Briefcase,
-  Heart,
   PlusCircle,
-  Sparkles,
-  PhoneCall,
-  ShieldCheck,
-  MessageSquare,
-  X,
-  BarChart3,
   Headphones,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -31,6 +29,8 @@ export default function Sidebar({
   setIsMobileNavOpen,
   onOpenChat,
   onOpenCallCenterModal,
+  isCollapsed = false,
+  onToggleCollapse,
 }) {
   const {
     user,
@@ -40,7 +40,6 @@ export default function Sidebar({
     isViewOnly,
     canEditGuests,
     setIsLoginModalOpen,
-    setIsAdminPasswordModalOpen,
   } = useAuth();
   const isScopedCaller = isCallCenter && user?.wedding_id && user.wedding_id !== "all";
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
@@ -54,381 +53,336 @@ export default function Sidebar({
       {/* Mobile Drawer Backdrop */}
       {isMobileNavOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden animate-fadeIn"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs md:hidden animate-fadeIn"
           onClick={closeMobile}
         />
       )}
 
-      {/* Sidebar (Desktop Static + Mobile Drawer) */}
+      {/* Sidebar: Clean White with Exact Structure & Icons from Reference Image */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white md:bg-[#FAF7F2] p-5 flex flex-col justify-between border-r border-[#E5DAC8] shrink-0 transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:z-auto md:w-64 lg:w-72 md:min-h-[860px] overflow-y-auto ${
+        className={`fixed inset-y-0 left-0 z-50 bg-white flex flex-col justify-between border-r border-slate-100 shrink-0 transition-all duration-300 ease-in-out md:static md:translate-x-0 md:z-auto md:h-full md:min-h-0 overflow-y-auto no-scrollbar ${
+          isCollapsed ? "p-3 md:w-20" : "p-4 sm:p-5 md:w-60 lg:w-64"
+        } ${
           isMobileNavOpen
-            ? "translate-x-0 shadow-2xl"
+            ? "w-72 max-w-[85vw] translate-x-0 shadow-2xl"
             : "-translate-x-full md:translate-x-0 shadow-none"
         }`}
       >
-        <div className="space-y-5">
-          {/* Brand Logo & Current Role Badge */}
-          <div className="flex items-center justify-between px-2 pt-1">
-            <div className="flex items-center gap-3 group cursor-pointer" onClick={closeMobile}>
-              <div className="w-8 h-8 rounded-2xl bg-[#14213D] flex items-center justify-center p-1.5 shadow-sm ring-4 ring-[#F4EDE0] transition-all group-hover:scale-105">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6B5B] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FF6B5B]"></span>
-                </span>
-              </div>
-              <div>
-                <span className="text-lg font-extrabold tracking-tight text-[#14213D] font-sans block leading-none">
-                  Wedding Site
-                </span>
-                <span className="text-[10px] text-slate-500 font-medium">Guest & Travel Directory</span>
-              </div>
-            </div>
-
-            {/* Mobile Close Button */}
-            <button
-              type="button"
-              onClick={closeMobile}
-              aria-label="Close navigation menu"
-              className="md:hidden w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-        {/* Role Pill Banner */}
-        <div className="px-2">
-          {isAdmin ? (
-            <div className="flex items-center justify-between bg-[#F4EDE0] border border-[#E5DAC8] px-3 py-1.5 rounded-xl text-[#14213D] text-xs font-bold shadow-2xs animate-fadeIn">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#FF6B5B]" />
-                <span>Super Admin</span>
+        <div className="space-y-4 sm:space-y-5">
+          {/* Mobile Drawer Header with Branding & Close Button */}
+          {isMobileNavOpen && (
+            <div className="md:hidden flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <span className="text-base font-black tracking-wider text-[#e11d48] font-sans">
+                RSVP.CO
               </span>
-              <span className="text-[10px] bg-[#14213D] text-[#F4EDE0] px-1.5 py-0.5 rounded-md font-semibold border border-[#14213D]">
-                Full Access
-              </span>
-            </div>
-          ) : isCallCenter ? (
-            <div
-              onClick={() => setIsAdminPasswordModalOpen(true)}
-              title="Click to Unlock Super Admin Mode with Password"
-              className="flex items-center justify-between bg-[#F4EDE0] hover:bg-[#EFE6D6] border border-[#E5DAC8] px-3 py-1.5 rounded-xl text-[#14213D] text-xs font-bold shadow-2xs animate-fadeIn cursor-pointer group transition-colors"
-            >
-              <span className="flex items-center gap-1.5">
-                <PhoneCall className="w-3.5 h-3.5 text-[#FF6B5B]" />
-                <span>Call Center Desk</span>
-              </span>
-              <span className="text-[10px] bg-[#14213D] text-[#F4EDE0] group-hover:bg-[#FF6B5B] group-hover:text-white px-1.5 py-0.5 rounded-md font-semibold transition-colors border border-[#14213D]">
-                Switch Role
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between bg-[#F4EDE0] border border-[#E5DAC8] px-3 py-1.5 rounded-xl text-[#14213D] text-xs font-bold shadow-2xs animate-fadeIn">
-              <span className="flex items-center gap-1.5">
-                <Heart className="w-3.5 h-3.5 text-[#FF6B5B]" />
-                <span>Client Portal</span>
-              </span>
-              <span className="text-[10px] bg-[#14213D] text-[#F4EDE0] px-1.5 py-0.5 rounded-md font-semibold border border-[#14213D]">
-                View Only
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Workspace Dropdown Card */}
-        <div className="relative">
-          <div
-            onClick={() => {
-              if (!isMarriageClient && !isScopedCaller) {
-                setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen);
-              }
-            }}
-            className={`bg-[#f8fafc] border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between transition-all group select-none ${
-              isMarriageClient || isScopedCaller
-                ? "cursor-default ring-1 ring-[#E5DAC8]/70"
-                : "hover:bg-[#f1f5f9] cursor-pointer hover:shadow-xs"
-            }`}
-          >
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-9 h-9 rounded-xl bg-slate-200/80 group-hover:bg-rose-100 flex items-center justify-center text-slate-700 group-hover:text-rose-600 transition-colors shrink-0">
-                <Heart className="w-4 h-4 text-rose-500 fill-rose-500 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="text-left min-w-0">
-                <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">
-                  {selectedWedding
-                    ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
-                    : "All Weddings"}
-                </h4>
-                <p className="text-[11px] text-slate-500 font-normal">
-                  {selectedWedding
-                    ? `${totalCount} ${totalCount === 1 ? "Guest" : "Guests"} • ${selectedWedding.city || "Venue"}`
-                    : `${totalWeddingsCount} Active Weddings`}
-                </p>
-              </div>
-            </div>
-            {!isMarriageClient && !isScopedCaller && (
-              <ChevronDown
-                className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
-                  isWorkspaceDropdownOpen ? "rotate-180 text-slate-700" : ""
-                }`}
-              />
-            )}
-          </div>
-
-          {/* Workspace Switcher Menu (Only accessible for Admin and Global Call Center) */}
-          {!isMarriageClient && !isScopedCaller && isWorkspaceDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-30 space-y-1 animate-fadeIn">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">
-                Select Wedding Workspace
-              </p>
-
-              {/* All Weddings Option */}
               <button
                 type="button"
+                onClick={closeMobile}
+                aria-label="Close navigation menu"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors active:scale-95"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Current Workspace Dropdown Pill */}
+          <div className="relative">
+            {isCollapsed ? (
+              <div
                 onClick={() => {
-                  onSelectWedding(null);
-                  setActiveTab("weddings");
-                  setIsWorkspaceDropdownOpen(false);
+                  if (!isMarriageClient && !isScopedCaller) {
+                    setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen);
+                  }
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors cursor-pointer ${
-                  !selectedWedding
-                    ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D]"
-                    : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
+                title={
+                  selectedWedding
+                    ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name} (${totalCount} guests)`
+                    : `All Weddings (${totalWeddingsCount} active)`
+                }
+                className="w-10 h-10 mx-auto rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors"
+              >
+                <Home className="w-4 h-4 text-[#e11d48]" />
+              </div>
+            ) : (
+              <div
+                onClick={() => {
+                  if (!isMarriageClient && !isScopedCaller) {
+                    setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen);
+                  }
+                }}
+                className={`bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 flex items-center justify-between transition-all select-none ${
+                  isMarriageClient || isScopedCaller
+                    ? "cursor-default"
+                    : "cursor-pointer hover:bg-slate-100"
                 }`}
               >
-                <span>All Marriage Cards</span>
-                <span className="text-[10px] bg-[#E5DAC8] text-[#14213D] px-1.5 py-0.5 rounded-full font-bold">
-                  {weddings.length}
-                </span>
-              </button>
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <span className="w-2 h-2 rounded-full bg-[#e11d48] shrink-0" />
+                  <span className="text-xs font-bold text-slate-800 truncate">
+                    {selectedWedding
+                      ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}`
+                      : "All Weddings Hub"}
+                  </span>
+                </div>
+                {!isMarriageClient && !isScopedCaller && (
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${
+                      isWorkspaceDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                )}
+              </div>
+            )}
 
-              {/* Individual Weddings */}
-              {weddings.map((w) => (
+            {/* Workspace Dropdown Menu */}
+            {!isMarriageClient && !isScopedCaller && isWorkspaceDropdownOpen && (
+              <div
+                className={`absolute ${
+                  isCollapsed ? "left-full ml-3 top-0 w-64" : "top-full left-0 right-0 mt-2"
+                } bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-30 space-y-1 animate-fadeIn`}
+              >
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">
+                  Select Wedding Workspace
+                </p>
+
                 <button
-                  key={w.id}
                   type="button"
                   onClick={() => {
-                    onSelectWedding(w);
-                    setActiveTab("directory");
+                    onSelectWedding(null);
+                    setActiveTab("weddings");
                     setIsWorkspaceDropdownOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors cursor-pointer ${
-                    selectedWedding?.id === w.id
-                      ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D]"
-                      : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
+                    !selectedWedding
+                      ? "bg-[#e11d48] text-white"
+                      : "text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  <span className="truncate">
-                    {w.groom_name} & {w.bride_name}
-                  </span>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 font-bold ${
-                      selectedWedding?.id === w.id
-                        ? "bg-[#FF6B5B] text-white"
-                        : "bg-[#E5DAC8] text-[#14213D]"
-                    }`}
-                  >
-                    {w.total_guests || 0} {w.total_guests === 1 ? "guest" : "guests"}
+                  <span>All Marriage Cards</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-white/20">
+                    {weddings.length}
                   </span>
                 </button>
-              ))}
 
-              {isAdmin && (
-                <div className="pt-1 border-t border-slate-100">
+                {weddings.map((w) => (
                   <button
+                    key={w.id}
                     type="button"
                     onClick={() => {
+                      onSelectWedding(w);
+                      setActiveTab("directory");
                       setIsWorkspaceDropdownOpen(false);
-                      onOpenAddWeddingModal();
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-[#14213D] hover:bg-[#F4EDE0] transition-colors cursor-pointer"
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors cursor-pointer ${
+                      selectedWedding?.id === w.id
+                        ? "bg-[#e11d48] text-white"
+                        : "text-slate-700 hover:bg-slate-50"
+                    }`}
                   >
-                    <PlusCircle className="w-3.5 h-3.5 text-[#FF6B5B]" />
-                    <span>+ Create Marriage Card</span>
+                    <span className="truncate">
+                      {w.groom_name} & {w.bride_name}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700">
+                      {w.total_guests || 0}
+                    </span>
                   </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ================= EXACT CATEGORIES & ICONS FROM IMAGE ================= */}
+          <nav className="space-y-4 pt-1">
+            {/* 1. SETUP */}
+            <div className="space-y-1">
+              {!isCollapsed && (
+                <p className="text-[11px] font-bold text-slate-400 tracking-wider uppercase px-3 mb-1">
+                  Setup
+                </p>
+              )}
+
+              {/* Overview (Active item with pink tint as in screenshot) */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedWedding) {
+                    setActiveTab("directory");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  } else {
+                    setActiveTab("weddings");
+                  }
+                  closeMobile();
+                }}
+                title={isCollapsed ? "Overview" : undefined}
+                className={`flex items-center transition-all cursor-pointer ${
+                  isCollapsed
+                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${
+                        activeTab === "weddings" || selectedWedding
+                          ? "bg-[#fdf2f4] text-[#e11d48]"
+                          : "text-slate-500 hover:bg-slate-50"
+                      }`
+                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-bold ${
+                        activeTab === "weddings" || (activeTab === "directory" && selectedWedding)
+                          ? "bg-[#fdf2f4] text-[#e11d48]"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`
+                }`}
+              >
+                <LayoutTemplate className="w-4 h-4 shrink-0 stroke-[2.2]" />
+                {!isCollapsed && <span>Overview</span>}
+              </button>
+
+              {/* Venues */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("directory");
+                  closeMobile();
+                }}
+                title={isCollapsed ? "Venues" : undefined}
+                className={`flex items-center transition-all cursor-pointer ${
+                  isCollapsed
+                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-50"
+                    : "w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <Target className="w-4 h-4 shrink-0 text-slate-400" />
+                {!isCollapsed && <span>Venues</span>}
+              </button>
+            </div>
+
+            {/* 2. PEOPLE */}
+            <div className="space-y-1">
+              {!isCollapsed && (
+                <p className="text-[11px] font-bold text-slate-400 tracking-wider uppercase px-3 mb-1">
+                  People
+                </p>
+              )}
+
+              {/* Guests */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!selectedWedding && weddings.length > 0) {
+                    onSelectWedding(weddings[0]);
+                  }
+                  setActiveTab("directory");
+                  const el = document.getElementById("guest-directory-table");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                  closeMobile();
+                }}
+                title={isCollapsed ? `Guests (${totalCount})` : undefined}
+                className={`flex items-center transition-all cursor-pointer ${
+                  isCollapsed
+                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-50"
+                    : "w-full justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 shrink-0 text-slate-400" />
+                  {!isCollapsed && <span>Guests</span>}
+                </div>
+                {!isCollapsed && (
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {totalCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* 3. COMMUNICATION */}
+            <div className="space-y-1">
+              {!isCollapsed && (
+                <p className="text-[11px] font-bold text-slate-400 tracking-wider uppercase px-3 mb-1">
+                  Communication
+                </p>
+              )}
+
+              {/* RSVP */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("directory");
+                  closeMobile();
+                }}
+                title={isCollapsed ? "RSVP Tracking" : undefined}
+                className={`flex items-center transition-all cursor-pointer ${
+                  isCollapsed
+                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-50"
+                    : "w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-slate-400" />
+                {!isCollapsed && <span>RSVP</span>}
+              </button>
+
+              {/* Call Log */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("directory");
+                  closeMobile();
+                }}
+                title={isCollapsed ? "Call Log" : undefined}
+                className={`flex items-center transition-all cursor-pointer ${
+                  isCollapsed
+                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-50"
+                    : "w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <PhoneCall className="w-4 h-4 shrink-0 text-slate-400" />
+                {!isCollapsed && <span>Call Log</span>}
+              </button>
+
+              {/* WhatsApp */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenChat) onOpenChat();
+                  closeMobile();
+                }}
+                title={isCollapsed ? "WhatsApp" : undefined}
+                className={`flex items-center transition-all cursor-pointer ${
+                  isCollapsed
+                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-50"
+                    : "w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 shrink-0 text-slate-400" />
+                {!isCollapsed && <span>WhatsApp</span>}
+              </button>
+            </div>
+          </nav>
+        </div>
+
+        {/* Bottom User Profile */}
+        <div className="pt-3 border-t border-slate-100 mt-4">
+          <div
+            onClick={() => setIsLoginModalOpen(true)}
+            className={`flex items-center ${
+              isCollapsed ? "justify-center" : "justify-between p-1.5"
+            } rounded-xl hover:bg-slate-50 transition-colors cursor-pointer`}
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                {user?.name?.charAt(0) || "A"}
+              </div>
+              {!isCollapsed && (
+                <div className="text-left leading-tight">
+                  <p className="text-xs font-bold text-slate-800 truncate max-w-[120px]">
+                    {user?.name || "Account"}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {isAdmin ? "Super Admin" : isCallCenter ? "Caller" : "Client"}
+                  </p>
                 </div>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Navigation Items */}
-        <nav className="space-y-1.5 pt-1">
-          {/* 1. Marriage Cards (All Weddings Hub - Admin & Call Center only) */}
-          {!isMarriageClient && (
-            <button
-              onClick={() => {
-                if (isScopedCaller) {
-                  setActiveTab("weddings");
-                } else {
-                  onSelectWedding(null);
-                  setActiveTab("weddings");
-                }
-              }}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer ${
-                activeTab === "weddings"
-                  ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D] font-bold shadow-sm"
-                  : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Heart className={`w-4 h-4 stroke-[2.2] ${activeTab === "weddings" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
-                <span>{isScopedCaller ? "Assigned Marriage" : "Marriage Cards"}</span>
-              </div>
-              <span
-                className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                  activeTab === "weddings"
-                    ? "bg-[#FF6B5B] text-white"
-                    : "bg-[#E5DAC8] text-[#14213D]"
-                }`}
-              >
-                {totalWeddingsCount}
-              </span>
-            </button>
-          )}
-
-          {/* 2. Guest Directory (Active / Scoped) */}
-          <button
-            onClick={() => {
-              if (!selectedWedding && weddings.length > 0) {
-                onSelectWedding(weddings[0]);
-              }
-              setActiveTab("directory");
-            }}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer ${
-              activeTab === "directory"
-                ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D] font-bold shadow-sm"
-                : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Users className={`w-4 h-4 stroke-[2.2] ${activeTab === "directory" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
-              <span>Guest Directory</span>
-            </div>
-            <span
-              className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                activeTab === "directory"
-                  ? "bg-[#FF6B5B] text-white"
-                  : "bg-[#E5DAC8] text-[#14213D]"
-              }`}
-            >
-              {totalCount}
-            </span>
-          </button>
-
-          {/* 3. Analytics & Trends (Visual Bar Graphs, Line Graphs, Insights) */}
-          <button
-            onClick={() => {
-              if (!selectedWedding && weddings.length > 0) {
-                onSelectWedding(weddings[0]);
-              }
-              setActiveTab("analytics");
-              closeMobile();
-            }}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer ${
-              activeTab === "analytics"
-                ? "bg-[#14213D] text-[#F4EDE0] border border-[#14213D] font-bold shadow-sm"
-                : "text-slate-700 hover:bg-[#F4EDE0] hover:text-[#14213D]"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <BarChart3 className={`w-4 h-4 stroke-[2.2] ${activeTab === "analytics" ? "text-[#FF6B5B]" : "text-slate-500"}`} />
-              <span>Analytics & Trends</span>
-            </div>
-            <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                activeTab === "analytics"
-                  ? "bg-[#FF6B5B] text-white"
-                  : "bg-[#E5DAC8] text-[#14213D]"
-              }`}
-            >
-              Graphs
-            </span>
-          </button>
-
-          {/* Action: Call Center Team & Assignments (Admin Only) */}
-          {isAdmin && (
-            <button
-              onClick={() => {
-                if (onOpenCallCenterModal) onOpenCallCenterModal();
-                closeMobile();
-              }}
-              className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-[#14213D] hover:bg-[#F4EDE0] transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <Headphones className="w-4 h-4 text-[#FF6B5B] stroke-[2]" />
-                <span>Call Center Team</span>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FF6B5B]/15 text-[#FF6B5B] group-hover:bg-[#FF6B5B] group-hover:text-white transition-colors">
-                Manage
-              </span>
-            </button>
-          )}
-
-          {/* Action: Add Marriage Card (Admin Only) */}
-          {!isViewOnly && isAdmin && (
-            <button
-              onClick={onOpenAddWeddingModal}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-[#14213D] hover:bg-[#F4EDE0] transition-colors cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4 text-[#FF6B5B] stroke-[2]" />
-              <span>+ Add Marriage Card</span>
-            </button>
-          )}
-
-          {/* Action: Add Guest Entry (Admin only) */}
-          {canEditGuests && (
-            <button
-              onClick={onOpenAddModal}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 hover:text-[#14213D] hover:bg-[#F4EDE0] transition-colors cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4 text-[#FF6B5B] stroke-[2]" />
-              <span>+ Add Guest Entry</span>
-            </button>
-          )}
-        </nav>
-      </div>
-
-      {/* Bottom Profile Footer */}
-      <div className="pt-6 border-t border-slate-100 mt-6">
-        <div
-          onClick={() => setIsLoginModalOpen(true)}
-          title="Click to Switch User / Role"
-          className="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#14213D] via-[#1c2d52] to-[#FF6B5B] p-0.5 flex items-center justify-center text-white font-semibold text-xs shadow-xs overflow-hidden">
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-full h-full object-cover rounded-full"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.style.display = "none";
-                  }}
-                />
-              ) : (
-                <span>{user?.name?.charAt(0) || "U"}</span>
-              )}
-            </div>
-            <div className="text-left leading-tight">
-              <p className="text-xs font-bold text-slate-900 truncate max-w-[130px]">
-                {user?.name || "Guest User"}
-              </p>
-              <p className="text-[11px] text-slate-400 font-normal">
-                {isAdmin
-                  ? "Super Admin"
-                  : isCallCenter
-                  ? "Call Center Telecaller"
-                  : "Marriage Client (View Only)"}
-              </p>
-            </div>
+            {!isCollapsed && <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
           </div>
-          <ChevronsUpDown className="w-4 h-4 text-slate-400" />
         </div>
-      </div>
-    </aside>
+      </aside>
     </>
   );
 }
