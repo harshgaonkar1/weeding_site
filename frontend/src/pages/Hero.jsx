@@ -37,6 +37,9 @@ import AdminPasswordModal from "../components/AdminPasswordModal";
 import GoogleSheetModal from "../components/GoogleSheetModal";
 import WhatsAppMessageModal from "../components/WhatsAppMessageModal";
 import AnalyticsView from "../components/AnalyticsView";
+import RsvpAnalyticsView from "../components/RsvpAnalyticsView";
+import CallDeskLogsView from "../components/CallDeskLogsView";
+import WhatsAppOverviewView from "../components/WhatsAppOverviewView";
 import ChatBotModal from "../components/ChatBotModal";
 import CircularChatWidget from "../components/CircularChatWidget";
 import CallCenterManagementModal from "../components/CallCenterManagementModal";
@@ -465,7 +468,7 @@ export default function Hero() {
   }, [selectedWeddingId, user?.role, user?.wedding_id, user?.name, loadGuests, loadWeddings]);
 
   // ------------------- WEDDING ACTIONS -------------------
-  const handleSelectWedding = (wedding) => {
+  const handleSelectWedding = (wedding, targetTab = "directory") => {
     if (wedding) {
       if (isCallCenter && user?.wedding_id && user.wedding_id !== "all" && wedding.id !== user.wedding_id) {
         showToast(
@@ -486,7 +489,7 @@ export default function Hero() {
       setIdCardFilter("All");
       setCallAttemptsFilter("All");
       setSelectedWedding(wedding);
-      setActiveTab("directory");
+      setActiveTab(targetTab || "directory");
 
       // Synchronously open wedding in Chrome Tab Bar
       setOpenWeddingTabs((prev) => {
@@ -1021,9 +1024,9 @@ export default function Hero() {
             }}
             selectedWedding={selectedWedding}
             weddings={visibleWeddings}
-            onSelectWedding={(w) => {
+            onSelectWedding={(w, targetTab) => {
               setIsMobileNavOpen(false);
-              handleSelectWedding(w);
+              handleSelectWedding(w, targetTab);
             }}
             isMobileNavOpen={isMobileNavOpen}
             setIsMobileNavOpen={setIsMobileNavOpen}
@@ -1351,6 +1354,48 @@ export default function Hero() {
               isAdmin={isAdmin}
               isMarriageClient={isMarriageClient}
               onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
+            />
+          )}
+
+          {/* ================= VIEW 4: RSVP ANALYTICS (PIE & BUBBLE CHARTS) ================= */}
+          {activeTab === "rsvp" && (
+            <RsvpAnalyticsView
+              guests={displayedGuests}
+              wedding={selectedWedding}
+              weddings={visibleWeddings}
+              onSelectWedding={handleSelectWedding}
+              onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
+              onUpdateRsvp={(guestId, newRsvp) => {
+                const target = displayedGuests.find((g) => g.id === guestId);
+                if (target) handleQuickUpdateRsvp(target, newRsvp);
+              }}
+            />
+          )}
+
+          {/* ================= VIEW 5: CALL DESK LOGS (ONLY CALL LOG DETAILS) ================= */}
+          {activeTab === "call_logs" && (
+            <CallDeskLogsView
+              guests={displayedGuests}
+              wedding={selectedWedding}
+              weddings={visibleWeddings}
+              onSelectWedding={handleSelectWedding}
+              onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
+              onOpenCallLogModal={handleOpenCallLogs}
+            />
+          )}
+
+          {/* ================= VIEW 6: WHATSAPP OVERVIEW (HOW MANY MESSAGES SO FAR DONE) ================= */}
+          {activeTab === "whatsapp" && (
+            <WhatsAppOverviewView
+              guests={displayedGuests}
+              wedding={selectedWedding}
+              weddings={visibleWeddings}
+              onSelectWedding={handleSelectWedding}
+              onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
+              onOpenWhatsAppModal={(g) => {
+                setWhatsAppModalInitialGuest(g || null);
+                setIsWhatsAppModalOpen(true);
+              }}
             />
           )}
         </main>

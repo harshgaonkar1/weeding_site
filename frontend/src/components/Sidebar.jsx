@@ -12,6 +12,7 @@ import {
   PlusCircle,
   Headphones,
   X,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -43,9 +44,21 @@ export default function Sidebar({
   } = useAuth();
   const isScopedCaller = isCallCenter && user?.wedding_id && user.wedding_id !== "all";
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
+  const [selectMarriageModalTab, setSelectMarriageModalTab] = useState(null);
 
   const closeMobile = () => {
     if (setIsMobileNavOpen) setIsMobileNavOpen(false);
+  };
+
+  const handleCommunicationClick = (tabKey) => {
+    if (selectedWedding && selectedWedding.id && selectedWedding.id !== "all") {
+      // Already in a particular marriage -> display that marriage data directly
+      setActiveTab(tabKey);
+      closeMobile();
+    } else {
+      // In overview section of admin panel -> must select the marriage first!
+      setSelectMarriageModalTab(tabKey);
+    }
   };
 
   return (
@@ -302,54 +315,81 @@ export default function Sidebar({
               {/* RSVP */}
               <button
                 type="button"
-                onClick={() => {
-                  setActiveTab("directory");
-                  closeMobile();
-                }}
-                title={isCollapsed ? "RSVP Tracking" : undefined}
+                onClick={() => handleCommunicationClick("rsvp")}
+                title={isCollapsed ? "RSVP Analytics" : undefined}
                 className={`flex items-center transition-all cursor-pointer ${
                   isCollapsed
-                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-50"
-                    : "w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${
+                        activeTab === "rsvp"
+                          ? "bg-[#fdf2f4] text-[#e11d48]"
+                          : "text-slate-500 hover:bg-slate-50"
+                      }`
+                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${
+                        activeTab === "rsvp"
+                          ? "bg-[#fdf2f4] text-[#e11d48] font-bold"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`
                 }`}
               >
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-slate-400" />
+                <CheckCircle2
+                  className={`w-4 h-4 shrink-0 ${
+                    activeTab === "rsvp" ? "text-[#e11d48]" : "text-slate-400"
+                  }`}
+                />
                 {!isCollapsed && <span>RSVP</span>}
               </button>
 
               {/* Call Log */}
               <button
                 type="button"
-                onClick={() => {
-                  setActiveTab("directory");
-                  closeMobile();
-                }}
-                title={isCollapsed ? "Call Log" : undefined}
+                onClick={() => handleCommunicationClick("call_logs")}
+                title={isCollapsed ? "Call Log Records" : undefined}
                 className={`flex items-center transition-all cursor-pointer ${
                   isCollapsed
-                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-50"
-                    : "w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${
+                        activeTab === "call_logs"
+                          ? "bg-[#fdf2f4] text-[#e11d48]"
+                          : "text-slate-500 hover:bg-slate-50"
+                      }`
+                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${
+                        activeTab === "call_logs"
+                          ? "bg-[#fdf2f4] text-[#e11d48] font-bold"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`
                 }`}
               >
-                <PhoneCall className="w-4 h-4 shrink-0 text-slate-400" />
+                <PhoneCall
+                  className={`w-4 h-4 shrink-0 ${
+                    activeTab === "call_logs" ? "text-[#e11d48]" : "text-slate-400"
+                  }`}
+                />
                 {!isCollapsed && <span>Call Log</span>}
               </button>
 
               {/* WhatsApp */}
               <button
                 type="button"
-                onClick={() => {
-                  if (onOpenChat) onOpenChat();
-                  closeMobile();
-                }}
-                title={isCollapsed ? "WhatsApp" : undefined}
+                onClick={() => handleCommunicationClick("whatsapp")}
+                title={isCollapsed ? "WhatsApp Outreach" : undefined}
                 className={`flex items-center transition-all cursor-pointer ${
                   isCollapsed
-                    ? "w-10 h-10 mx-auto rounded-xl justify-center text-slate-500 hover:bg-slate-50"
-                    : "w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${
+                        activeTab === "whatsapp"
+                          ? "bg-[#fdf2f4] text-[#e11d48]"
+                          : "text-slate-500 hover:bg-slate-50"
+                      }`
+                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${
+                        activeTab === "whatsapp"
+                          ? "bg-[#fdf2f4] text-[#e11d48] font-bold"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`
                 }`}
               >
-                <MessageCircle className="w-4 h-4 shrink-0 text-slate-400" />
+                <MessageCircle
+                  className={`w-4 h-4 shrink-0 ${
+                    activeTab === "whatsapp" ? "text-[#e11d48]" : "text-slate-400"
+                  }`}
+                />
                 {!isCollapsed && <span>WhatsApp</span>}
               </button>
             </div>
@@ -383,6 +423,73 @@ export default function Sidebar({
           </div>
         </div>
       </aside>
+
+      {/* ================= MODAL: SELECT MARRIAGE FIRST ================= */}
+      {selectMarriageModalTab && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-100 max-w-md w-full space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Select Marriage First
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Choose a marriage to open its{" "}
+                  <span className="font-bold text-[#e11d48]">
+                    {selectMarriageModalTab === "rsvp"
+                      ? "RSVP Analytics"
+                      : selectMarriageModalTab === "call_logs"
+                      ? "Call Desk Logs"
+                      : "WhatsApp Messages"}
+                  </span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectMarriageModalTab(null)}
+                aria-label="Close marriage selection"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* List of Marriages */}
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto no-scrollbar py-1">
+              {weddings.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-4">No marriages found.</p>
+              ) : (
+                weddings.map((w) => (
+                  <div
+                    key={w.id}
+                    onClick={() => {
+                      onSelectWedding(w, selectMarriageModalTab);
+                      setSelectMarriageModalTab(null);
+                      closeMobile();
+                    }}
+                    className="p-3 sm:p-3.5 rounded-2xl border border-slate-100 hover:border-[#e11d48]/40 hover:bg-[#fdf2f4]/40 cursor-pointer transition-all flex items-center justify-between group"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-[#e11d48] truncate transition-colors">
+                        {w.groom_name} & {w.bride_name}
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5 truncate">
+                        {w.wedding_date || "Upcoming"} {w.city ? `• ${w.city}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+                        {w.total_guests || 0} Guests
+                      </span>
+                      <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-[#e11d48] group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

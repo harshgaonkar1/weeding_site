@@ -170,7 +170,7 @@ export default function WeddingHeroBanner({
             </p>
           </div>
 
-          {/* Location, Date, Budget */}
+          {/* Location & Date */}
           <div className="flex items-center gap-3.5 sm:gap-6 flex-wrap text-xs text-slate-300 pt-1.5 sm:pt-2">
             <div className="flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#e11d48] shrink-0" />
@@ -184,11 +184,6 @@ export default function WeddingHeroBanner({
               <span className="font-medium text-slate-200">
                 {wedding.wedding_date || "2-4 Feb 2026"}
               </span>
-            </div>
-
-            <div className="flex flex-col text-left">
-              <span className="font-extrabold text-white text-xs">₹2.4 Cr</span>
-              <span className="text-[9px] sm:text-[10px] text-slate-400 leading-tight">Total Budget</span>
             </div>
           </div>
         </div>
@@ -210,7 +205,7 @@ export default function WeddingHeroBanner({
       </div>
 
       {/* ================= 2. STATUS STRIP ================= */}
-      <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:px-6 sm:py-4 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs shadow-xs">
+      <div className="bg-white border border-slate-100 rounded-2xl p-3 sm:px-6 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs shadow-xs">
         {/* LIVE Status */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
@@ -224,12 +219,6 @@ export default function WeddingHeroBanner({
         <div>
           <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium block leading-tight">Duration</span>
           <span className="font-bold text-slate-900 text-xs sm:text-sm">25 days to go</span>
-        </div>
-
-        {/* Budget */}
-        <div>
-          <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium block leading-tight">Budget</span>
-          <span className="font-bold text-slate-900 text-xs sm:text-sm truncate block">₹2.4 Cr / ₹1.62 Cr</span>
         </div>
 
         {/* Location */}
