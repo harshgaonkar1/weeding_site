@@ -67,6 +67,7 @@ export default function Header({
   }, [isDropdownOpen]);
 
   const handleRoleToggle = (role) => {
+    if (isMarriageClient || isViewOnly) return;
     if (role === "admin") {
       if (isAdmin) return;
       // Protected: requires Super Admin password
@@ -136,50 +137,53 @@ export default function Header({
 
         {/* Right Controls: Role Switcher & Profile */}
         <div className="flex items-center gap-2 sm:gap-2.5 w-full md:w-auto justify-between md:justify-end flex-wrap">
-          {/* Clean Segmented Role Switcher Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shadow-2xs flex-1 sm:flex-initial justify-between sm:justify-start">
-            <button
-              type="button"
-              onClick={() => handleRoleToggle("admin")}
-              title="Super Admin Mode"
-              className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                isAdmin
-                  ? "bg-[#1E3A8A] text-white font-bold shadow-xs border border-[#1E3A8A]"
-                  : "text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
-              }`}
-            >
-              <ShieldCheck className={`w-3.5 h-3.5 ${isAdmin ? "text-[#FF6574]" : "text-slate-400"}`} />
-              <span>Admin</span>
-            </button>
+          {/* Role Switcher (Hidden in User View so client cannot see or jump to Admin/Call Center) */}
+          {!(isMarriageClient || isViewOnly) ? (
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shadow-2xs flex-1 sm:flex-initial justify-between sm:justify-start">
+              <button
+                type="button"
+                onClick={() => handleRoleToggle("admin")}
+                title="Super Admin Mode"
+                className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  isAdmin
+                    ? "bg-[#1E3A8A] text-white font-bold shadow-xs border border-[#1E3A8A]"
+                    : "text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
+                }`}
+              >
+                <ShieldCheck className={`w-3.5 h-3.5 ${isAdmin ? "text-[#FF6574]" : "text-slate-400"}`} />
+                <span>Admin</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleRoleToggle("call_center")}
-              title="Call Desk Telecaller Mode"
-              className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                isCallCenter
-                  ? "bg-[#1E3A8A] text-white font-bold shadow-xs border border-[#1E3A8A]"
-                  : "text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
-              }`}
-            >
-              <PhoneCall className={`w-3.5 h-3.5 ${isCallCenter ? "text-[#FF6574]" : "text-slate-400"}`} />
-              <span>Call Center</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleRoleToggle("call_center")}
+                title="Call Desk Telecaller Mode"
+                className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  isCallCenter
+                    ? "bg-[#1E3A8A] text-white font-bold shadow-xs border border-[#1E3A8A]"
+                    : "text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
+                }`}
+              >
+                <PhoneCall className={`w-3.5 h-3.5 ${isCallCenter ? "text-[#FF6574]" : "text-slate-400"}`} />
+                <span>Call Center</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleRoleToggle("marriage_client")}
-              title="Marriage Client User View"
-              className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                isMarriageClient
-                  ? "bg-[#1E3A8A] text-white font-bold shadow-xs border border-[#1E3A8A]"
-                  : "text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
-              }`}
-            >
-              <Heart className={`w-3.5 h-3.5 ${isMarriageClient ? "text-[#FF6574]" : "text-slate-400"}`} />
+              <button
+                type="button"
+                onClick={() => handleRoleToggle("marriage_client")}
+                title="Marriage Client User View"
+                className="flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer text-slate-600 hover:text-[#1E3A8A] hover:bg-slate-200/60"
+              >
+                <Heart className="w-3.5 h-3.5 text-slate-400" />
+                <span>User View</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E3A8A] text-white text-xs font-bold shadow-xs border border-[#1E3A8A]">
+              <Heart className="w-3.5 h-3.5 text-[#FF6574] fill-[#FF6574]" />
               <span>User View</span>
-            </button>
-          </div>
+            </div>
+          )}
 
           {/* Add Guest Button (Desktop only - mobile is in top bar) */}
           {canEditGuests && (
@@ -253,17 +257,19 @@ export default function Header({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    setIsLoginModalOpen(true);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Switch Account</span>
-                </button>
+                {!isMarriageClient && !isViewOnly && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setIsLoginModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Switch Account</span>
+                  </button>
+                )}
 
                 <button
                   type="button"

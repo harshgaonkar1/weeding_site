@@ -26,7 +26,7 @@ export default function ChromeTabBar({
   unopenedWeddings = [],
   onOpenMobileNav,
 }) {
-  const { user, setIsLoginModalOpen } = useAuth();
+  const { user, isMarriageClient, isViewOnly, setIsLoginModalOpen } = useAuth();
   const scrollContainerRef = useRef(null);
 
   // Auto-scroll the active tab into view when activeTabId changes
@@ -163,9 +163,13 @@ export default function ChromeTabBar({
 
       {/* Right: User Profile ("Account" as in reference image) */}
       <div
-        onClick={() => setIsLoginModalOpen(true)}
-        className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity shrink-0 px-2 py-1 rounded-xl hover:bg-slate-100"
-        title="Click to Switch User / Role"
+        onClick={!isMarriageClient && !isViewOnly ? () => setIsLoginModalOpen(true) : undefined}
+        className={`flex items-center gap-2 shrink-0 px-2 py-1 rounded-xl ${
+          !isMarriageClient && !isViewOnly
+            ? "cursor-pointer hover:opacity-90 hover:bg-slate-100"
+            : ""
+        }`}
+        title={!isMarriageClient && !isViewOnly ? "Click to Switch User / Role" : "User Profile"}
       >
         <div className="w-7 h-7 rounded-full bg-[#FF6574] text-white flex items-center justify-center shrink-0 shadow-2xs">
           <User className="w-3.5 h-3.5" />

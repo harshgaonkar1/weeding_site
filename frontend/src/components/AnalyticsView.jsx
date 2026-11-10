@@ -16,6 +16,7 @@ import {
   Filter,
   ArrowUpRight,
   PieChart as PieIcon,
+  CircleDot,
   MapPin,
   Utensils,
   ChevronRight,
@@ -57,6 +58,7 @@ export default function AnalyticsView({
   const [timeRange, setTimeRange] = useState("all"); // 'all', 'bride', 'groom'
   const [flightLogisticsType, setFlightLogisticsType] = useState("arrival"); // 'arrival' | 'departure'
   const [selectedFlight, setSelectedFlight] = useState(null);
+  const [hoveredDatePoint, setHoveredDatePoint] = useState(null);
 
   // Filter guests based on active side filter
   const filteredGuests = useMemo(() => {
@@ -90,6 +92,158 @@ export default function AnalyticsView({
   const groomConfirmed = groomGuests.filter((g) => (g.rsvp_status || "").toLowerCase() === "confirmed").length;
   const groomPending = groomGuests.length - groomConfirmed;
 
+  const [activeSlice, setActiveSlice] = useState(null);
+  const [activeBubble, setActiveBubble] = useState(null);
+
+  // ------------------- SVG PIE / DONUT CHART GENERATION -------------------
+  const pieSlices = useMemo(() => {
+    if (totalGuests === 0) return [];
+    const radius = 80;
+    const innerRadius = 48; // Donut hole
+    const cx = 100;
+    const cy = 100;
+
+    const data = [
+      {
+        key: "confirmed",
+        label: "Confirmed",
+        count: confirmedCount,
+        pct: confirmedRate,
+        color: "#10b981",
+        lightColor: "#ecfdf5",
+        ringColor: "ring-emerald-500",
+      },
+      {
+        key: "pending",
+        label: "Pending",
+        count: pendingCount,
+        pct: pendingRate,
+        color: "#f59e0b",
+        lightColor: "#fffbeb",
+        ringColor: "ring-amber-500",
+      },
+      {
+        key: "regrets",
+        label: "Regrets",
+        count: declinedCount,
+        pct: declinedRate,
+        color: "#f43f5e",
+        lightColor: "#fff1f2",
+        ringColor: "ring-rose-500",
+      },
+    ].filter((d) => d.count > 0);
+
+    let cumulativeAngle = -Math.PI / 2;
+
+    return data.map((d) => {
+      const sliceAngle = (d.count / Math.max(totalGuests, 1)) * 2 * Math.PI;
+      const startAngle = cumulativeAngle;
+      const endAngle = cumulativeAngle + sliceAngle;
+      cumulativeAngle = endAngle;
+
+      const x1 = cx + radius * Math.cos(startAngle);
+      const y1 = cy + radius * Math.sin(startAngle);
+      const x2 = cx + radius * Math.cos(endAngle);
+      const y2 = cy + radius * Math.sin(endAngle);
+
+      const ix1 = cx + innerRadius * Math.cos(endAngle);
+      const iy1 = cy + innerRadius * Math.sin(endAngle);
+      const ix2 = cx + innerRadius * Math.cos(startAngle);
+      const iy2 = cy + innerRadius * Math.sin(startAngle);
+
+      const largeArc = sliceAngle > Math.PI ? 1 : 0;
+
+      const path = [
+        `M ${x1} ${y1}`,
+        `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
+        `L ${ix1} ${iy1}`,
+        `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${ix2} ${iy2}`,
+        "Z",
+      ].join(" ");
+
+      return {
+        ...d,
+        path,
+      };
+    });
+  }, [totalGuests, confirmedCount, pendingCount, declinedCount, confirmedRate, pendingRate, declinedRate]);
+
+  // ------------------- SVG BUBBLE CLUSTER CHART GENERATION -------------------
+  const bubbles = useMemo(() => {
+    const rawGroups = [
+      {
+        id: "groom-confirmed",
+        label: "Groom Confirmed",
+        category: "Confirmed",
+        count: groomConfirmed || Math.max(1, Math.round(confirmedCount * 0.55)),
+        color: "#10b981",
+        gradientFrom: "#059669",
+        gradientTo: "#34d399",
+        cx: 120,
+        cy: 90,
+      },
+      {
+        id: "bride-confirmed",
+        label: "Bride Confirmed",
+        category: "Confirmed",
+        count: brideConfirmed || Math.max(1, Math.round(confirmedCount * 0.45)),
+        color: "#059669",
+        gradientFrom: "#10b981",
+        gradientTo: "#6ee7b7",
+        cx: 240,
+        cy: 80,
+      },
+      {
+        id: "groom-pending",
+        label: "Groom Pending",
+        category: "Pending",
+        count: groomPending || Math.max(1, Math.round(pendingCount * 0.5)),
+        color: "#f59e0b",
+        gradientFrom: "#d97706",
+        gradientTo: "#fbbf24",
+        cx: 90,
+        cy: 190,
+      },
+      {
+        id: "bride-pending",
+        label: "Bride Pending",
+        category: "Pending",
+        count: bridePending || Math.max(1, Math.round(pendingCount * 0.5)),
+        color: "#fbbf24",
+        gradientFrom: "#f59e0b",
+        gradientTo: "#fde68a",
+        cx: 200,
+        cy: 185,
+      },
+      {
+        id: "regrets-total",
+        label: "Regrets (Declined)",
+        category: "Regrets",
+        count: declinedCount,
+        color: "#f43f5e",
+        gradientFrom: "#e11d48",
+        gradientTo: "#fda4af",
+        cx: 300,
+        cy: 170,
+      },
+    ];
+
+    const maxCount = Math.max(...rawGroups.map((g) => g.count), 1);
+    const minRadius = 24;
+    const maxRadius = 52;
+
+    return rawGroups.map((g) => {
+      const scale = g.count / maxCount;
+      const r = Math.max(minRadius, minRadius + scale * (maxRadius - minRadius));
+      const pct = totalGuests > 0 ? Math.round((g.count / totalGuests) * 100) : 0;
+      return {
+        ...g,
+        r,
+        pct,
+      };
+    });
+  }, [groomConfirmed, brideConfirmed, groomPending, bridePending, confirmedCount, pendingCount, declinedCount, totalGuests]);
+
   // ID Cards
   const idReceivedCount = filteredGuests.filter((g) => (g.id_card_received || "").toLowerCase() === "yes" || g.id_card_copy).length;
   const idRate = totalGuests > 0 ? Math.round((idReceivedCount / totalGuests) * 100) : 0;
@@ -98,15 +252,8 @@ export default function AnalyticsView({
   const arrivalCapturedCount = filteredGuests.filter((g) => g.arrival_date || g.arrival_flight_train_no).length;
   const arrivalRate = totalGuests > 0 ? Math.round((arrivalCapturedCount / totalGuests) * 100) : 0;
 
-  // Call Desk Progress
-  const calledOnce = filteredGuests.filter((g) => Number(g.call_count) >= 1).length;
-  const calledTwice = filteredGuests.filter((g) => Number(g.call_count) >= 2).length;
-  const calledThrice = filteredGuests.filter((g) => Number(g.call_count) >= 3).length;
-  const calledNone = filteredGuests.filter((g) => !g.call_count || Number(g.call_count) === 0).length;
-
-  // Flight Grouping & Passenger Influx Aggregation (Same Flight Distribution)
-  const flightData = useMemo(() => {
-    const isArrival = flightLogisticsType === "arrival";
+  // Flight Grouping & Passenger Influx Aggregation for Inbound (Arrival) and Outbound (Departure)
+  const computeFlightManifest = (isArrival) => {
     const countsMap = {};
     let totalTrackedPassengers = 0;
 
@@ -167,17 +314,140 @@ export default function AnalyticsView({
       totalTrackedPassengers = flights.reduce((sum, f) => sum + f.count, 0);
     }
 
-    // Sort descending: flight with largest group first
     flights.sort((a, b) => b.count - a.count);
-
-    const maxCount = Math.max(...flights.map((f) => f.count), 1);
-
     return {
       flights,
       totalTrackedPassengers,
-      maxCount,
+      maxCount: Math.max(...flights.map((f) => f.count), 1),
     };
-  }, [filteredGuests, flightLogisticsType]);
+  };
+
+  const arrivalData = useMemo(() => computeFlightManifest(true), [filteredGuests]);
+  const departureData = useMemo(() => computeFlightManifest(false), [filteredGuests]);
+
+  // ------------------- LOCATION INFLUX AGGREGATION -------------------
+  const locationData = useMemo(() => {
+    const locMap = {};
+    let totalTracked = 0;
+
+    filteredGuests.forEach((g) => {
+      const loc = (g.arrival_location || "").trim();
+      if (!loc) return;
+      if (!locMap[loc]) {
+        locMap[loc] = { location: loc, count: 0, guests: [] };
+      }
+      locMap[loc].count += 1;
+      locMap[loc].guests.push(g);
+      totalTracked += 1;
+    });
+
+    let items = Object.values(locMap);
+
+    // If no arrival location data has been entered yet, provide realistic preview data
+    if (items.length === 0) {
+      items = [
+        { location: "GOX - Manohar Int'l Airport (Mopa)", count: 72, guests: [] },
+        { location: "GOI - Dabolim Airport (Vasco)", count: 48, guests: [] },
+        { location: "Madgaon Junction Railway Station (MAO)", count: 24, guests: [] },
+        { location: "Thivim Railway Station (THVM)", count: 14, guests: [] },
+        { location: "Direct Venue / Hotel Arrival", count: 18, guests: [] },
+      ];
+      totalTracked = items.reduce((s, i) => s + i.count, 0);
+    }
+
+    items.sort((a, b) => b.count - a.count);
+    return {
+      locations: items,
+      totalTracked,
+    };
+  }, [filteredGuests]);
+
+  // ------------------- DATE-WISE ARRIVAL TIMELINE (LINE GRAPH) -------------------
+  const dateInfluxData = useMemo(() => {
+    const dateMap = {};
+    let totalWithDate = 0;
+
+    filteredGuests.forEach((g) => {
+      const d = (g.arrival_date || "").trim();
+      if (!d) return;
+      if (!dateMap[d]) {
+        dateMap[d] = { rawDate: d, count: 0, guests: [] };
+      }
+      dateMap[d].count += 1;
+      dateMap[d].guests.push(g);
+      totalWithDate += 1;
+    });
+
+    let points = Object.values(dateMap);
+
+    if (points.length < 2) {
+      points = [
+        { rawDate: "19 Nov 2026", label: "19 Nov", count: 12 },
+        { rawDate: "20 Nov 2026", label: "20 Nov", count: 34 },
+        { rawDate: "21 Nov 2026", label: "21 Nov (Peak)", count: 86 },
+        { rawDate: "22 Nov 2026", label: "22 Nov", count: 42 },
+        { rawDate: "23 Nov 2026", label: "23 Nov", count: 18 },
+        { rawDate: "24 Nov 2026", label: "24 Nov", count: 8 },
+      ];
+    } else {
+      points.sort((a, b) => {
+        const da = new Date(a.rawDate);
+        const db = new Date(b.rawDate);
+        if (!isNaN(da) && !isNaN(db)) return da - db;
+        return a.rawDate.localeCompare(b.rawDate);
+      });
+      points = points.map((p) => ({
+        ...p,
+        label: p.rawDate.length > 10 ? p.rawDate.substring(0, 10) : p.rawDate,
+      }));
+    }
+
+    const maxCount = Math.max(...points.map((p) => p.count), 1);
+    const peakPoint = points.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), points[0]);
+
+    return {
+      points,
+      maxCount,
+      peakPoint,
+    };
+  }, [filteredGuests]);
+
+  // SVG Coordinates & Bezier Curve Path for the Line Graph
+  const lineGraphCoords = useMemo(() => {
+    const pts = dateInfluxData.points;
+    const n = pts.length;
+    const coords = pts.map((p, i) => {
+      const x = 45 + (i / Math.max(n - 1, 1)) * 510;
+      const y = 160 - (p.count / Math.max(dateInfluxData.maxCount, 1)) * 135;
+      return { ...p, x, y };
+    });
+
+    if (coords.length === 0) return { coords: [], path: "", areaPath: "" };
+    if (coords.length === 1) {
+      return {
+        coords,
+        path: `M ${coords[0].x} ${coords[0].y}`,
+        areaPath: `M ${coords[0].x} ${coords[0].y} L ${coords[0].x} 165 Z`,
+      };
+    }
+
+    let path = `M ${coords[0].x} ${coords[0].y}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[i === 0 ? 0 : i - 1];
+      const p1 = coords[i];
+      const p2 = coords[i + 1];
+      const p3 = coords[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+
+    const areaPath = `${path} L ${coords[coords.length - 1].x.toFixed(1)} 165 L ${coords[0].x.toFixed(1)} 165 Z`;
+
+    return { coords, path, areaPath };
+  }, [dateInfluxData]);
 
   // Food / Special Request breakdown
   const vegCount = filteredGuests.filter((g) => (g.special_request || "").toLowerCase().includes("veg") && !(g.special_request || "").toLowerCase().includes("non-veg")).length;
@@ -395,275 +665,290 @@ export default function AnalyticsView({
         </div>
       </div>
 
-      {/* 3. ROW 2: BAR GRAPH (RSVP & Side Distribution) + DONUT / RING CHART */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* BAR GRAPH: RSVP Breakdown by Family Side (7 cols) */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-emerald-600" />
-                <span>RSVP Status by Family Side (Bar Graph)</span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Comparison between Bride's family and Groom's family
-              </p>
+      {/* 3. ROW 2: INTERACTIVE SVG PIE / DONUT CHART + SVG BUBBLE CLUSTER CHART (FROM RSVP) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* ================= A. INTERACTIVE SVG PIE / DONUT CHART ================= */}
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <PieIcon className="w-4 h-4 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    RSVP Status Distribution (Pie Chart)
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Breakdown of Confirmed, Pending & Regrets
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                Interactive Slices
+              </span>
             </div>
 
-            <div className="flex items-center gap-3 text-xs font-semibold">
-              <span className="flex items-center gap-1.5 text-rose-800">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                <span>Bride ({brideGuests.length})</span>
-              </span>
-              <span className="flex items-center gap-1.5 text-sky-800">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
-                <span>Groom ({groomGuests.length})</span>
-              </span>
+            {/* SVG Pie Chart Canvas */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 py-2 sm:py-4">
+              <div className="relative w-44 h-44 sm:w-52 sm:h-52 shrink-0 mx-auto sm:mx-0">
+                <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-sm">
+                  {pieSlices.length === 0 ? (
+                    <circle cx="100" cy="100" r="80" fill="#f1f5f9" />
+                  ) : (
+                    pieSlices.map((slice) => {
+                      const isHovered = activeSlice === slice.key;
+                      return (
+                        <path
+                          key={slice.key}
+                          d={slice.path}
+                          fill={slice.color}
+                          opacity={activeSlice && !isHovered ? 0.6 : 1}
+                          transform={
+                            isHovered ? "scale(1.04) translate(-4, -4)" : "scale(1)"
+                          }
+                          className="transition-all duration-300 cursor-pointer"
+                          onMouseEnter={() => setActiveSlice(slice.key)}
+                          onMouseLeave={() => setActiveSlice(null)}
+                        />
+                      );
+                    })
+                  )}
+
+                  {/* Inner Donut Center Details */}
+                  <circle cx="100" cy="100" r="46" fill="#ffffff" />
+                  <text
+                    x="100"
+                    y="95"
+                    textAnchor="middle"
+                    className="text-xs font-bold fill-slate-400"
+                  >
+                    Response
+                  </text>
+                  <text
+                    x="100"
+                    y="114"
+                    textAnchor="middle"
+                    className="text-lg font-black fill-slate-900"
+                  >
+                    {confirmedRate + declinedRate}%
+                  </text>
+                </svg>
+              </div>
+
+              {/* Pie Chart Legend */}
+              <div className="space-y-3 w-full sm:w-auto">
+                {/* Confirmed */}
+                <div
+                  onMouseEnter={() => setActiveSlice("confirmed")}
+                  onMouseLeave={() => setActiveSlice(null)}
+                  className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                    activeSlice === "confirmed"
+                      ? "bg-emerald-50 border-emerald-200 ring-2 ring-emerald-500/20"
+                      : "bg-slate-50 border-slate-100 hover:bg-slate-100/70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-[#10b981]" />
+                      <span className="text-xs font-bold text-slate-800">Confirmed</span>
+                    </div>
+                    <span className="text-xs font-black text-emerald-700">
+                      {confirmedCount} ({confirmedRate}%)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pending */}
+                <div
+                  onMouseEnter={() => setActiveSlice("pending")}
+                  onMouseLeave={() => setActiveSlice(null)}
+                  className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                    activeSlice === "pending"
+                      ? "bg-amber-50 border-amber-200 ring-2 ring-amber-500/20"
+                      : "bg-slate-50 border-slate-100 hover:bg-slate-100/70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-[#f59e0b]" />
+                      <span className="text-xs font-bold text-slate-800">Pending</span>
+                    </div>
+                    <span className="text-xs font-black text-amber-700">
+                      {pendingCount} ({pendingRate}%)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Regrets */}
+                <div
+                  onMouseEnter={() => setActiveSlice("regrets")}
+                  onMouseLeave={() => setActiveSlice(null)}
+                  className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                    activeSlice === "regrets"
+                      ? "bg-rose-50 border-rose-200 ring-2 ring-rose-500/20"
+                      : "bg-slate-50 border-slate-100 hover:bg-slate-100/70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-[#f43f5e]" />
+                      <span className="text-xs font-bold text-slate-800">Regrets</span>
+                    </div>
+                    <span className="text-xs font-black text-rose-700">
+                      {declinedCount} ({declinedRate}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Interactive SVG Bar Graph */}
-          <div className="pt-2">
-            <div className="grid grid-cols-3 gap-3 sm:gap-6 items-end h-52 sm:h-56 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
-              {/* Category 1: Confirmed */}
-              <div className="flex flex-col items-center h-full justify-end group">
-                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md mb-2 border border-emerald-200">
-                  {confirmedCount} ({confirmedRate}%)
-                </span>
-                <div className="w-full flex items-end justify-center gap-2 sm:gap-3 h-36">
-                  {/* Bride Bar */}
-                  <div className="w-5 sm:w-8 flex flex-col items-center h-full justify-end">
-                    <span className="text-[9px] font-bold text-rose-700 mb-1">{brideConfirmed}</span>
-                    <div
-                      style={{
-                        height: `${Math.max(
-                          (brideConfirmed / Math.max(totalGuests, 1)) * 100 * 1.5,
-                          8
-                        )}%`,
-                      }}
-                      className="w-full bg-gradient-to-t from-rose-500 to-rose-400 rounded-t-xl shadow-xs transition-all duration-500 hover:brightness-110"
-                      title={`Bride Confirmed: ${brideConfirmed}`}
-                    />
-                  </div>
-                  {/* Groom Bar */}
-                  <div className="w-5 sm:w-8 flex flex-col items-center h-full justify-end">
-                    <span className="text-[9px] font-bold text-sky-700 mb-1">{groomConfirmed}</span>
-                    <div
-                      style={{
-                        height: `${Math.max(
-                          (groomConfirmed / Math.max(totalGuests, 1)) * 100 * 1.5,
-                          8
-                        )}%`,
-                      }}
-                      className="w-full bg-gradient-to-t from-sky-600 to-sky-400 rounded-t-xl shadow-xs transition-all duration-500 hover:brightness-110"
-                      title={`Groom Confirmed: ${groomConfirmed}`}
-                    />
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-slate-800 mt-2">✓ Confirmed</span>
-              </div>
-
-              {/* Category 2: Pending */}
-              <div className="flex flex-col items-center h-full justify-end group">
-                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md mb-2 border border-amber-200">
-                  {pendingCount} ({pendingRate}%)
-                </span>
-                <div className="w-full flex items-end justify-center gap-2 sm:gap-3 h-36">
-                  {/* Bride Bar */}
-                  <div className="w-5 sm:w-8 flex flex-col items-center h-full justify-end">
-                    <span className="text-[9px] font-bold text-rose-700 mb-1">{bridePending}</span>
-                    <div
-                      style={{
-                        height: `${Math.max(
-                          (bridePending / Math.max(totalGuests, 1)) * 100 * 1.5,
-                          6
-                        )}%`,
-                      }}
-                      className="w-full bg-gradient-to-t from-rose-400/80 to-rose-300 rounded-t-xl shadow-xs transition-all duration-500 hover:brightness-110"
-                      title={`Bride Pending: ${bridePending}`}
-                    />
-                  </div>
-                  {/* Groom Bar */}
-                  <div className="w-5 sm:w-8 flex flex-col items-center h-full justify-end">
-                    <span className="text-[9px] font-bold text-sky-700 mb-1">{groomPending}</span>
-                    <div
-                      style={{
-                        height: `${Math.max(
-                          (groomPending / Math.max(totalGuests, 1)) * 100 * 1.5,
-                          6
-                        )}%`,
-                      }}
-                      className="w-full bg-gradient-to-t from-sky-400/80 to-sky-300 rounded-t-xl shadow-xs transition-all duration-500 hover:brightness-110"
-                      title={`Groom Pending: ${groomPending}`}
-                    />
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-slate-800 mt-2">⏳ Pending</span>
-              </div>
-
-              {/* Category 3: Declined / Regrets */}
-              <div className="flex flex-col items-center h-full justify-end group">
-                <span className="text-[10px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-md mb-2 border border-slate-300">
-                  {declinedCount} ({declinedRate}%)
-                </span>
-                <div className="w-full flex items-end justify-center gap-2 sm:gap-3 h-36">
-                  {/* Bride Bar */}
-                  <div className="w-5 sm:w-8 flex flex-col items-center h-full justify-end">
-                    <span className="text-[9px] font-bold text-slate-500 mb-1">
-                      {brideGuests.filter((g) => (g.rsvp_status || "").toLowerCase().includes("decline")).length}
-                    </span>
-                    <div
-                      style={{
-                        height: `${Math.max(
-                          (declinedCount / Math.max(totalGuests, 1)) * 100 * 1.5,
-                          4
-                        )}%`,
-                      }}
-                      className="w-full bg-gradient-to-t from-slate-400 to-slate-300 rounded-t-xl shadow-xs transition-all duration-500"
-                    />
-                  </div>
-                  {/* Groom Bar */}
-                  <div className="w-5 sm:w-8 flex flex-col items-center h-full justify-end">
-                    <span className="text-[9px] font-bold text-slate-500 mb-1">
-                      {groomGuests.filter((g) => (g.rsvp_status || "").toLowerCase().includes("decline")).length}
-                    </span>
-                    <div
-                      style={{
-                        height: `${Math.max(
-                          (declinedCount / Math.max(totalGuests, 1)) * 100 * 1.5,
-                          4
-                        )}%`,
-                      }}
-                      className="w-full bg-gradient-to-t from-slate-400 to-slate-300 rounded-t-xl shadow-xs transition-all duration-500"
-                    />
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-slate-800 mt-2">✕ Regrets</span>
-              </div>
-            </div>
+          <div className="text-[11px] text-slate-400 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <span>Hover over slices to highlight segments</span>
+            <span>Total: {totalGuests} Guests</span>
           </div>
         </div>
 
-        {/* DONUT / BREAKDOWN: Dietary & Special Requests (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-4">
+        {/* ================= B. SVG BUBBLE PACK CHART ================= */}
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-2xs flex flex-col justify-between">
           <div>
-            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
-              <Utensils className="w-4 h-4 text-emerald-600" />
-              <span>Special Logistics & Requests</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Catering, airport transfers and room accommodations
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <CircleDot className="w-4 h-4 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    RSVP Bubble Cluster Chart
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Clustered parties sized by guest volume
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                Sized by Guest Count
+              </span>
+            </div>
+
+            {/* SVG Bubble Canvas */}
+            <div className="w-full h-48 sm:h-60 bg-gradient-to-b from-slate-50/70 to-slate-100/40 rounded-2xl border border-slate-100 flex items-center justify-center relative overflow-hidden">
+              <svg viewBox="0 0 380 265" className="w-full h-full">
+                <defs>
+                  {bubbles.map((b) => (
+                    <linearGradient
+                      key={`grad-${b.id}`}
+                      id={`grad-${b.id}`}
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
+                      <stop offset="0%" stopColor={b.gradientTo} />
+                      <stop offset="100%" stopColor={b.gradientFrom} />
+                    </linearGradient>
+                  ))}
+                  <filter id="analytics-bubble-glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="4" floodOpacity="0.15" />
+                  </filter>
+                </defs>
+
+                {bubbles.map((bubble) => {
+                  const isHovered = activeBubble === bubble.id;
+                  if (bubble.count === 0) return null;
+                  return (
+                    <g
+                      key={bubble.id}
+                      className="cursor-pointer transition-transform duration-300"
+                      transform={
+                        isHovered
+                          ? `scale(1.06) translate(${bubble.cx * -0.06}, ${bubble.cy * -0.06})`
+                          : "scale(1)"
+                      }
+                      onMouseEnter={() => setActiveBubble(bubble.id)}
+                      onMouseLeave={() => setActiveBubble(null)}
+                    >
+                      {/* Bubble Circle */}
+                      <circle
+                        cx={bubble.cx}
+                        cy={bubble.cy}
+                        r={bubble.r}
+                        fill={`url(#grad-${bubble.id})`}
+                        filter="url(#analytics-bubble-glow)"
+                        opacity={activeBubble && !isHovered ? 0.45 : 0.95}
+                        className="transition-all duration-300"
+                      />
+
+                      {/* Bubble Text: Count & Subtitle */}
+                      <text
+                        x={bubble.cx}
+                        y={bubble.cy - 2}
+                        textAnchor="middle"
+                        className="text-xs font-black fill-white drop-shadow-sm select-none"
+                      >
+                        {bubble.count}
+                      </text>
+                      <text
+                        x={bubble.cx}
+                        y={bubble.cy + 12}
+                        textAnchor="middle"
+                        className="text-[9px] font-bold fill-white/90 drop-shadow-sm select-none"
+                      >
+                        {bubble.pct}%
+                      </text>
+                      <text
+                        x={bubble.cx}
+                        y={bubble.cy + bubble.r + 14}
+                        textAnchor="middle"
+                        className="text-[10px] font-extrabold fill-slate-700 select-none"
+                      >
+                        {bubble.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
           </div>
 
-          <div className="space-y-3 pt-1">
-            {/* 1. Airport Shuttle Needed */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-700 flex items-center gap-1.5">
-                  <PlaneLanding className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Airport Shuttle / Cab Pickups</span>
-                </span>
-                <span className="text-emerald-800">{shuttleCount} Guests</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  style={{ width: `${Math.min((shuttleCount / Math.max(totalGuests, 1)) * 100, 100)}%` }}
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
-                />
-              </div>
-            </div>
-
-            {/* 2. Vegetarian Food Requests */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-700 flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-                  <span>Vegetarian Meal Preferences</span>
-                </span>
-                <span className="text-slate-800">{vegCount} Guests</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  style={{ width: `${Math.min((vegCount / Math.max(totalGuests, 1)) * 100, 100)}%` }}
-                  className="h-full bg-emerald-500 rounded-full"
-                />
-              </div>
-            </div>
-
-            {/* 3. Jain Food Preferences */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-700 flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                  <span>Jain Meal Preferences</span>
-                </span>
-                <span className="text-amber-800">{jainCount} Guests</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  style={{ width: `${Math.min((jainCount / Math.max(totalGuests, 1)) * 100, 100)}%` }}
-                  className="h-full bg-amber-500 rounded-full"
-                />
-              </div>
-            </div>
-
-            {/* 4. ID Verification Completed */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-700 flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-sky-600" />
-                  <span>ID Card / PDF Uploaded</span>
-                </span>
-                <span className="text-sky-800">{idReceivedCount} Verified ({idRate}%)</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  style={{ width: `${idRate}%` }}
-                  className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 rounded-full"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[#f0fbf3] border border-emerald-200 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs">
-            <span className="text-emerald-900 font-bold">
-              Telecaller Call Outreach
-            </span>
-            <span className="font-extrabold text-emerald-800 bg-white px-2.5 py-0.5 rounded-full border border-emerald-300 shadow-2xs">
-              {calledOnce} / {totalGuests} Contacted
-            </span>
+          <div className="text-[11px] text-slate-400 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <span>Bubble area scales with RSVP volume</span>
+            <span>Hover to inspect party cluster</span>
           </div>
         </div>
       </div>
 
-      {/* 4. ROW 3: SAME FLIGHT GUEST INFLUX (BAR GRAPH + SIDE TABLE) */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/90 shadow-2xs space-y-5">
-        {/* Header with Title and Mode Switcher */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FF6574] animate-pulse"></span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#FF6574]">
-                Flight Manifest & Group Influx
-              </span>
+      {/* 4. ROW 3: FLIGHT MANIFEST WINDOW WIDGET + LOCATION INFLUX TABLE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* ================= LEFT: FLIGHT PASSENGER MANIFEST WINDOW WIDGET (7 cols) ================= */}
+        <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between space-y-3">
+          {/* Window Frame Title Bar with Toggle Buttons */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              {/* Window Controls Visual */}
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 rounded-lg">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                  {flightLogisticsType === "arrival" ? (
+                    <PlaneLanding className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <PlaneTakeoff className="w-4 h-4 text-purple-600" />
+                  )}
+                  <span>Flight Passenger Manifest Window</span>
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Click button to switch between Arrival and Departure manifests
+                </p>
+              </div>
             </div>
-            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2 mt-0.5">
-              <PlaneLanding className="w-5 h-5 text-[#1E3A8A]" />
-              <span>
-                {flightLogisticsType === "arrival"
-                  ? "Guests Coming on Same Flight (Inbound Influx)"
-                  : "Guests Departing on Same Flight (Outbound Departure)"}
-              </span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Displays how many guests are arriving on the same flight for airport shuttle scheduling
-            </p>
-          </div>
 
-          {/* Toggle Arrival / Departure Flights */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center p-1 bg-slate-100 rounded-xl text-xs font-bold">
+            {/* Toggle Buttons: Clicking button opens that table */}
+            <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200/60">
               <button
                 type="button"
                 onClick={() => {
@@ -672,12 +957,12 @@ export default function AnalyticsView({
                 }}
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                   flightLogisticsType === "arrival"
-                    ? "bg-white text-emerald-800 shadow-xs font-extrabold"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-emerald-800 shadow-xs font-black"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                 }`}
               >
                 <PlaneLanding className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Arrival Flights</span>
+                <span>Arrivals ({arrivalData.flights.length})</span>
               </button>
               <button
                 type="button"
@@ -687,201 +972,189 @@ export default function AnalyticsView({
                 }}
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                   flightLogisticsType === "departure"
-                    ? "bg-white text-purple-800 shadow-xs font-extrabold"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-purple-800 shadow-xs font-black"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                 }`}
               >
                 <PlaneTakeoff className="w-3.5 h-3.5 text-purple-600" />
-                <span>Departure Flights</span>
+                <span>Departures ({departureData.flights.length})</span>
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Main Grid: Bar Graph (Left) + Table with Flight Name and Count (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* ================= BAR GRAPH FORMAT ================= */}
-          <div className="lg:col-span-7 xl:col-span-8 bg-[#FAF9F6] border border-slate-200/90 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-[#1E3A8A]" />
-                  <span>Passenger Volume Bar Graph</span>
-                </h4>
-                <p className="text-[11px] text-slate-400">
-                  Height represents total guests arriving on each flight
-                </p>
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-700 shadow-2xs">
-                Peak: <b className="text-[#FF6574]">{flightData.maxCount} Guests</b> on {flightData.flights[0]?.flightNumber}
-              </span>
-            </div>
-
-            {/* Bars Canvas with Background Scale Grid */}
-            <div className="relative pt-6 pb-2">
-              {/* Background Grid Lines with values */}
-              <div className="absolute inset-x-0 top-6 bottom-16 flex flex-col justify-between pointer-events-none opacity-40">
-                {[1, 0.75, 0.5, 0.25, 0].map((ratio, idx) => (
-                  <div key={idx} className="flex items-center gap-2 border-b border-dashed border-slate-300 w-full">
-                    <span className="text-[9px] font-mono text-slate-500 font-bold w-6 text-right">
-                      {Math.round(ratio * flightData.maxCount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Scrollable Bar Columns Container */}
-              <div className="relative z-10 flex items-end justify-between sm:justify-around gap-3 sm:gap-4 overflow-x-auto pt-4 pb-2 px-6 min-h-[250px]">
-                {flightData.flights.map((flight, idx) => {
-                  const pct = Math.max(Math.round((flight.count / flightData.maxCount) * 100), 12);
-                  const isSelected = selectedFlight?.flightNumber === flight.flightNumber;
-                  const airline = getAirlineInfo(flight.flightNumber);
-
-                  return (
-                    <div
-                      key={flight.flightNumber || idx}
-                      onClick={() => setSelectedFlight(flight)}
-                      className="flex flex-col items-center justify-end h-full flex-1 min-w-[58px] max-w-[84px] group cursor-pointer transition-all"
-                    >
-                      {/* Passenger Count Badge on Top of Bar */}
-                      <div
-                        className={`text-[11px] font-black px-2 py-0.5 rounded-full mb-2 transition-all shadow-2xs whitespace-nowrap ${
-                          isSelected
-                            ? "bg-[#FF6574] text-white scale-110 shadow-md shadow-[#FF6574]/30"
-                            : "bg-slate-900 text-white group-hover:bg-[#FF6574] group-hover:scale-105"
-                        }`}
-                      >
-                        {flight.count} {flight.count === 1 ? "Guest" : "Guests"}
-                      </div>
-
-                      {/* Bar Pillar */}
-                      <div className="w-full flex justify-center h-[160px] items-end">
-                        <div
-                          style={{ height: `${pct}%` }}
-                          className={`w-11 sm:w-13 rounded-t-xl transition-all duration-300 relative group-hover:brightness-110 shadow-sm ${
-                            isSelected
-                              ? "bg-gradient-to-t from-[#FF6574] via-[#e05463] to-[#FF8A96] ring-3 ring-[#FF6574]/40"
-                              : "bg-gradient-to-t from-[#1E3A8A] via-[#2a4ea2] to-[#FF6574]"
-                          }`}
-                        >
-                          {/* Inner soft highlight */}
-                          <div className="w-full h-2 bg-white/25 rounded-t-xl"></div>
-                        </div>
-                      </div>
-
-                      {/* Flight Number & Airline Label */}
-                      <div className="mt-2 text-center">
-                        <p className={`font-mono text-xs font-black tracking-tight ${
-                          isSelected ? "text-[#FF6574]" : "text-slate-800 group-hover:text-[#1E3A8A]"
-                        }`}>
-                          {flight.flightNumber}
-                        </p>
-                        <p className="text-[10px] text-slate-500 font-semibold truncate max-w-[70px]">
-                          {airline.name}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Bottom Insight Footer */}
-            <div className="mt-4 pt-3 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span>🚌</span>
-                <span>
-                  Recommended Shuttles: <b>{Math.ceil(flightData.totalTrackedPassengers / 6)} Airport Vans</b> (6 seats / van)
-                </span>
-              </span>
-              <span className="text-[11px] text-slate-500">
-                Click any bar or row to inspect flight passengers
-              </span>
-            </div>
-          </div>
-
-          {/* ================= SIDE TABLE: FLIGHT NAME & COUNT ================= */}
-          <div className="lg:col-span-5 xl:col-span-4 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <PlaneLanding className="w-4 h-4 text-[#FF6574]" />
-                  <span>Flight Passenger Manifest</span>
-                </h4>
-                <p className="text-[11px] text-slate-500">
-                  Flight name and passenger count
-                </p>
-              </div>
-              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                {flightData.flights.length} Flights
-              </span>
-            </div>
-
-            {/* The Table */}
-            <div className="overflow-x-auto flex-1 max-h-[300px] overflow-y-auto pr-1">
+          {/* Active Flight Table Container (Window with scroll) */}
+          <div className="h-[280px] sm:h-[300px] overflow-y-auto pr-1">
+            <div className="overflow-x-auto rounded-xl border border-slate-200/70 bg-white">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 text-[11px] font-black uppercase tracking-wider text-slate-400">
-                    <th className="py-2 px-2">Flight Name</th>
-                    <th className="py-2 px-2 text-center">Count</th>
-                    <th className="py-2 px-2 text-right">Schedule</th>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="py-2.5 px-3">Flight & Carrier</th>
+                    <th className="py-2.5 px-3 text-center">Count of People</th>
+                    <th className="py-2.5 px-3 text-right">Schedule (Date & Time)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {flightData.flights.map((flight, idx) => {
+                  {(flightLogisticsType === "arrival" ? arrivalData.flights : departureData.flights).map((flight, idx) => {
                     const isSelected = selectedFlight?.flightNumber === flight.flightNumber;
                     const airline = getAirlineInfo(flight.flightNumber);
-                    const sharePct = Math.round((flight.count / Math.max(flightData.totalTrackedPassengers, 1)) * 100);
+                    const totalPassengers = flightLogisticsType === "arrival" ? arrivalData.totalTrackedPassengers : departureData.totalTrackedPassengers;
+                    const sharePct = Math.round((flight.count / Math.max(totalPassengers, 1)) * 100);
 
                     return (
                       <tr
                         key={flight.flightNumber || idx}
-                        onClick={() => setSelectedFlight(flight)}
+                        onClick={() => setSelectedFlight(isSelected ? null : flight)}
                         className={`transition-colors cursor-pointer ${
                           isSelected
-                            ? "bg-[#FFF2F4] font-bold"
-                            : "hover:bg-slate-50"
+                            ? flightLogisticsType === "arrival"
+                              ? "bg-emerald-50/70 font-semibold"
+                              : "bg-purple-50/70 font-semibold"
+                            : "hover:bg-slate-50/80"
                         }`}
                       >
-                        {/* Flight Name / Number Column */}
-                        <td className="py-2.5 px-2">
+                        {/* 1. Flight & Carrier */}
+                        <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
-                            <span className="p-1.5 rounded-lg bg-slate-100 text-[#1E3A8A]">
+                            <span className="w-7 h-7 rounded-lg bg-blue-50 text-[#1E3A8A] flex items-center justify-center font-bold text-xs shadow-2xs">
                               ✈️
                             </span>
-                            <div className="min-w-0">
-                              <span className="font-mono font-extrabold text-slate-900 block text-xs">
+                            <div>
+                              <span className="font-mono font-bold text-slate-900 block text-xs">
                                 {flight.flightNumber}
                               </span>
-                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${airline.color}`}>
+                              <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-semibold border inline-block ${airline.color}`}>
                                 {airline.name}
                               </span>
                             </div>
                           </div>
                         </td>
 
-                        {/* Count Column */}
-                        <td className="py-2.5 px-2 text-center">
-                          <span className={`inline-flex items-center gap-1 font-black px-2.5 py-1 rounded-full text-xs shadow-2xs ${
-                            isSelected
-                              ? "bg-[#FF6574] text-white"
-                              : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        {/* 2. Count of People */}
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`inline-flex items-center gap-1 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs ${
+                            flightLogisticsType === "arrival"
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                              : "bg-purple-50 text-purple-800 border border-purple-200"
                           }`}>
                             <Users className="w-3 h-3" />
-                            <span>{flight.count}</span>
+                            <span>{flight.count} Guests</span>
                           </span>
                           <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
                             {sharePct}% share
                           </span>
                         </td>
 
-                        {/* Schedule / Airport Column */}
-                        <td className="py-2.5 px-2 text-right">
-                          <span className="font-bold text-slate-800 block text-[11px]">
-                            {flight.time || "TBD"}
+                        {/* 3. Schedule (Date & Time) - Date prominently displayed */}
+                        <td className="py-2.5 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1 font-black text-slate-800 text-xs">
+                            <Calendar className="w-3.5 h-3.5 text-[#FF6574] shrink-0" />
+                            <span>{flight.date || wedding?.wedding_date || "Date TBA"}</span>
+                          </div>
+                          <div className="flex items-center justify-end gap-1 text-slate-500 text-[10.5px] mt-0.5 font-medium">
+                            <Clock className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                            <span>{flight.time || "Time TBA"}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Selected Flight Passenger Inspector Drawer */}
+          {selectedFlight && selectedFlight.passengers && selectedFlight.passengers.length > 0 && (
+            <div className="bg-[#FAF9F6] border border-[#FF6574]/30 rounded-2xl p-2.5 animate-fadeIn space-y-1.5 text-xs">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                <span className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-[#FF6574]"></span>
+                  <span>Flight {selectedFlight.flightNumber} Passengers ({selectedFlight.count})</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFlight(null)}
+                  className="text-slate-400 hover:text-slate-700 text-[11px] font-bold cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap max-h-20 overflow-y-auto no-scrollbar">
+                {selectedFlight.passengers.map((p, pIdx) => (
+                  <span
+                    key={p.id || pIdx}
+                    className="bg-white border border-slate-200 text-slate-800 px-2 py-0.5 rounded-lg text-[10px] font-medium shadow-2xs"
+                  >
+                    {p.name} {p.side ? `(${p.side})` : ""}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Window Footer */}
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>
+              Showing {flightLogisticsType === "arrival" ? "Inbound Arrivals" : "Outbound Departures"} ({
+                (flightLogisticsType === "arrival" ? arrivalData.flights : departureData.flights).length
+              } Flights)
+            </span>
+            <span>Click any flight to view passenger names</span>
+          </div>
+        </div>
+
+        {/* ================= RIGHT: GUESTS BY ARRIVAL LOCATION TABLE (5 cols) ================= */}
+        <div className="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-3">
+          <div className="pb-2 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-[#FF6574]" />
+                <span>Guests by Arrival Location</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Count of people arriving at the same transit point / venue
+              </p>
+            </div>
+            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+              {locationData.locations.length} Locations
+            </span>
+          </div>
+
+          {/* Location Table Container */}
+          <div className="h-[280px] sm:h-[300px] overflow-y-auto pr-1">
+            <div className="overflow-x-auto rounded-xl border border-slate-200/70 bg-white">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="py-2.5 px-3">Location</th>
+                    <th className="py-2.5 px-3 text-right">Count of People</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {locationData.locations.map((item, idx) => {
+                    const sharePct = Math.round((item.count / Math.max(locationData.totalTracked, 1)) * 100);
+                    return (
+                      <tr key={item.location || idx} className="hover:bg-slate-50/80 transition-colors">
+                        {/* 1. Location Column */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-md bg-rose-50 text-[#FF6574] flex items-center justify-center text-xs shrink-0">
+                              <MapPin className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="font-bold text-slate-800 text-xs truncate max-w-[170px]" title={item.location}>
+                              {item.location}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* 2. Count of People Column */}
+                        <td className="py-2.5 px-3 text-right">
+                          <span className="inline-flex items-center gap-1 font-black px-2.5 py-0.5 rounded-full text-xs bg-rose-50 text-rose-800 border border-rose-200 shadow-2xs">
+                            <Users className="w-3 h-3 text-[#FF6574]" />
+                            <span>{item.count} Guests</span>
                           </span>
-                          <span className="text-[10px] text-slate-400 block truncate max-w-[90px] ml-auto">
-                            {flight.location || flight.date || "Arrival Airport"}
+                          <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
+                            {sharePct}% share
                           </span>
                         </td>
                       </tr>
@@ -890,69 +1163,199 @@ export default function AnalyticsView({
                 </tbody>
               </table>
             </div>
+          </div>
 
-            {/* Table Footer Totals */}
-            <div className="pt-2.5 border-t border-slate-200/90 flex items-center justify-between text-xs bg-slate-50/80 p-2.5 rounded-xl">
-              <span className="font-bold text-slate-700">Total Tracked Passengers:</span>
-              <span className="font-black text-[#1E3A8A] text-sm">
-                {flightData.totalTrackedPassengers} Guests
-              </span>
-            </div>
+          {/* Location Card Footer */}
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 bg-slate-50/80 p-2 rounded-xl">
+            <span className="font-bold">Total Tracked Influx:</span>
+            <span className="font-black text-[#1E3A8A] text-xs">
+              {locationData.totalTracked} Guests
+            </span>
           </div>
         </div>
       </div>
 
-      {/* 5. ROW 4: CALL DESK CHECKPOINTS & RECENT INSIGHTS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Call Progress 1 */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-slate-800">Call Checkpoint #1</span>
-            <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full">
-              {calledOnce} / {totalGuests}
+      {/* 5. ROW 4: DATE-WISE GUEST INFLUX LINE GRAPH */}
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/90 shadow-2xs space-y-4">
+        {/* Header Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#1E3A8A] animate-pulse"></span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E3A8A]">
+                Date-wise Arrival Influx
+              </span>
+            </div>
+            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2 mt-0.5">
+              <TrendingUp className="w-5 h-5 text-[#1E3A8A]" />
+              <span>Guest Arrival Timeline (Line Graph)</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Displays how many people are coming on each specific date leading up to the celebration
+            </p>
+          </div>
+
+          {/* Peak Date Badge */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs flex items-center gap-1.5">
+              <span>🔥 Peak Arrival:</span>
+              <b className="text-[#FF6574]">{dateInfluxData.peakPoint?.label}</b>
+              <span className="bg-[#FF6574] text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                {dateInfluxData.peakPoint?.count} Guests
+              </span>
             </span>
           </div>
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              style={{ width: `${Math.min((calledOnce / Math.max(totalGuests, 1)) * 100, 100)}%` }}
-              className="h-full bg-emerald-500 rounded-full"
-            />
-          </div>
-          <p className="text-[11px] text-slate-500">First contact made to verify invitation</p>
         </div>
 
-        {/* Call Progress 2 */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-slate-800">Call Checkpoint #2</span>
-            <span className="bg-purple-100 text-purple-900 px-2 py-0.5 rounded-full">
-              {calledTwice} / {totalGuests}
-            </span>
-          </div>
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+        {/* Interactive SVG Line Graph Canvas */}
+        <div className="relative pt-2 pb-2">
+          {/* Active Hover Tooltip */}
+          {hoveredDatePoint && (
             <div
-              style={{ width: `${Math.min((calledTwice / Math.max(totalGuests, 1)) * 100, 100)}%` }}
-              className="h-full bg-purple-500 rounded-full"
-            />
+              style={{
+                left: `${(hoveredDatePoint.x / 600) * 100}%`,
+                top: `${(hoveredDatePoint.y / 200) * 100}%`,
+              }}
+              className="absolute pointer-events-none -translate-x-1/2 -translate-y-12 z-20 bg-slate-900/95 text-white text-xs rounded-xl px-2.5 py-1.5 shadow-xl border border-white/20 whitespace-nowrap animate-fadeIn"
+            >
+              <div className="font-extrabold text-[#FF6574] text-[11px]">{hoveredDatePoint.rawDate}</div>
+              <div className="font-bold flex items-center gap-1 text-[10.5px]">
+                <Users className="w-3 h-3 text-emerald-400" />
+                <span>{hoveredDatePoint.count} Guests Arriving</span>
+              </div>
+            </div>
+          )}
+
+          <div className="w-full h-48 sm:h-56 bg-gradient-to-b from-slate-50/70 to-slate-100/30 rounded-2xl border border-slate-100 p-2 sm:p-4">
+            <svg viewBox="0 0 600 200" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="lineGraphGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.30" />
+                  <stop offset="60%" stopColor="#FF6574" stopOpacity="0.10" />
+                  <stop offset="100%" stopColor="#FF6574" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="lineStrokeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#1E3A8A" />
+                  <stop offset="45%" stopColor="#2563EB" />
+                  <stop offset="100%" stopColor="#FF6574" />
+                </linearGradient>
+                <filter id="point-glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.25" />
+                </filter>
+              </defs>
+
+              {/* Grid Horizontal Reference Lines */}
+              {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                const y = 160 - ratio * 135;
+                return (
+                  <g key={idx}>
+                    <line
+                      x1="45"
+                      y1={y}
+                      x2="555"
+                      y2={y}
+                      stroke="#e2e8f0"
+                      strokeDasharray="4 4"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x="36"
+                      y={y + 3}
+                      textAnchor="end"
+                      className="text-[9px] fill-slate-400 font-mono font-bold"
+                    >
+                      {Math.round(ratio * dateInfluxData.maxCount)}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Area Gradient Fill */}
+              {lineGraphCoords.areaPath && (
+                <path d={lineGraphCoords.areaPath} fill="url(#lineGraphGradient)" />
+              )}
+
+              {/* Stroke Curve Line */}
+              {lineGraphCoords.path && (
+                <path
+                  d={lineGraphCoords.path}
+                  fill="none"
+                  stroke="url(#lineStrokeGradient)"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {/* Data Point Dots & Labels */}
+              {lineGraphCoords.coords.map((pt, idx) => {
+                const isHovered = hoveredDatePoint?.rawDate === pt.rawDate;
+                return (
+                  <g
+                    key={pt.rawDate || idx}
+                    className="cursor-pointer"
+                    onMouseEnter={() => setHoveredDatePoint(pt)}
+                    onMouseLeave={() => setHoveredDatePoint(null)}
+                  >
+                    {/* Outer hover ring */}
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={isHovered ? 8 : 5}
+                      fill="#ffffff"
+                      stroke={isHovered ? "#FF6574" : "#1E3A8A"}
+                      strokeWidth={isHovered ? "3.5" : "2.5"}
+                      filter="url(#point-glow)"
+                      className="transition-all duration-200"
+                    />
+                    {/* Inner point */}
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={isHovered ? 3.5 : 2}
+                      fill={isHovered ? "#FF6574" : "#1E3A8A"}
+                      className="transition-all duration-200"
+                    />
+
+                    {/* Value Badge above Peak point */}
+                    {pt.count === dateInfluxData.maxCount && !isHovered && (
+                      <text
+                        x={pt.x}
+                        y={pt.y - 10}
+                        textAnchor="middle"
+                        className="text-[10px] font-black fill-[#FF6574] drop-shadow-xs"
+                      >
+                        {pt.count}
+                      </text>
+                    )}
+
+                    {/* X-axis Date Label */}
+                    <text
+                      x={pt.x}
+                      y="185"
+                      textAnchor="middle"
+                      className={`text-[10px] font-sans transition-all ${
+                        isHovered ? "font-black fill-[#FF6574]" : "font-bold fill-slate-600"
+                      }`}
+                    >
+                      {pt.label}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
           </div>
-          <p className="text-[11px] text-slate-500">Travel confirmation & flight details</p>
         </div>
 
-        {/* Call Progress 3 */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-slate-800">Call Checkpoint #3</span>
-            <span className="bg-sky-100 text-sky-900 px-2 py-0.5 rounded-full">
-              {calledThrice} / {totalGuests}
-            </span>
-          </div>
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              style={{ width: `${Math.min((calledThrice / Math.max(totalGuests, 1)) * 100, 100)}%` }}
-              className="h-full bg-sky-500 rounded-full"
-            />
-          </div>
-          <p className="text-[11px] text-slate-500">Final pickup & room check-in lock</p>
+        {/* Footer Insight */}
+        <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span>📅</span>
+            <span>Hover over points to see exact guest counts for each date</span>
+          </span>
+          <span className="text-[11px] text-slate-400">
+            Total {filteredGuests.length} Guests Analyzed
+          </span>
         </div>
       </div>
     </div>

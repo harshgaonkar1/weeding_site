@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { getWeddingCoverImage, WEDDING_COVER_PRESETS } from "../utils/weddingThemes";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * Luxury Wedding Hero Banner & Executive Summary Cards
@@ -37,6 +38,8 @@ export default function WeddingHeroBanner({
   onOpenGoogleSheet,
   onUpdateCoverImage,
 }) {
+  const { isMarriageClient, isViewOnly } = useAuth();
+  const canChangeImage = !isMarriageClient && !isViewOnly && Boolean(onUpdateCoverImage);
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
   const imagePickerRef = useRef(null);
 
@@ -258,74 +261,76 @@ export default function WeddingHeroBanner({
             </span>
           </div>
 
-          {/* Option to Select / Change Image */}
-          <div className="relative" ref={imagePickerRef}>
-            <button
-              type="button"
-              onClick={() => setIsImagePickerOpen(!isImagePickerOpen)}
-              className="px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white text-[11px] sm:text-xs font-bold backdrop-blur-md border border-white/25 flex items-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-102"
-              title="Change wedding cover photo"
-            >
-              <ImageIcon className="w-3.5 h-3.5 text-[#FF6574]" />
-              <span>Select Image</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform ${
-                  isImagePickerOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+          {/* Option to Select / Change Image (Hidden in User View) */}
+          {canChangeImage && (
+            <div className="relative" ref={imagePickerRef}>
+              <button
+                type="button"
+                onClick={() => setIsImagePickerOpen(!isImagePickerOpen)}
+                className="px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white text-[11px] sm:text-xs font-bold backdrop-blur-md border border-white/25 flex items-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-102"
+                title="Change wedding cover photo"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-[#FF6574]" />
+                <span>Select Image</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    isImagePickerOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-            {/* Image Selection Dropdown Drawer */}
-            {isImagePickerOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-[#1E3A8A]/98 backdrop-blur-xl border border-[#2563EB]/40 rounded-2xl p-3 shadow-2xl z-50 animate-fadeIn text-white space-y-2">
-                <div className="flex items-center justify-between pb-2 border-b border-[#2563EB]/40">
-                  <span className="text-xs font-bold text-white">
-                    Select Cover Photo
-                  </span>
-                  <span className="text-[10px] text-[#FF6574] font-medium">
-                    5 Curated Vibes
-                  </span>
-                </div>
+              {/* Image Selection Dropdown Drawer */}
+              {isImagePickerOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-[#1E3A8A]/98 backdrop-blur-xl border border-[#2563EB]/40 rounded-2xl p-3 shadow-2xl z-50 animate-fadeIn text-white space-y-2">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#2563EB]/40">
+                    <span className="text-xs font-bold text-white">
+                      Select Cover Photo
+                    </span>
+                    <span className="text-[10px] text-[#FF6574] font-medium">
+                      5 Curated Vibes
+                    </span>
+                  </div>
 
-                <div className="grid grid-cols-1 gap-1.5 max-h-60 overflow-y-auto no-scrollbar">
-                  {WEDDING_COVER_PRESETS.map((preset) => {
-                    const isSelected =
-                      wedding.cover_theme === preset.id ||
-                      currentCoverUrl === preset.url;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handleSelectCover(preset)}
-                        className={`flex items-center gap-2.5 p-1.5 rounded-xl transition-all cursor-pointer text-left w-full ${
-                          isSelected
-                            ? "bg-[#FF6574]/25 border border-[#FF6574] text-white"
-                            : "hover:bg-[#172554] border border-transparent text-blue-100"
-                        }`}
-                      >
-                        <img
-                          src={preset.url}
-                          alt={preset.label}
-                          className="w-12 h-10 rounded-lg object-cover shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold block truncate text-white">
-                            {preset.label}
-                          </span>
-                          <span className="text-[10px] text-blue-200 block truncate">
-                            {preset.tag}
-                          </span>
-                        </div>
-                        {isSelected && (
-                          <Check className="w-4 h-4 text-[#FF6574] shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
+                  <div className="grid grid-cols-1 gap-1.5 max-h-60 overflow-y-auto no-scrollbar">
+                    {WEDDING_COVER_PRESETS.map((preset) => {
+                      const isSelected =
+                        wedding.cover_theme === preset.id ||
+                        currentCoverUrl === preset.url;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleSelectCover(preset)}
+                          className={`flex items-center gap-2.5 p-1.5 rounded-xl transition-all cursor-pointer text-left w-full ${
+                            isSelected
+                              ? "bg-[#FF6574]/25 border border-[#FF6574] text-white"
+                              : "hover:bg-[#172554] border border-transparent text-blue-100"
+                          }`}
+                        >
+                          <img
+                            src={preset.url}
+                            alt={preset.label}
+                            className="w-12 h-10 rounded-lg object-cover shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-bold block truncate text-white">
+                              {preset.label}
+                            </span>
+                            <span className="text-[10px] text-blue-200 block truncate">
+                              {preset.tag}
+                            </span>
+                          </div>
+                          {isSelected && (
+                            <Check className="w-4 h-4 text-[#FF6574] shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bottom Couple Title & Details (Exact layout from reference image) */}

@@ -1101,43 +1101,6 @@ export default function Hero() {
             </div>
           )}
 
-          {/* Banner 2: Marriage Client View-Only Notice */}
-          {isMarriageClient && (
-            <div className="bg-[#1E3A8A] border-b border-[#2563EB]/40 px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-white animate-fadeIn">
-              <div className="flex items-center gap-2 font-bold">
-                <span className="w-6 h-6 rounded-lg bg-[#FF6574]/20 text-[#FF6574] flex items-center justify-center text-xs shadow-2xs">
-                  <Heart className="w-3.5 h-3.5" />
-                </span>
-                <span className="text-white">
-                  {selectedWedding
-                    ? `${selectedWedding.groom_name} & ${selectedWedding.bride_name}'s Private Wedding Portal`
-                    : "Wedding Client Portal"}
-                </span>
-                <span className="text-[10px] bg-[#2563EB] text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  View Only Dashboard
-                </span>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab((prev) => (prev === "analytics" ? "directory" : "analytics"))}
-                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white border border-white/20 px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <BarChart3 className="w-3.5 h-3.5 text-[#FF6574]" />
-                  <span>{activeTab === "analytics" ? "Guest Directory Table" : "Analytics & Graphs"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsChatModalOpen(true)}
-                  className="bg-[#FF6574] hover:bg-[#e05463] active:scale-98 text-white px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <MessageSquare className="w-3.5 h-3.5 text-white" />
-                  <span>Chat with Admin</span>
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* ================= VIEW 1: MARRIAGE CARDS HUB (ALL WEDDINGS) ================= */}
           {!isMarriageClient && activeTab === "weddings" && (
             <div className="p-3.5 sm:p-5 md:p-7 space-y-4 sm:space-y-5 flex-1 animate-fadeIn">
@@ -1228,7 +1191,7 @@ export default function Hero() {
                     setActiveTab("analytics");
                   }}
                   onOpenGoogleSheet={() => setGoogleSheetModalWedding(selectedWedding)}
-                  onUpdateCoverImage={handleUpdateWeddingCover}
+                  onUpdateCoverImage={!isMarriageClient && !isViewOnly ? handleUpdateWeddingCover : null}
                   onOpenCallDesk={() => {
                     setPreviousTab(activeTab);
                     setActiveTab("call_logs");
@@ -1382,8 +1345,8 @@ export default function Hero() {
             </div>
           )}
 
-          {/* ================= VIEW 3: ANALYTICS & TRENDS (BAR GRAPH, LINE GRAPH, LOGISTICS) ================= */}
-          {activeTab === "analytics" && (
+          {/* ================= VIEW 3: UNIFIED ANALYTICS (PIE CHART, BUBBLE GRAPH, FLIGHT MANIFEST, LOGISTICS) ================= */}
+          {(activeTab === "analytics" || activeTab === "rsvp" || activeTab === "call_logs" || activeTab === "whatsapp") && (
             <AnalyticsView
               guests={displayedGuests}
               wedding={selectedWedding || (weddings && weddings[0])}
@@ -1392,48 +1355,6 @@ export default function Hero() {
               isAdmin={isAdmin}
               isMarriageClient={isMarriageClient}
               onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
-            />
-          )}
-
-          {/* ================= VIEW 4: RSVP ANALYTICS (PIE & BUBBLE CHARTS) ================= */}
-          {activeTab === "rsvp" && (
-            <RsvpAnalyticsView
-              guests={displayedGuests}
-              wedding={selectedWedding || (weddings && weddings[0])}
-              weddings={visibleWeddings}
-              onSelectWedding={handleSelectWedding}
-              onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
-              onUpdateRsvp={!isViewOnly ? (guestId, newRsvp) => {
-                const target = displayedGuests.find((g) => g.id === guestId);
-                if (target) handleQuickUpdateRsvp(target, newRsvp);
-              } : null}
-            />
-          )}
-
-          {/* ================= VIEW 5: CALL DESK LOGS (ONLY CALL LOG DETAILS) ================= */}
-          {activeTab === "call_logs" && (
-            <CallDeskLogsView
-              guests={displayedGuests}
-              wedding={selectedWedding || (weddings && weddings[0])}
-              weddings={visibleWeddings}
-              onSelectWedding={handleSelectWedding}
-              onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
-              onOpenCallLogModal={!isViewOnly ? handleOpenCallLogs : null}
-            />
-          )}
-
-          {/* ================= VIEW 6: WHATSAPP OVERVIEW (HOW MANY MESSAGES SO FAR DONE) ================= */}
-          {activeTab === "whatsapp" && (
-            <WhatsAppOverviewView
-              guests={displayedGuests}
-              wedding={selectedWedding || (weddings && weddings[0])}
-              weddings={visibleWeddings}
-              onSelectWedding={handleSelectWedding}
-              onBack={() => setActiveTab(previousTab || (selectedWedding ? "directory" : "weddings"))}
-              onOpenWhatsAppModal={canSendWhatsApp ? (g) => {
-                setWhatsAppModalInitialGuest(g || null);
-                setIsWhatsAppModalOpen(true);
-              } : null}
             />
           )}
 

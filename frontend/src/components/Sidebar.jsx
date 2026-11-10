@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   PhoneCall,
   MessageCircle,
+  BarChart3,
   ChevronDown,
   ChevronsUpDown,
   PlusCircle,
@@ -206,6 +207,11 @@ export default function Sidebar({
           <nav className="space-y-4 pt-1">
             {/* 1. SETUP */}
             <div className="space-y-1">
+              {!isCollapsed && (
+                <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Setup
+                </p>
+              )}
               {/* Overview */}
               <button
                 type="button"
@@ -260,6 +266,11 @@ export default function Sidebar({
 
             {/* 2. PEOPLE */}
             <div className="space-y-1">
+              {!isCollapsed && (
+                <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  People
+                </p>
+              )}
               {/* Guests */}
               <button
                 type="button"
@@ -290,75 +301,39 @@ export default function Sidebar({
               </button>
             </div>
 
-            {/* 3. COMMUNICATION */}
+            {/* 3. ANALYTICS */}
             <div className="space-y-1">
-              {/* RSVP */}
+              {!isCollapsed && (
+                <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Analytics
+                </p>
+              )}
+              {/* Analytics */}
               <button
                 type="button"
-                onClick={() => handleCommunicationClick("rsvp")}
-                title={isCollapsed ? "RSVP Analytics" : undefined}
+                onClick={() => {
+                  if (!selectedWedding && weddings.length > 0) {
+                    onSelectWedding(weddings[0]);
+                  }
+                  setActiveTab("analytics");
+                  closeMobile();
+                }}
+                title={isCollapsed ? "Analytics" : undefined}
                 className={`flex items-center transition-all cursor-pointer ${isCollapsed
-                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${activeTab === "rsvp"
+                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${activeTab === "analytics"
                       ? "bg-[#FF6574] text-white shadow-md shadow-[#FF6574]/30"
                       : "text-slate-500 hover:bg-slate-100 hover:text-[#1E3A8A]"
                     }`
-                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${activeTab === "rsvp"
+                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${activeTab === "analytics"
                       ? "bg-[#FF6574] text-white font-bold shadow-md shadow-[#FF6574]/30"
                       : "text-slate-700 hover:bg-slate-100 hover:text-[#1E3A8A]"
                     }`
                   }`}
               >
-                <CheckCircle2
-                  className={`w-4 h-4 shrink-0 ${activeTab === "rsvp" ? "text-white" : "text-slate-400"
-                    }`}
+                <BarChart3
+                  className={`w-4 h-4 shrink-0 ${activeTab === "analytics" ? "text-white" : "text-slate-400"}`}
                 />
-                {!isCollapsed && <span>RSVP</span>}
-              </button>
-
-              {/* Call Log */}
-              <button
-                type="button"
-                onClick={() => handleCommunicationClick("call_logs")}
-                title={isCollapsed ? "Call Log Records" : undefined}
-                className={`flex items-center transition-all cursor-pointer ${isCollapsed
-                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${activeTab === "call_logs"
-                      ? "bg-[#FF6574] text-white shadow-md shadow-[#FF6574]/30"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-[#1E3A8A]"
-                    }`
-                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${activeTab === "call_logs"
-                      ? "bg-[#FF6574] text-white font-bold shadow-md shadow-[#FF6574]/30"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-[#1E3A8A]"
-                    }`
-                  }`}
-              >
-                <PhoneCall
-                  className={`w-4 h-4 shrink-0 ${activeTab === "call_logs" ? "text-white" : "text-slate-400"
-                    }`}
-                />
-                {!isCollapsed && <span>Call Log</span>}
-              </button>
-
-              {/* WhatsApp */}
-              <button
-                type="button"
-                onClick={() => handleCommunicationClick("whatsapp")}
-                title={isCollapsed ? "WhatsApp Outreach" : undefined}
-                className={`flex items-center transition-all cursor-pointer ${isCollapsed
-                    ? `w-10 h-10 mx-auto rounded-xl justify-center ${activeTab === "whatsapp"
-                      ? "bg-[#FF6574] text-white shadow-md shadow-[#FF6574]/30"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-[#1E3A8A]"
-                    }`
-                    : `w-full gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${activeTab === "whatsapp"
-                      ? "bg-[#FF6574] text-white font-bold shadow-md shadow-[#FF6574]/30"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-[#1E3A8A]"
-                    }`
-                  }`}
-              >
-                <MessageCircle
-                  className={`w-4 h-4 shrink-0 ${activeTab === "whatsapp" ? "text-white" : "text-slate-400"
-                    }`}
-                />
-                {!isCollapsed && <span>WhatsApp</span>}
+                {!isCollapsed && <span>Analytics</span>}
               </button>
             </div>
           </nav>
