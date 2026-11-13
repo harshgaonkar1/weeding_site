@@ -93,8 +93,8 @@ export default function LoginPage({ initialTab = "admin" }) {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseleave", handleMouseLeave);
 
-    // Particle definition
-    const PARTICLE_COUNT = Math.min(80, Math.floor((width * height) / 14000));
+    // Lightweight Particle definition for silky smooth 60fps performance
+    const PARTICLE_COUNT = Math.min(35, Math.floor((width * height) / 28000));
     const particles = [];
     const ripples = [];
 
@@ -106,35 +106,33 @@ export default function LoginPage({ initialTab = "admin" }) {
       reset() {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        this.vx = (Math.random() - 0.5) * 0.7;
-        this.vy = (Math.random() - 0.5) * 0.7;
-        this.radius = Math.random() * 2 + 1.2;
-        this.baseAlpha = Math.random() * 0.45 + 0.25;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.radius = Math.random() * 1.8 + 1;
+        this.baseAlpha = Math.random() * 0.4 + 0.2;
         this.alpha = this.baseAlpha;
-        this.isGold = Math.random() > 0.65; // Mix of emerald green and warm golden stars
+        this.isGold = Math.random() > 0.65;
       }
 
       update() {
         this.x += this.vx;
         this.y += this.vy;
 
-        // Wrap edges smoothly
         if (this.x < 0) this.x = width;
         if (this.x > width) this.x = 0;
         if (this.y < 0) this.y = height;
         if (this.y > height) this.y = 0;
 
-        // Interactive mouse physics
         if (mouse.x !== null && mouse.y !== null) {
           const dx = this.x - mouse.x;
           const dy = this.y - mouse.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < mouse.radius && dist > 0) {
-            const force = (1 - dist / mouse.radius) * 3.5;
+            const force = (1 - dist / mouse.radius) * 2.5;
             this.x += (dx / dist) * force;
             this.y += (dy / dist) * force;
-            this.alpha = Math.min(1, this.baseAlpha + (1 - dist / mouse.radius) * 0.5);
+            this.alpha = Math.min(0.9, this.baseAlpha + (1 - dist / mouse.radius) * 0.4);
           } else {
             this.alpha = this.baseAlpha;
           }
@@ -147,12 +145,7 @@ export default function LoginPage({ initialTab = "admin" }) {
         ctx.fillStyle = this.isGold
           ? `rgba(251, 191, 36, ${this.alpha})`
           : `rgba(132, 224, 48, ${this.alpha})`;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = this.isGold
-          ? "rgba(251, 191, 36, 0.6)"
-          : "rgba(132, 224, 48, 0.6)";
         ctx.fill();
-        ctx.shadowBlur = 0;
       }
     }
 

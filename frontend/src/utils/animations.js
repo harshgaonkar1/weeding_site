@@ -32,15 +32,19 @@ export const animateCounter = (element, endValue, duration = 0.8) => {
  */
 export const animateStaggerIn = (target, customVars = {}) => {
   if (!target) return null;
-  return gsap.from(target, {
-    y: 20,
-    opacity: 0,
-    duration: 0.5,
-    stagger: 0.05,
-    ease: "power3.out",
-    clearProps: "transform,opacity",
-    ...customVars,
-  });
+  return gsap.fromTo(
+    target,
+    { y: 16, opacity: 0 },
+    {
+      y: 0,
+      opacity: 1,
+      duration: 0.35,
+      stagger: 0.04,
+      ease: "power2.out",
+      clearProps: "all",
+      ...customVars,
+    }
+  );
 };
 
 /**

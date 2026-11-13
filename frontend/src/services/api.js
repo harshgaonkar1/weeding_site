@@ -83,16 +83,18 @@ const INITIAL_FALLBACK_GUESTS = [];
 const INITIAL_FALLBACK_CALL_LOGS = {};
 
 const sanitizeWeddingFrontend = (w) => {
-  if (!w) return w;
-  let groom = (w.groom_name || "").trim();
+  if (!w || typeof w !== "object") return w;
+  let groom = typeof w.groom_name === "string" ? w.groom_name.trim() : String(w.groom_name || "").trim();
   if (!groom || groom.startsWith("wedding_") || groom === w.id) {
     if (w.client_username) {
-      const uPart = w.client_username.split("_")[0]?.replace(/[0-9]/g, "");
+      const uPart = String(w.client_username).split("_")[0]?.replace(/[0-9]/g, "");
       if (uPart) groom = uPart.charAt(0).toUpperCase() + uPart.slice(1);
     }
     if (!groom || groom.startsWith("wedding_")) groom = "Groom";
   }
-  return { ...w, groom_name: groom };
+  let bride = typeof w.bride_name === "string" ? w.bride_name.trim() : String(w.bride_name || "").trim();
+  if (!bride) bride = "Bride";
+  return { ...w, groom_name: groom, bride_name: bride };
 };
 
 // Helper to manage session-scoped cache
@@ -562,16 +564,24 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/weddings`, { headers });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
-          let sanitized = json.data.map(sanitizeWeddingFrontend);
-          if ((userRole === "call_center" || userRole === "marriage_client") && userWeddingId && userWeddingId !== "all") {
-            sanitized = sanitized.filter((w) => w.id === userWeddingId);
-          }
+        // Support all response structures: array directly, json.data, or json.weddings
+        const rawList = Array.isArray(json)
+          ? json
+          : Array.isArray(json?.data)
+          ? json.data
+          : Array.isArray(json?.weddings)
+          ? json.weddings
+          : [];
+
+        if (Array.isArray(rawList) && rawList.length > 0) {
+          const sanitized = rawList.map(sanitizeWeddingFrontend);
           setCachedWeddings(sanitized);
           return sanitized;
         }
       }
-    } catch (e) { }
+    } catch (e) {
+      console.warn("fetchWeddings network notice:", e?.message || e);
+    }
 
     return getCachedWeddings();
   },
