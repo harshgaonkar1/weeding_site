@@ -1,6 +1,7 @@
 import { UserModel } from "../models/userModel.js";
 import { WeddingModel } from "../models/weddingModel.js";
 import { broadcastDataChange } from "../socket/chatSocket.js";
+import { signJwt, verifyJwt } from "../services/jwtService.js";
 
 export const authController = {
   // POST /api/auth/login
@@ -19,11 +20,20 @@ export const authController = {
       // 1. Check in System Users (Super Admin or Call Center Agent)
       const user = await UserModel.authenticate(identifier.trim(), password);
       if (user) {
+        const token = signJwt({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          wedding_id: user.wedding_id || "all",
+          assigned_weddings: user.assigned_weddings || [],
+        });
+
         return res.status(200).json({
           success: true,
           message: `Welcome back, ${user.name}!`,
           user,
-          token: `session_${user.role}_${user.id}_${Date.now()}`,
+          token,
         });
       }
 
@@ -46,11 +56,19 @@ export const authController = {
           wedding,
         };
 
+        const token = signJwt({
+          id: clientUser.id,
+          name: clientUser.name,
+          email: clientUser.email,
+          role: clientUser.role,
+          wedding_id: clientUser.wedding_id,
+        });
+
         return res.status(200).json({
           success: true,
           message: `Welcome to ${wedding.groom_name} & ${wedding.bride_name}'s Wedding Portal!`,
           user: clientUser,
-          token: `session_client_${wedding.id}_${Date.now()}`,
+          token,
         });
       }
 
@@ -71,9 +89,44 @@ export const authController = {
   // GET /api/auth/me
   async getMe(req, res) {
     try {
-      const { userId } = req.query;
+      let { userId } = req.query;
+
+      // Also support Authorization header Bearer token
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const rawToken = authHeader.substring(7).trim();
+        const decoded = verifyJwt(rawToken);
+        if (decoded && decoded.id) {
+          userId = userId || decoded.id;
+        }
+      }
+
       if (!userId) {
         return res.status(400).json({ success: false, message: "User ID required" });
+      }
+
+      // Check if it's a marriage client user
+      if (userId.startsWith("marriage_")) {
+        const weddingId = userId.replace("marriage_", "");
+        const wedding = await WeddingModel.getById(weddingId);
+        if (wedding) {
+          const clientUser = {
+            id: `marriage_${wedding.id}`,
+            name: `${wedding.groom_name} & ${wedding.bride_name}`,
+            email: `${wedding.client_username || wedding.id}@weddingportal.com`,
+            username: wedding.client_username || wedding.id,
+            role: "marriage_client",
+            wedding_id: wedding.id,
+            venue: wedding.venue,
+            city: wedding.city,
+            wedding_date: wedding.wedding_date,
+            cover_theme: wedding.cover_theme,
+            avatar: null,
+            is_view_only: true,
+            wedding,
+          };
+          return res.status(200).json({ success: true, user: clientUser });
+        }
       }
 
       const user = await UserModel.findById(userId);

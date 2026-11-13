@@ -196,14 +196,14 @@ export default function Hero() {
       const data = await api.fetchWeddings();
       setWeddings(data || []);
       if (!isMarriageClient && (!isCallCenter || !user?.wedding_id || user.wedding_id === "all") && Array.isArray(data) && data.length > 0) {
-        const savedId = localStorage.getItem("manish_selected_wedding_id");
+        const savedId = sessionStorage.getItem("manish_selected_wedding_id");
         if (savedId) {
           const matched = data.find((w) => w.id === savedId);
           if (matched) {
             setSelectedWedding(matched);
           } else {
             try {
-              localStorage.removeItem("manish_selected_wedding_id");
+              sessionStorage.removeItem("manish_selected_wedding_id");
             } catch (e) {}
           }
         }
@@ -216,7 +216,7 @@ export default function Hero() {
   useEffect(() => {
     if (selectedWedding?.id && selectedWedding.id !== "all") {
       try {
-        localStorage.setItem("manish_selected_wedding_id", selectedWedding.id);
+        sessionStorage.setItem("manish_selected_wedding_id", selectedWedding.id);
       } catch (e) {}
     }
   }, [selectedWedding]);
@@ -381,7 +381,7 @@ export default function Hero() {
   // Ask the server ONLY ONCE on mount/selection; then listen for live socket events to update ONLY when changes occur.
   // This eliminates periodic polling intervals and ensures zero unnecessary server stress.
   useEffect(() => {
-    const token = localStorage.getItem("manish_auth_token") || "";
+    const token = sessionStorage.getItem("manish_auth_token") || "";
     const cleanWId = selectedWeddingId ? String(selectedWeddingId).replace(/^wedding:/, "").trim() : null;
 
     socket.auth = {
@@ -529,6 +529,7 @@ export default function Hero() {
       setStats({});
       setActiveTab("weddings");
       try {
+        sessionStorage.removeItem("manish_selected_wedding_id");
         localStorage.removeItem("manish_selected_wedding_id");
       } catch (e) {}
     }
@@ -724,9 +725,10 @@ export default function Hero() {
       // 2. Perform delete - cleans cache + syncs backend (graceful even if offline)
       await api.deleteWedding(delId);
 
-      // Clean saved selected wedding id from localStorage if matching
+      // Clean saved selected wedding id from sessionStorage & legacy localStorage if matching
       try {
-        if (localStorage.getItem("manish_selected_wedding_id") === delId) {
+        if (sessionStorage.getItem("manish_selected_wedding_id") === delId || localStorage.getItem("manish_selected_wedding_id") === delId) {
+          sessionStorage.removeItem("manish_selected_wedding_id");
           localStorage.removeItem("manish_selected_wedding_id");
         }
       } catch (e) {}

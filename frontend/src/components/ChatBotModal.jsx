@@ -61,7 +61,7 @@ export default function ChatBotModal({
     return (
       selectedWedding?.id ||
       user?.wedding_id ||
-      localStorage.getItem("manish_chat_active_wedding") ||
+      sessionStorage.getItem("manish_chat_active_wedding") ||
       (weddings && weddings[0]?.id) ||
       "wedding_01"
     );
@@ -97,7 +97,7 @@ export default function ChatBotModal({
   useEffect(() => {
     if (activeWeddingId && activeWeddingId !== "wedding_01") {
       try {
-        localStorage.setItem("manish_chat_active_wedding", activeWeddingId);
+        sessionStorage.setItem("manish_chat_active_wedding", activeWeddingId);
       } catch (e) {}
     }
   }, [activeWeddingId]);
@@ -119,7 +119,7 @@ export default function ChatBotModal({
       setIsRefreshing(false);
       const myRole = isAdmin ? "admin" : "client";
       try {
-        localStorage.setItem(`chat_last_seen_${cleanWId}_${myRole}`, new Date().toISOString());
+        sessionStorage.setItem(`chat_last_seen_${cleanWId}_${myRole}`, new Date().toISOString());
       } catch (e) {}
       markSocketMessagesRead(cleanWId, myRole);
       api.markMessagesRead(cleanWId, myRole);
@@ -130,7 +130,7 @@ export default function ChatBotModal({
   useEffect(() => {
     if (!isOpen) return;
     const targetWId = String(activeWeddingId || selectedWedding?.id || user?.wedding_id || "wedding_01").replace(/^wedding:/, "");
-    const authToken = token || localStorage.getItem("manish_auth_token") || "";
+    const authToken = token || sessionStorage.getItem("manish_auth_token") || "";
 
     const joinRooms = () => {
       socket.emit("join_room", targetWId);
@@ -164,7 +164,7 @@ export default function ChatBotModal({
       // If incoming message is from the other party while chat is open, mark seen
       if (msg.sender_role !== myRole) {
         try {
-          localStorage.setItem(`chat_last_seen_${targetWId}_${myRole}`, new Date().toISOString());
+          sessionStorage.setItem(`chat_last_seen_${targetWId}_${myRole}`, new Date().toISOString());
         } catch (e) {}
         markSocketMessagesRead(targetWId, myRole);
         api.markMessagesRead(targetWId, myRole);

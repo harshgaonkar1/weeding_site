@@ -24,12 +24,45 @@ export const DEFAULT_USERS = {
   },
 };
 
+// Automatic startup purge: wipe any legacy stale localStorage caches from older versions
+try {
+  const legacyKeys = [
+    "manish_auth_user",
+    "manish_auth_token",
+    "manish_weddings_data",
+    "manish_guest_data_v3",
+    "manish_guest_data_v2",
+    "manish_guest_data",
+    "manish_call_logs_v1",
+    "manish_selected_wedding_id",
+    "manish_custom_users",
+    "manish_chat_active_wedding",
+  ];
+  legacyKeys.forEach((k) => {
+    try { localStorage.removeItem(k); } catch (e) {}
+  });
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (k && (k.startsWith("cached_messages_") || k.startsWith("chat_last_seen_"))) {
+      try { localStorage.removeItem(k); } catch (e) {}
+    }
+  }
+} catch (e) {}
+
 export const getCurrentAuthUser = () => {
   try {
-    const raw = localStorage.getItem("manish_auth_user");
+    const raw = sessionStorage.getItem("manish_auth_user");
     if (raw) return JSON.parse(raw);
   } catch (e) {}
   return null;
+};
+
+export const getAuthToken = () => {
+  try {
+    return sessionStorage.getItem("manish_auth_token") || "";
+  } catch (e) {
+    return "";
+  }
 };
 
 export const getCurrentUserRole = () => {
@@ -62,10 +95,10 @@ const sanitizeWeddingFrontend = (w) => {
   return { ...w, groom_name: groom };
 };
 
-// Helper to manage localStorage cache
+// Helper to manage session-scoped cache
 const getCachedWeddings = () => {
   try {
-    const cached = localStorage.getItem("manish_weddings_data");
+    const cached = sessionStorage.getItem("manish_weddings_data");
     let weddingList = (cached ? JSON.parse(cached) : INITIAL_FALLBACK_WEDDINGS).map(sanitizeWeddingFrontend);
     const guests = getCachedGuests();
 
@@ -101,7 +134,7 @@ const getCachedWeddings = () => {
 const setCachedWeddings = (weddings) => {
   try {
     const sanitized = (weddings || []).map(sanitizeWeddingFrontend);
-    localStorage.setItem("manish_weddings_data", JSON.stringify(sanitized));
+    sessionStorage.setItem("manish_weddings_data", JSON.stringify(sanitized));
   } catch (e) { }
 };
 
@@ -138,7 +171,7 @@ const sanitizeGuestRecord = (g) => {
 
 const getCachedGuests = () => {
   try {
-    const cached = localStorage.getItem("manish_guest_data_v3");
+    const cached = sessionStorage.getItem("manish_guest_data_v3");
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed)) {
@@ -152,25 +185,23 @@ const getCachedGuests = () => {
 const setCachedGuests = (guests) => {
   try {
     const sanitized = Array.isArray(guests) ? guests.map(sanitizeGuestRecord) : [];
-    localStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
+    sessionStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
   } catch (e) {
     try {
-      // If full data exceeds browser localStorage quota due to large PDFs/images,
-      // preserve guests in cache without breaking local storage:
       const sanitized = Array.isArray(guests)
         ? guests.map((g) => ({
             ...sanitizeGuestRecord(g),
             id_card_copy: g.id_card_copy && g.id_card_copy.length > 50000 ? g.id_card_copy.slice(0, 100) : g.id_card_copy,
           }))
         : [];
-      localStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
+      sessionStorage.setItem("manish_guest_data_v3", JSON.stringify(sanitized));
     } catch (e2) { }
   }
 };
 
 const getCachedCallLogs = (guestId) => {
   try {
-    const all = JSON.parse(localStorage.getItem("manish_call_logs_v1") || "{}");
+    const all = JSON.parse(sessionStorage.getItem("manish_call_logs_v1") || "{}");
     return all[guestId] || INITIAL_FALLBACK_CALL_LOGS[guestId] || [];
   } catch (e) { }
   return INITIAL_FALLBACK_CALL_LOGS[guestId] || [];
@@ -178,9 +209,9 @@ const getCachedCallLogs = (guestId) => {
 
 const setCachedCallLogs = (guestId, logs) => {
   try {
-    const all = JSON.parse(localStorage.getItem("manish_call_logs_v1") || "{}");
+    const all = JSON.parse(sessionStorage.getItem("manish_call_logs_v1") || "{}");
     all[guestId] = logs;
-    localStorage.setItem("manish_call_logs_v1", JSON.stringify(all));
+    sessionStorage.setItem("manish_call_logs_v1", JSON.stringify(all));
   } catch (e) { }
 };
 
@@ -525,7 +556,7 @@ export const api = {
       if (userWeddingId) {
         headers["x-user-wedding-id"] = userWeddingId;
       }
-      const token = localStorage.getItem("manish_auth_token");
+      const token = getAuthToken();
       if (token) headers.Authorization = `Bearer ${token}`;
 
       const res = await fetch(`${API_BASE_URL}/weddings`, { headers });
@@ -535,9 +566,8 @@ export const api = {
           let sanitized = json.data.map(sanitizeWeddingFrontend);
           if ((userRole === "call_center" || userRole === "marriage_client") && userWeddingId && userWeddingId !== "all") {
             sanitized = sanitized.filter((w) => w.id === userWeddingId);
-          } else if (userRole === "admin") {
-            setCachedWeddings(sanitized);
           }
+          setCachedWeddings(sanitized);
           return sanitized;
         }
       }
@@ -617,17 +647,19 @@ export const api = {
   async deleteWedding(id) {
     if (!id) return true;
 
-    // 1. Purge from local browser cache immediately
+    // 1. Purge from local browser session cache immediately
     const list = getCachedWeddings().filter((w) => w.id !== id);
     setCachedWeddings(list);
     const guests = getCachedGuests().filter((g) => g.wedding_id !== id);
     setCachedGuests(guests);
     try {
-      localStorage.removeItem('cached_messages_' + id);
-      const savedSel = localStorage.getItem("manish_selected_wedding_id");
+      sessionStorage.removeItem('cached_messages_' + id);
+      const savedSel = sessionStorage.getItem("manish_selected_wedding_id");
       if (savedSel === id) {
-        localStorage.removeItem("manish_selected_wedding_id");
+        sessionStorage.removeItem("manish_selected_wedding_id");
       }
+      localStorage.removeItem('cached_messages_' + id);
+      localStorage.removeItem("manish_selected_wedding_id");
     } catch (e) {}
 
     // 2. Call backend endpoint to purge database store & Google Sheet
@@ -718,16 +750,10 @@ export const api = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          // Merge fetched guests into local cache
-          const cached = getCachedGuests();
-          const merged = [...json.data];
-          for (const c of cached) {
-            if (!merged.some((m) => m.id === c.id)) {
-              merged.push(c);
-            }
-          }
-          setCachedGuests(merged);
-          return { data: json.data, source: "backend" };
+          // Fresh server data is the single source of truth - replace cache, do NOT merge stale cache!
+          const sanitized = json.data.map(sanitizeGuestRecord);
+          setCachedGuests(sanitized);
+          return { data: sanitized, source: "backend" };
         }
       }
     } catch (e) { }
@@ -1402,7 +1428,7 @@ function syncAllGuestsToDatabase() {
     const cleanId = String(targetId).replace(/^wedding:/, "").trim();
 
     try {
-      const token = localStorage.getItem("manish_auth_token") || "";
+      const token = getAuthToken();
       const headers = { Accept: "application/json" };
       if (token) {
         headers.Authorization = `Bearer ${token}`;
@@ -1434,8 +1460,8 @@ function syncAllGuestsToDatabase() {
           unique.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
           try {
-            localStorage.setItem(`cached_messages_${cleanId}`, JSON.stringify(unique));
-            localStorage.setItem(`cached_messages_${targetId}`, JSON.stringify(unique));
+            sessionStorage.setItem(`cached_messages_${cleanId}`, JSON.stringify(unique));
+            sessionStorage.setItem(`cached_messages_${targetId}`, JSON.stringify(unique));
           } catch (e) {}
 
           return unique;
@@ -1451,7 +1477,7 @@ function syncAllGuestsToDatabase() {
         `cached_messages_${targetId}`,
       ];
       for (const key of cacheKeys) {
-        const local = localStorage.getItem(key);
+        const local = sessionStorage.getItem(key);
         if (local) {
           const parsed = JSON.parse(local);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -1479,9 +1505,13 @@ function syncAllGuestsToDatabase() {
 
     // Helper: attempt a single POST to save message in backend DB
     const attempt = async () => {
+      const token = getAuthToken();
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
       const res = await fetch(`${API_BASE_URL}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           wedding_id: safeWeddingId,
           sender_id,
@@ -1522,7 +1552,7 @@ function syncAllGuestsToDatabase() {
         if (json?.data) {
           let list = [];
           try {
-            const local = localStorage.getItem(`cached_messages_${safeWeddingId}`);
+            const local = sessionStorage.getItem(`cached_messages_${safeWeddingId}`);
             if (local) list = JSON.parse(local);
           } catch (e) {}
 
@@ -1535,7 +1565,7 @@ function syncAllGuestsToDatabase() {
             list.push(json.bot_reply);
           }
           try {
-            localStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
+            sessionStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
           } catch (e) {}
         }
         return json;
@@ -1558,7 +1588,7 @@ function syncAllGuestsToDatabase() {
 
     let list = [];
     try {
-      const local = localStorage.getItem(`cached_messages_${safeWeddingId}`);
+      const local = sessionStorage.getItem(`cached_messages_${safeWeddingId}`);
       if (local) list = JSON.parse(local);
     } catch (e) {}
 
@@ -1569,7 +1599,7 @@ function syncAllGuestsToDatabase() {
     if (!isDuplicate) {
       list.push(newMsg);
       try {
-        localStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
+        sessionStorage.setItem(`cached_messages_${safeWeddingId}`, JSON.stringify(list));
       } catch (e) {}
     }
 
@@ -1586,7 +1616,7 @@ function syncAllGuestsToDatabase() {
 
     // 1. Dispatch non-blocking HTTP PUT to update DB with 4s timeout
     try {
-      const token = localStorage.getItem("manish_auth_token") || "";
+      const token = getAuthToken();
       const headers = { "Content-Type": "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -1607,7 +1637,7 @@ function syncAllGuestsToDatabase() {
         });
     } catch (e) {}
 
-    // 2. Update local storage cache for all possible key variants
+    // 2. Update session storage cache for all possible key variants
     try {
       const cacheKeys = [
         `cached_messages_${cleanId}`,
@@ -1618,14 +1648,14 @@ function syncAllGuestsToDatabase() {
       }
 
       cacheKeys.forEach((key) => {
-        const local = localStorage.getItem(key);
+        const local = sessionStorage.getItem(key);
         if (local) {
           try {
             const msgs = JSON.parse(local).map((m) => {
               if (m.sender_role !== readerRole) m.is_read = true;
               return m;
             });
-            localStorage.setItem(key, JSON.stringify(msgs));
+            sessionStorage.setItem(key, JSON.stringify(msgs));
           } catch (err) {}
         }
       });
@@ -1637,7 +1667,7 @@ function syncAllGuestsToDatabase() {
   // ============================================================
   async getUsers() {
     try {
-      const token = localStorage.getItem("manish_auth_token") || "";
+      const token = getAuthToken();
       const headers = {
         Accept: "application/json",
         "x-user-role": getCurrentUserRole() || "admin",
@@ -1655,9 +1685,9 @@ function syncAllGuestsToDatabase() {
       console.warn("GetUsers API notice:", e.message);
     }
 
-    // Fallback: Default users + localStorage users
+    // Fallback: Default users + session users
     try {
-      const local = localStorage.getItem("manish_custom_users");
+      const local = sessionStorage.getItem("manish_custom_users");
       const customUsers = local ? JSON.parse(local) : [];
       return [
         { ...DEFAULT_USERS.admin, wedding_id: "all", assigned_wedding_name: "All Marriages" },
@@ -1671,7 +1701,7 @@ function syncAllGuestsToDatabase() {
 
   async createUser(userData) {
     try {
-      const token = localStorage.getItem("manish_auth_token") || "";
+      const token = getAuthToken();
       const headers = {
         "Content-Type": "application/json",
         "x-user-role": getCurrentUserRole() || "admin",
@@ -1690,8 +1720,8 @@ function syncAllGuestsToDatabase() {
       }
       throw new Error(json.message || "Failed to create user account");
     } catch (e) {
-      // If server error or offline, fallback to local storage
-      const local = localStorage.getItem("manish_custom_users");
+      // If server error or offline, fallback to session storage
+      const local = sessionStorage.getItem("manish_custom_users");
       const customUsers = local ? JSON.parse(local) : [];
       const newId = `user_${Date.now().toString(36)}`;
       const newUser = {
@@ -1706,14 +1736,14 @@ function syncAllGuestsToDatabase() {
         created_at: new Date().toISOString(),
       };
       customUsers.push(newUser);
-      localStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
+      sessionStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
       return newUser;
     }
   },
 
   async updateUser(id, updateData) {
     try {
-      const token = localStorage.getItem("manish_auth_token") || "";
+      const token = getAuthToken();
       const headers = {
         "Content-Type": "application/json",
         "x-user-role": getCurrentUserRole() || "admin",
@@ -1732,13 +1762,13 @@ function syncAllGuestsToDatabase() {
       }
       throw new Error(json.message || "Failed to update user account");
     } catch (e) {
-      const local = localStorage.getItem("manish_custom_users");
+      const local = sessionStorage.getItem("manish_custom_users");
       if (local) {
         let customUsers = JSON.parse(local);
         const idx = customUsers.findIndex((u) => u.id === id);
         if (idx >= 0) {
           customUsers[idx] = { ...customUsers[idx], ...updateData };
-          localStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
+          sessionStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
           return customUsers[idx];
         }
       }
@@ -1748,7 +1778,7 @@ function syncAllGuestsToDatabase() {
 
   async deleteUser(id) {
     try {
-      const token = localStorage.getItem("manish_auth_token") || "";
+      const token = getAuthToken();
       const headers = {
         "x-user-role": getCurrentUserRole() || "admin",
       };
@@ -1765,11 +1795,11 @@ function syncAllGuestsToDatabase() {
       }
       throw new Error(json.message || "Failed to delete user");
     } catch (e) {
-      const local = localStorage.getItem("manish_custom_users");
+      const local = sessionStorage.getItem("manish_custom_users");
       if (local) {
         let customUsers = JSON.parse(local);
         customUsers = customUsers.filter((u) => u.id !== id);
-        localStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
+        sessionStorage.setItem("manish_custom_users", JSON.stringify(customUsers));
       }
       return true;
     }

@@ -4,18 +4,28 @@ import { getSocket } from "../services/socket";
 
 const AuthContext = createContext(null);
 
+// Purge any legacy persistent localStorage auth tokens / user profiles
+try {
+  localStorage.removeItem("manish_auth_user");
+  localStorage.removeItem("manish_auth_token");
+} catch (e) {}
+
 export const AuthProvider = ({ children }) => {
-  // Initialize user from localStorage or null (prompts login page)
+  // Initialize user from sessionStorage (closing browser/tab requires password login on reopen)
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem("manish_auth_user");
+      const saved = sessionStorage.getItem("manish_auth_user");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return null;
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem("manish_auth_token") || null;
+    try {
+      return sessionStorage.getItem("manish_auth_token") || null;
+    } catch (e) {
+      return null;
+    }
   });
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -27,21 +37,27 @@ export const AuthProvider = ({ children }) => {
     setIsLoginModalOpen(true);
   };
 
-  // Sync to localStorage
+  // Sync to sessionStorage (session-scoped: cleared automatically on browser/tab close)
   useEffect(() => {
     if (user) {
-      localStorage.setItem("manish_auth_user", JSON.stringify(user));
+      sessionStorage.setItem("manish_auth_user", JSON.stringify(user));
     } else {
-      localStorage.removeItem("manish_auth_user");
+      sessionStorage.removeItem("manish_auth_user");
     }
+    try {
+      localStorage.removeItem("manish_auth_user");
+    } catch (e) {}
   }, [user]);
 
   useEffect(() => {
     if (token) {
-      localStorage.setItem("manish_auth_token", token);
+      sessionStorage.setItem("manish_auth_token", token);
     } else {
-      localStorage.removeItem("manish_auth_token");
+      sessionStorage.removeItem("manish_auth_token");
     }
+    try {
+      localStorage.removeItem("manish_auth_token");
+    } catch (e) {}
   }, [token]);
 
   // Keep Call Center user assignment strictly up-to-date with backend DB
@@ -96,10 +112,24 @@ export const AuthProvider = ({ children }) => {
   }, [user?.id]);
 
   const login = async (identifier, password) => {
+    // Purge any stale cache to ensure fresh data loads from the database
+    try {
+      sessionStorage.removeItem("manish_weddings_data");
+      sessionStorage.removeItem("manish_guest_data_v3");
+      sessionStorage.removeItem("manish_call_logs_v1");
+      sessionStorage.removeItem("manish_selected_wedding_id");
+      localStorage.removeItem("manish_weddings_data");
+      localStorage.removeItem("manish_guest_data_v3");
+      localStorage.removeItem("manish_call_logs_v1");
+      localStorage.removeItem("manish_selected_wedding_id");
+    } catch (e) {}
+
     const result = await api.login(identifier, password);
     if (result && result.user) {
       setUser(result.user);
       setToken(result.token || `token_${Date.now()}`);
+      sessionStorage.setItem("manish_auth_user", JSON.stringify(result.user));
+      sessionStorage.setItem("manish_auth_token", result.token || `token_${Date.now()}`);
       setIsLoginModalOpen(false);
       setIsAdminPasswordModalOpen(false);
       return result.user;
@@ -112,6 +142,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   const quickLogin = (roleType, wedding = null) => {
+    try {
+      sessionStorage.removeItem("manish_weddings_data");
+      sessionStorage.removeItem("manish_guest_data_v3");
+      sessionStorage.removeItem("manish_call_logs_v1");
+      sessionStorage.removeItem("manish_selected_wedding_id");
+      localStorage.removeItem("manish_weddings_data");
+      localStorage.removeItem("manish_guest_data_v3");
+      localStorage.removeItem("manish_call_logs_v1");
+      localStorage.removeItem("manish_selected_wedding_id");
+    } catch (e) {}
+
     if (roleType === "admin") {
       setUser(DEFAULT_USERS.admin);
       setToken(`mock_admin_${Date.now()}`);
@@ -164,8 +205,16 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem("manish_auth_user");
-    localStorage.removeItem("manish_auth_token");
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem("manish_auth_user");
+      localStorage.removeItem("manish_auth_token");
+      localStorage.removeItem("manish_weddings_data");
+      localStorage.removeItem("manish_guest_data_v3");
+      localStorage.removeItem("manish_call_logs_v1");
+      localStorage.removeItem("manish_selected_wedding_id");
+      localStorage.removeItem("manish_custom_users");
+    } catch (e) {}
     openLoginModal("admin");
   };
 

@@ -35,7 +35,7 @@ export default function CircularChatWidget({
     if (isChatOpen) {
       setUnreadCount(0);
       try {
-        localStorage.setItem(lastSeenKey, new Date().toISOString());
+        sessionStorage.setItem(lastSeenKey, new Date().toISOString());
       } catch (e) {}
     }
   }, [isChatOpen, lastSeenKey]);
@@ -43,7 +43,7 @@ export default function CircularChatWidget({
   // Ensure socket is authenticated and connected for real-time live messaging
   useEffect(() => {
     if (!isAdmin && !isMarriageClient) return;
-    const token = localStorage.getItem("manish_auth_token") || "";
+    const token = sessionStorage.getItem("manish_auth_token") || "";
     socket.auth = {
       token,
       weddingId: cleanWId,
@@ -76,7 +76,7 @@ export default function CircularChatWidget({
         const msgs = await api.fetchMessages(cleanWId);
         if (isMounted) {
           if (msgs && msgs.length > 0) {
-            const lastSeenVal = localStorage.getItem(lastSeenKey);
+            const lastSeenVal = sessionStorage.getItem(lastSeenKey);
             const lastSeenTime = lastSeenVal ? new Date(lastSeenVal).getTime() : 0;
 
             // Only count genuine unseen messages from the other sender
@@ -118,7 +118,7 @@ export default function CircularChatWidget({
           // Chat is currently open: seen immediately
           setUnreadCount(0);
           try {
-            localStorage.setItem(lastSeenKey, new Date().toISOString());
+            sessionStorage.setItem(lastSeenKey, new Date().toISOString());
           } catch (e) {}
         } else {
           // Chat is closed: live incoming message triggers notification dot
@@ -134,7 +134,7 @@ export default function CircularChatWidget({
       if (reader_role === myRole) {
         setUnreadCount(0);
         try {
-          localStorage.setItem(lastSeenKey, new Date().toISOString());
+          sessionStorage.setItem(lastSeenKey, new Date().toISOString());
         } catch (e) {}
       }
     };
@@ -188,7 +188,7 @@ export default function CircularChatWidget({
   const handleOpenClick = () => {
     setUnreadCount(0);
     try {
-      localStorage.setItem(lastSeenKey, new Date().toISOString());
+      sessionStorage.setItem(lastSeenKey, new Date().toISOString());
     } catch (e) {}
     socket.emit("mark_read", { wedding_id: cleanWId, reader_role: myRole });
     api.markMessagesRead(cleanWId, myRole);

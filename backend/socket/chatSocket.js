@@ -2,6 +2,7 @@ import { MessageModel } from "../models/messageModel.js";
 import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
 import { ConciergeBotService } from "../services/conciergeBotService.js";
+import { verifyJwt } from "../services/jwtService.js";
 
 /**
  * Standard Helper to normalize wedding room ID
@@ -14,7 +15,7 @@ export const getCleanWeddingId = (weddingId) => {
 export const getWeddingRoom = (weddingId) => getCleanWeddingId(weddingId);
 
 /**
- * Helper to authenticate token if needed for REST routes
+ * Helper to authenticate token if needed for REST routes and sockets
  */
 export async function authenticate(auth) {
   if (!auth) return null;
@@ -22,6 +23,20 @@ export async function authenticate(auth) {
   if (!token) return null;
 
   const raw = String(token).replace(/^Bearer\s+/, "").trim();
+
+  // 1. Try decoding with native HMAC-SHA256 JWT
+  const decoded = verifyJwt(raw);
+  if (decoded && decoded.id) {
+    return {
+      id: decoded.id,
+      name: decoded.name || (decoded.role === "admin" ? "Admin" : "Client"),
+      role: decoded.role || "client",
+      weddingId: decoded.wedding_id === "all" ? null : decoded.wedding_id || null,
+      email: decoded.email,
+    };
+  }
+
+  // 2. Fallback to legacy string matching for backward compatibility
   if (raw.includes("admin") || raw === "user_admin_01") {
     return { id: "user_admin_01", name: "Manish (Admin)", role: "admin", weddingId: null };
   }
@@ -63,19 +78,26 @@ export const broadcastDataChange = (io, { event, weddingId, payload = {} }) => {
  * Handles real-time client-to-admin communication and live event-driven data sync.
  */
 export const initializeChatSocket = (io) => {
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     console.log(`🔌 [Socket Connected] ID: ${socket.id}`);
 
+    // Check token if passed in handshake auth
+    const token = socket.handshake.auth?.token || socket.handshake.auth?.auth_token;
+    let authUser = null;
+    if (token) {
+      authUser = await authenticate(token);
+    }
+
     // Automatically join admins room if user claims admin or call_center in handshake
-    const authRole = socket.handshake.auth?.role || socket.handshake.query?.role;
+    const authRole = authUser?.role || socket.handshake.auth?.role || socket.handshake.query?.role;
     if (authRole === "admin" || authRole === "call_center") {
       socket.join("admins");
       console.log(`💬 Socket ${socket.id} joined admins channel (${authRole})`);
     }
 
     // Automatically join wedding room if specified in auth handshake
-    const initialWeddingId = socket.handshake.auth?.weddingId || socket.handshake.query?.weddingId;
-    if (initialWeddingId) {
+    const initialWeddingId = authUser?.weddingId || socket.handshake.auth?.weddingId || socket.handshake.query?.weddingId;
+    if (initialWeddingId && initialWeddingId !== "all") {
       const room = getCleanWeddingId(initialWeddingId);
       socket.join(room);
       socket.data.weddingId = room;
