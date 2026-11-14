@@ -59,6 +59,7 @@ export default function AnalyticsView({
   const [flightLogisticsType, setFlightLogisticsType] = useState("arrival"); // 'arrival' | 'departure'
   const [locationLogisticsType, setLocationLogisticsType] = useState("arrival"); // 'arrival' | 'departure'
   const [selectedFlight, setSelectedFlight] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [hoveredDatePoint, setHoveredDatePoint] = useState(null);
 
   // Filter guests based on active side filter
@@ -327,10 +328,9 @@ export default function AnalyticsView({
   const departureData = useMemo(() => computeFlightManifest(false), [filteredGuests]);
 
   // ------------------- LOCATION INFLUX AGGREGATION (ARRIVAL & DEPARTURE) -------------------
-  const locationData = useMemo(() => {
+  const computeLocationBreakdown = (isArrival) => {
     const locMap = {};
     let totalTracked = 0;
-    const isArrival = locationLogisticsType === "arrival";
 
     filteredGuests.forEach((g) => {
       const loc = (isArrival ? g.arrival_location : g.departure_location || "").trim();
@@ -370,7 +370,11 @@ export default function AnalyticsView({
       locations: items,
       totalTracked,
     };
-  }, [filteredGuests, locationLogisticsType]);
+  };
+
+  const arrivalLocationData = useMemo(() => computeLocationBreakdown(true), [filteredGuests]);
+  const departureLocationData = useMemo(() => computeLocationBreakdown(false), [filteredGuests]);
+  const locationData = locationLogisticsType === "arrival" ? arrivalLocationData : departureLocationData;
 
   // ------------------- DATE-WISE ARRIVAL TIMELINE (LINE GRAPH) -------------------
   const dateInfluxData = useMemo(() => {
@@ -1113,46 +1117,63 @@ export default function AnalyticsView({
           </div>
         </div>
 
-        {/* ================= RIGHT: GUESTS BY ARRIVAL / DEPARTURE LOCATION TABLE (5 cols) ================= */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-3">
-          <div className="pb-2 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <MapPin className={`w-4 h-4 ${locationLogisticsType === "arrival" ? "text-emerald-600" : "text-purple-600"}`} />
-                <span>Guests by {locationLogisticsType === "arrival" ? "Arrival" : "Departure"} Location</span>
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {locationLogisticsType === "arrival"
-                  ? "Count of people arriving at each transit point / venue"
-                  : "Count of people departing from each transit point / venue"}
-              </p>
+        {/* ================= RIGHT: GUESTS LOCATION WINDOW (5 cols) ================= */}
+        <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between space-y-3">
+          {/* Window Frame Title Bar with Toggle Buttons */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              {/* Window Controls Visual */}
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 rounded-lg">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                  {locationLogisticsType === "arrival" ? (
+                    <PlaneLanding className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <PlaneTakeoff className="w-4 h-4 text-purple-600" />
+                  )}
+                  <span>Guests Location</span>
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Click button to switch between Arrival and Departure locations
+                </p>
+              </div>
             </div>
 
-            {/* Inbound (Arrival) vs Outbound (Departure) Location Toggle */}
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shrink-0 self-start sm:self-auto">
+            {/* Toggle Buttons: Clicking button switches between Arrival and Departure */}
+            <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200/60">
               <button
                 type="button"
-                onClick={() => setLocationLogisticsType("arrival")}
-                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-xs ${
+                onClick={() => {
+                  setLocationLogisticsType("arrival");
+                  setSelectedLocation(null);
+                }}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                   locationLogisticsType === "arrival"
                     ? "bg-white text-emerald-800 shadow-xs font-black"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                 }`}
               >
                 <PlaneLanding className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Arrival</span>
+                <span>Arrivals ({arrivalLocationData.locations.length})</span>
               </button>
               <button
                 type="button"
-                onClick={() => setLocationLogisticsType("departure")}
-                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-xs ${
+                onClick={() => {
+                  setLocationLogisticsType("departure");
+                  setSelectedLocation(null);
+                }}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                   locationLogisticsType === "departure"
                     ? "bg-white text-purple-800 shadow-xs font-black"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                 }`}
               >
                 <PlaneTakeoff className="w-3.5 h-3.5 text-purple-600" />
-                <span>Departure</span>
+                <span>Departures ({departureLocationData.locations.length})</span>
               </button>
             </div>
           </div>
@@ -1169,9 +1190,20 @@ export default function AnalyticsView({
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {locationData.locations.map((item, idx) => {
+                    const isSelected = selectedLocation?.location === item.location;
                     const sharePct = Math.round((item.count / Math.max(locationData.totalTracked, 1)) * 100);
                     return (
-                      <tr key={item.location || idx} className="hover:bg-slate-50/80 transition-colors">
+                      <tr
+                        key={item.location || idx}
+                        onClick={() => setSelectedLocation(isSelected ? null : item)}
+                        className={`transition-colors cursor-pointer ${
+                          isSelected
+                            ? locationLogisticsType === "arrival"
+                              ? "bg-emerald-50/70 font-semibold"
+                              : "bg-purple-50/70 font-semibold"
+                            : "hover:bg-slate-50/80"
+                        }`}
+                      >
                         {/* 1. Location Column */}
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
@@ -1210,14 +1242,43 @@ export default function AnalyticsView({
             </div>
           </div>
 
-          {/* Location Card Footer */}
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 bg-slate-50/80 p-2 rounded-xl">
-            <span className="font-bold">
-              Total Tracked {locationLogisticsType === "arrival" ? "Arrivals" : "Departures"}:
+          {/* Selected Location Guest Inspector Drawer */}
+          {selectedLocation && selectedLocation.guests && selectedLocation.guests.length > 0 && (
+            <div className="bg-[#FAF9F6] border border-[#FF6574]/30 rounded-2xl p-2.5 animate-fadeIn space-y-1.5 text-xs">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                <span className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-[#FF6574]"></span>
+                  <span>{selectedLocation.location} Guests ({selectedLocation.count})</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLocation(null)}
+                  className="text-slate-400 hover:text-slate-700 text-[11px] font-bold cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap max-h-20 overflow-y-auto no-scrollbar">
+                {selectedLocation.guests.map((g, gIdx) => (
+                  <span
+                    key={g.id || gIdx}
+                    className="bg-white border border-slate-200 text-slate-800 px-2 py-0.5 rounded-lg text-[10px] font-medium shadow-2xs"
+                  >
+                    {g.guest_name || g.name} {g.side ? `(${g.side})` : ""}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Window Footer */}
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>
+              Showing {locationLogisticsType === "arrival" ? "Inbound Arrivals" : "Outbound Departures"} ({
+                locationData.locations.length
+              } Locations)
             </span>
-            <span className="font-black text-[#1E3A8A] text-xs">
-              {locationData.totalTracked} Guests
-            </span>
+            <span>Click any location to view guest names</span>
           </div>
         </div>
       </div>
