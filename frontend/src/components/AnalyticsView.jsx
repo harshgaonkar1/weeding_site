@@ -260,10 +260,12 @@ export default function AnalyticsView({
     let totalTrackedPassengers = 0;
 
     filteredGuests.forEach((g) => {
+      if (!g) return;
       const flightRaw = isArrival ? g.arrival_flight_train_no : g.departure_flight_train_no;
-      if (!flightRaw || !flightRaw.trim()) return;
+      const flightStr = typeof flightRaw === "string" ? flightRaw.trim() : String(flightRaw || "").trim();
+      if (!flightStr) return;
 
-      const flightKey = flightRaw.trim().toUpperCase();
+      const flightKey = flightStr.toUpperCase();
       if (!countsMap[flightKey]) {
         countsMap[flightKey] = {
           flightNumber: flightKey,
@@ -280,9 +282,9 @@ export default function AnalyticsView({
       const dateVal = isArrival ? g.arrival_date : g.departure_date;
       const timeVal = isArrival ? g.arrival_time : g.departure_time;
       const locVal = isArrival ? g.arrival_location : g.departure_location;
-      if (dateVal) countsMap[flightKey].dates.add(dateVal);
-      if (timeVal) countsMap[flightKey].times.add(timeVal);
-      if (locVal) countsMap[flightKey].locations.add(locVal);
+      if (dateVal) countsMap[flightKey].dates.add(String(dateVal));
+      if (timeVal) countsMap[flightKey].times.add(String(timeVal));
+      if (locVal) countsMap[flightKey].locations.add(String(locVal));
       totalTrackedPassengers += 1;
     });
 
@@ -333,7 +335,9 @@ export default function AnalyticsView({
     let totalTracked = 0;
 
     filteredGuests.forEach((g) => {
-      const loc = (isArrival ? g.arrival_location : g.departure_location || "").trim();
+      if (!g) return;
+      const rawLoc = isArrival ? g.arrival_location : g.departure_location;
+      const loc = typeof rawLoc === "string" ? rawLoc.trim() : String(rawLoc || "").trim();
       if (!loc) return;
       if (!locMap[loc]) {
         locMap[loc] = { location: loc, count: 0, guests: [] };
@@ -382,7 +386,9 @@ export default function AnalyticsView({
     let totalWithDate = 0;
 
     filteredGuests.forEach((g) => {
-      const d = (g.arrival_date || "").trim();
+      if (!g) return;
+      const rawDate = g.arrival_date;
+      const d = typeof rawDate === "string" ? rawDate.trim() : String(rawDate || "").trim();
       if (!d) return;
       if (!dateMap[d]) {
         dateMap[d] = { rawDate: d, count: 0, guests: [] };
