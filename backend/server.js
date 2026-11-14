@@ -45,7 +45,7 @@ const io = new SocketIOServer(server, {
     origin: (origin, callback) => callback(null, true),
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-user-role"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-user-role", "x-user-id", "x-user-wedding-id", "*"],
   },
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -82,7 +82,7 @@ app.use((req, res, next) => {
   const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0] || "*";
   res.header("Access-Control-Allow-Origin", allowedOrigin);
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, x-user-role");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, x-user-role, x-user-id, x-user-wedding-id, *");
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Vary", "Origin");
   if (req.method === "OPTIONS") {
@@ -96,7 +96,7 @@ app.use(
     origin: (origin, callback) => callback(null, true),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-user-role"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-user-role", "x-user-id", "x-user-wedding-id", "*"],
   })
 );
 
@@ -262,7 +262,7 @@ app.use((err, req, res, next) => {
   res.header("Access-Control-Allow-Origin", origin);
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, x-user-role");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, x-user-role, x-user-id, x-user-wedding-id, *");
   console.error("Unhandled Error:", err);
   res.status(500).json({
     success: false,

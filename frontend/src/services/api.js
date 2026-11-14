@@ -544,27 +544,13 @@ export const api = {
   // ------------------- WEDDINGS (MARRIAGE CARDS) -------------------
   async fetchWeddings() {
     try {
-      const authUser = getCurrentAuthUser();
-      const userRole = getCurrentUserRole() || "admin";
-      const userWeddingId = getCurrentUserWeddingId();
-
-      const headers = {
-        Accept: "application/json",
-        "x-user-role": userRole,
-      };
-      if (authUser?.id) {
-        headers["x-user-id"] = authUser.id;
-      }
-      if (userWeddingId) {
-        headers["x-user-wedding-id"] = userWeddingId;
-      }
       const token = getAuthToken();
+      const headers = { Accept: "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
 
       const res = await fetch(`${API_BASE_URL}/weddings`, { headers });
       if (res.ok) {
         const json = await res.json();
-        // Support all response structures: array directly, json.data, or json.weddings
         const rawList = Array.isArray(json)
           ? json
           : Array.isArray(json?.data)
@@ -573,10 +559,12 @@ export const api = {
           ? json.weddings
           : [];
 
-        if (Array.isArray(rawList) && rawList.length > 0) {
+        if (Array.isArray(rawList)) {
           const sanitized = rawList.map(sanitizeWeddingFrontend);
-          setCachedWeddings(sanitized);
-          return sanitized;
+          if (sanitized.length > 0) {
+            setCachedWeddings(sanitized);
+            return sanitized;
+          }
         }
       }
     } catch (e) {
@@ -747,22 +735,26 @@ export const api = {
       if (callStatus && callStatus !== "All") params.append("callStatus", callStatus);
       if (callAttempts && callAttempts !== "All") params.append("callAttempts", callAttempts);
 
-      const authUser = getCurrentAuthUser();
-      const userRole = getCurrentUserRole() || "admin";
-      const userWeddingId = getCurrentUserWeddingId();
-      const headers = {
-        "x-user-role": userRole,
-      };
-      if (authUser?.id) headers["x-user-id"] = authUser.id;
-      if (userWeddingId) headers["x-user-wedding-id"] = userWeddingId;
+      const token = getAuthToken();
+      const headers = { Accept: "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
 
       const res = await fetch(`${API_BASE_URL}/guests?${params.toString()}`, { headers });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
-          // Fresh server data is the single source of truth - replace cache, do NOT merge stale cache!
-          const sanitized = json.data.map(sanitizeGuestRecord);
-          setCachedGuests(sanitized);
+        const rawList = Array.isArray(json)
+          ? json
+          : Array.isArray(json?.data)
+          ? json.data
+          : Array.isArray(json?.guests)
+          ? json.guests
+          : [];
+
+        if (Array.isArray(rawList)) {
+          const sanitized = rawList.map(sanitizeGuestRecord);
+          if (sanitized.length > 0) {
+            setCachedGuests(sanitized);
+          }
           return { data: sanitized, source: "backend" };
         }
       }
@@ -817,20 +809,16 @@ export const api = {
 
   async fetchStats(weddingId = "all") {
     try {
-      const authUser = getCurrentAuthUser();
-      const userRole = getCurrentUserRole() || "admin";
-      const userWeddingId = getCurrentUserWeddingId();
-      const headers = {
-        "x-user-role": userRole,
-      };
-      if (authUser?.id) headers["x-user-id"] = authUser.id;
-      if (userWeddingId) headers["x-user-wedding-id"] = userWeddingId;
+      const token = getAuthToken();
+      const headers = { Accept: "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
 
       const params = weddingId && weddingId !== "all" ? `?weddingId=${weddingId}` : "";
       const res = await fetch(`${API_BASE_URL}/guests/stats${params}`, { headers });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data) return json.data;
+        if (json?.data) return json.data;
+        if (json && typeof json === "object") return json;
       }
     } catch (e) { }
 
