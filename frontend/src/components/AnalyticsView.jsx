@@ -177,7 +177,7 @@ export default function AnalyticsView({
         id: "groom-confirmed",
         label: "Groom Confirmed",
         category: "Confirmed",
-        count: groomConfirmed || Math.max(1, Math.round(confirmedCount * 0.55)),
+        count: groomConfirmed,
         color: "#10b981",
         gradientFrom: "#059669",
         gradientTo: "#34d399",
@@ -188,7 +188,7 @@ export default function AnalyticsView({
         id: "bride-confirmed",
         label: "Bride Confirmed",
         category: "Confirmed",
-        count: brideConfirmed || Math.max(1, Math.round(confirmedCount * 0.45)),
+        count: brideConfirmed,
         color: "#059669",
         gradientFrom: "#10b981",
         gradientTo: "#6ee7b7",
@@ -199,7 +199,7 @@ export default function AnalyticsView({
         id: "groom-pending",
         label: "Groom Pending",
         category: "Pending",
-        count: groomPending || Math.max(1, Math.round(pendingCount * 0.5)),
+        count: groomPending,
         color: "#f59e0b",
         gradientFrom: "#d97706",
         gradientTo: "#fbbf24",
@@ -210,7 +210,7 @@ export default function AnalyticsView({
         id: "bride-pending",
         label: "Bride Pending",
         category: "Pending",
-        count: bridePending || Math.max(1, Math.round(pendingCount * 0.5)),
+        count: bridePending,
         color: "#fbbf24",
         gradientFrom: "#f59e0b",
         gradientTo: "#fde68a",
@@ -230,13 +230,14 @@ export default function AnalyticsView({
       },
     ];
 
-    const maxCount = Math.max(...rawGroups.map((g) => g.count), 1);
+    const activeCounts = rawGroups.map((g) => g.count).filter((c) => c > 0);
+    const maxCount = activeCounts.length > 0 ? Math.max(...activeCounts) : 1;
     const minRadius = 24;
     const maxRadius = 52;
 
     return rawGroups.map((g) => {
-      const scale = g.count / maxCount;
-      const r = Math.max(minRadius, minRadius + scale * (maxRadius - minRadius));
+      const scale = maxCount > 0 ? g.count / maxCount : 0;
+      const r = g.count > 0 ? Math.max(minRadius, minRadius + scale * (maxRadius - minRadius)) : minRadius;
       const pct = totalGuests > 0 ? Math.round((g.count / totalGuests) * 100) : 0;
       return {
         ...g,
@@ -244,7 +245,7 @@ export default function AnalyticsView({
         pct,
       };
     });
-  }, [groomConfirmed, brideConfirmed, groomPending, bridePending, confirmedCount, pendingCount, declinedCount, totalGuests]);
+  }, [groomConfirmed, brideConfirmed, groomPending, bridePending, totalGuests, declinedCount]);
 
   // ID Cards
   const idReceivedCount = filteredGuests.filter((g) => (g.id_card_received || "").toLowerCase() === "yes" || g.id_card_copy).length;
@@ -288,7 +289,7 @@ export default function AnalyticsView({
       totalTrackedPassengers += 1;
     });
 
-    let flights = Object.values(countsMap).map((f) => ({
+    const flights = Object.values(countsMap).map((f) => ({
       flightNumber: f.flightNumber,
       count: f.count,
       passengers: f.passengers,
@@ -296,27 +297,6 @@ export default function AnalyticsView({
       time: Array.from(f.times)[0] || "",
       location: Array.from(f.locations)[0] || "",
     }));
-
-    // If no real flight details entered yet in guests data, provide realistic preview data
-    if (flights.length === 0) {
-      const sampleArrivals = [
-        { flightNumber: "6E-2411", count: 18, date: "21/11/2026", time: "10:40 AM", location: "GOX (Mopa)" },
-        { flightNumber: "AI-682", count: 14, date: "21/11/2026", time: "12:15 PM", location: "GOX (Mopa)" },
-        { flightNumber: "QP-1414", count: 11, date: "21/11/2026", time: "02:30 PM", location: "GOI (Dabolim)" },
-        { flightNumber: "UK-815", count: 8, date: "22/11/2026", time: "09:15 AM", location: "GOX (Mopa)" },
-        { flightNumber: "6E-512", count: 6, date: "22/11/2026", time: "04:50 PM", location: "GOI (Dabolim)" },
-        { flightNumber: "SG-302", count: 4, date: "22/11/2026", time: "06:10 PM", location: "GOX (Mopa)" },
-      ];
-      const sampleDepartures = [
-        { flightNumber: "QP-1414", count: 19, date: "30/11/2026", time: "11:20 AM", location: "GOX (Mopa)" },
-        { flightNumber: "6E-2412", count: 15, date: "30/11/2026", time: "01:45 PM", location: "GOX (Mopa)" },
-        { flightNumber: "AI-683", count: 10, date: "30/11/2026", time: "04:10 PM", location: "GOI (Dabolim)" },
-        { flightNumber: "UK-816", count: 7, date: "01/12/2026", time: "10:30 AM", location: "GOX (Mopa)" },
-        { flightNumber: "SG-303", count: 5, date: "01/12/2026", time: "05:00 PM", location: "GOI (Dabolim)" },
-      ];
-      flights = isArrival ? sampleArrivals : sampleDepartures;
-      totalTrackedPassengers = flights.reduce((sum, f) => sum + f.count, 0);
-    }
 
     flights.sort((a, b) => b.count - a.count);
     return {
@@ -347,28 +327,7 @@ export default function AnalyticsView({
       totalTracked += 1;
     });
 
-    let items = Object.values(locMap);
-
-    // If no location data has been entered yet, provide realistic preview data
-    if (items.length === 0) {
-      items = isArrival
-        ? [
-            { location: "GOX - Manohar Int'l Airport (Mopa)", count: 72, guests: [] },
-            { location: "GOI - Dabolim Airport (Vasco)", count: 48, guests: [] },
-            { location: "Madgaon Junction Railway Station (MAO)", count: 24, guests: [] },
-            { location: "Thivim Railway Station (THVM)", count: 14, guests: [] },
-            { location: "Direct Venue / Hotel Arrival", count: 18, guests: [] },
-          ]
-        : [
-            { location: "GOX - Manohar Int'l Airport (Mopa)", count: 68, guests: [] },
-            { location: "GOI - Dabolim Airport (Vasco)", count: 52, guests: [] },
-            { location: "Madgaon Junction Railway Station (MAO)", count: 26, guests: [] },
-            { location: "Thivim Railway Station (THVM)", count: 16, guests: [] },
-            { location: "Direct Venue / Hotel Checkout", count: 14, guests: [] },
-          ];
-      totalTracked = items.reduce((s, i) => s + i.count, 0);
-    }
-
+    const items = Object.values(locMap);
     items.sort((a, b) => b.count - a.count);
     return {
       locations: items,
@@ -400,33 +359,24 @@ export default function AnalyticsView({
 
     let points = Object.values(dateMap);
 
-    if (points.length < 2) {
-      points = [
-        { rawDate: "19 Nov 2026", label: "19 Nov", count: 12 },
-        { rawDate: "20 Nov 2026", label: "20 Nov", count: 34 },
-        { rawDate: "21 Nov 2026", label: "21 Nov (Peak)", count: 86 },
-        { rawDate: "22 Nov 2026", label: "22 Nov", count: 42 },
-        { rawDate: "23 Nov 2026", label: "23 Nov", count: 18 },
-        { rawDate: "24 Nov 2026", label: "24 Nov", count: 8 },
-      ];
-    } else {
-      points.sort((a, b) => {
-        const da = new Date(a.rawDate);
-        const db = new Date(b.rawDate);
-        if (!isNaN(da) && !isNaN(db)) return da - db;
-        return a.rawDate.localeCompare(b.rawDate);
-      });
-      points = points.map((p) => ({
-        ...p,
-        label: p.rawDate.length > 10 ? p.rawDate.substring(0, 10) : p.rawDate,
-      }));
-    }
+    points.sort((a, b) => {
+      const da = new Date(a.rawDate);
+      const db = new Date(b.rawDate);
+      if (!isNaN(da) && !isNaN(db)) return da - db;
+      return a.rawDate.localeCompare(b.rawDate);
+    });
 
-    const maxCount = Math.max(...points.map((p) => p.count), 1);
-    const peakPoint = points.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), points[0]);
+    points = points.map((p) => ({
+      ...p,
+      label: p.rawDate.length > 10 ? p.rawDate.substring(0, 10) : p.rawDate,
+    }));
+
+    const maxCount = points.length > 0 ? Math.max(...points.map((p) => p.count), 1) : 0;
+    const peakPoint = points.length > 0 ? points.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), points[0]) : null;
 
     return {
       points,
+      totalWithDate,
       maxCount,
       peakPoint,
     };
@@ -436,18 +386,19 @@ export default function AnalyticsView({
   const lineGraphCoords = useMemo(() => {
     const pts = dateInfluxData.points;
     const n = pts.length;
+    if (n === 0) return { coords: [], path: "", areaPath: "" };
+
     const coords = pts.map((p, i) => {
       const x = 45 + (i / Math.max(n - 1, 1)) * 510;
       const y = 160 - (p.count / Math.max(dateInfluxData.maxCount, 1)) * 135;
       return { ...p, x, y };
     });
 
-    if (coords.length === 0) return { coords: [], path: "", areaPath: "" };
     if (coords.length === 1) {
       return {
         coords,
-        path: `M ${coords[0].x} ${coords[0].y}`,
-        areaPath: `M ${coords[0].x} ${coords[0].y} L ${coords[0].x} 165 Z`,
+        path: `M ${coords[0].x - 20} ${coords[0].y} L ${coords[0].x + 20} ${coords[0].y}`,
+        areaPath: `M ${coords[0].x - 20} 165 L ${coords[0].x - 20} ${coords[0].y} L ${coords[0].x + 20} ${coords[0].y} L ${coords[0].x + 20} 165 Z`,
       };
     }
 
@@ -874,10 +825,20 @@ export default function AnalyticsView({
                   </filter>
                 </defs>
 
-                {bubbles.map((bubble) => {
-                  const isHovered = activeBubble === bubble.id;
-                  if (bubble.count === 0) return null;
-                  return (
+                {bubbles.filter((b) => b.count > 0).length === 0 ? (
+                  <text
+                    x="190"
+                    y="132"
+                    textAnchor="middle"
+                    className="text-xs font-bold fill-slate-400"
+                  >
+                    No RSVP categories recorded in database
+                  </text>
+                ) : (
+                  bubbles.map((bubble) => {
+                    const isHovered = activeBubble === bubble.id;
+                    if (bubble.count === 0) return null;
+                    return (
                     <g
                       key={bubble.id}
                       className="cursor-pointer transition-transform duration-300"
@@ -927,7 +888,7 @@ export default function AnalyticsView({
                       </text>
                     </g>
                   );
-                })}
+                }))}
               </svg>
             </div>
           </div>
@@ -1014,70 +975,86 @@ export default function AnalyticsView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {(flightLogisticsType === "arrival" ? arrivalData.flights : departureData.flights).map((flight, idx) => {
-                    const isSelected = selectedFlight?.flightNumber === flight.flightNumber;
-                    const airline = getAirlineInfo(flight.flightNumber);
-                    const totalPassengers = flightLogisticsType === "arrival" ? arrivalData.totalTrackedPassengers : departureData.totalTrackedPassengers;
-                    const sharePct = Math.round((flight.count / Math.max(totalPassengers, 1)) * 100);
+                  {(flightLogisticsType === "arrival" ? arrivalData.flights : departureData.flights).length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-12 text-center text-slate-400">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2 text-slate-400 text-sm">
+                          ✈️
+                        </div>
+                        <p className="font-bold text-xs text-slate-600">
+                          No {flightLogisticsType === "arrival" ? "arrival" : "departure"} flight / train details in database
+                        </p>
+                        <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
+                          Flight and train numbers entered for guests will appear here automatically.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    (flightLogisticsType === "arrival" ? arrivalData.flights : departureData.flights).map((flight, idx) => {
+                      const isSelected = selectedFlight?.flightNumber === flight.flightNumber;
+                      const airline = getAirlineInfo(flight.flightNumber);
+                      const totalPassengers = flightLogisticsType === "arrival" ? arrivalData.totalTrackedPassengers : departureData.totalTrackedPassengers;
+                      const sharePct = Math.round((flight.count / Math.max(totalPassengers, 1)) * 100);
 
-                    return (
-                      <tr
-                        key={flight.flightNumber || idx}
-                        onClick={() => setSelectedFlight(isSelected ? null : flight)}
-                        className={`transition-colors cursor-pointer ${
-                          isSelected
-                            ? flightLogisticsType === "arrival"
-                              ? "bg-emerald-50/70 font-semibold"
-                              : "bg-purple-50/70 font-semibold"
-                            : "hover:bg-slate-50/80"
-                        }`}
-                      >
-                        {/* 1. Flight & Carrier */}
-                        <td className="py-2.5 px-3">
-                          <div className="flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-lg bg-blue-50 text-[#1E3A8A] flex items-center justify-center font-bold text-xs shadow-2xs">
-                              ✈️
-                            </span>
-                            <div>
-                              <span className="font-mono font-bold text-slate-900 block text-xs">
-                                {flight.flightNumber}
+                      return (
+                        <tr
+                          key={flight.flightNumber || idx}
+                          onClick={() => setSelectedFlight(isSelected ? null : flight)}
+                          className={`transition-colors cursor-pointer ${
+                            isSelected
+                              ? flightLogisticsType === "arrival"
+                                ? "bg-emerald-50/70 font-semibold"
+                                : "bg-purple-50/70 font-semibold"
+                              : "hover:bg-slate-50/80"
+                          }`}
+                        >
+                          {/* 1. Flight & Carrier */}
+                          <td className="py-2.5 px-3">
+                            <div className="flex items-center gap-2">
+                              <span className="w-7 h-7 rounded-lg bg-blue-50 text-[#1E3A8A] flex items-center justify-center font-bold text-xs shadow-2xs">
+                                ✈️
                               </span>
-                              <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-semibold border inline-block ${airline.color}`}>
-                                {airline.name}
-                              </span>
+                              <div>
+                                <span className="font-mono font-bold text-slate-900 block text-xs">
+                                  {flight.flightNumber}
+                                </span>
+                                <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-semibold border inline-block ${airline.color}`}>
+                                  {airline.name}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* 2. Count of People */}
-                        <td className="py-2.5 px-3 text-center">
-                          <span className={`inline-flex items-center gap-1 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs ${
-                            flightLogisticsType === "arrival"
-                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                              : "bg-purple-50 text-purple-800 border border-purple-200"
-                          }`}>
-                            <Users className="w-3 h-3" />
-                            <span>{flight.count} Guests</span>
-                          </span>
-                          <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
-                            {sharePct}% share
-                          </span>
-                        </td>
+                          {/* 2. Count of People */}
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`inline-flex items-center gap-1 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs ${
+                              flightLogisticsType === "arrival"
+                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                : "bg-purple-50 text-purple-800 border border-purple-200"
+                            }`}>
+                              <Users className="w-3 h-3" />
+                              <span>{flight.count} Guests</span>
+                            </span>
+                            <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
+                              {sharePct}% share
+                            </span>
+                          </td>
 
-                        {/* 3. Schedule (Date & Time) - Date prominently displayed */}
-                        <td className="py-2.5 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1 font-black text-slate-800 text-xs">
-                            <Calendar className="w-3.5 h-3.5 text-[#FF6574] shrink-0" />
-                            <span>{flight.date || wedding?.wedding_date || "Date TBA"}</span>
-                          </div>
-                          <div className="flex items-center justify-end gap-1 text-slate-500 text-[10.5px] mt-0.5 font-medium">
-                            <Clock className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                            <span>{flight.time || "Time TBA"}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          {/* 3. Schedule (Date & Time) - Date prominently displayed */}
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1 font-black text-slate-800 text-xs">
+                              <Calendar className="w-3.5 h-3.5 text-[#FF6574] shrink-0" />
+                              <span>{flight.date || wedding?.wedding_date || "Date TBA"}</span>
+                            </div>
+                            <div className="flex items-center justify-end gap-1 text-slate-500 text-[10.5px] mt-0.5 font-medium">
+                              <Clock className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                              <span>{flight.time || "Time TBA"}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1105,7 +1082,7 @@ export default function AnalyticsView({
                     key={p.id || pIdx}
                     className="bg-white border border-slate-200 text-slate-800 px-2 py-0.5 rounded-lg text-[10px] font-medium shadow-2xs"
                   >
-                    {p.name} {p.side ? `(${p.side})` : ""}
+                    {p.guest_name || p.name} {p.side ? `(${p.side})` : ""}
                   </span>
                 ))}
               </div>
@@ -1195,54 +1172,70 @@ export default function AnalyticsView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {locationData.locations.map((item, idx) => {
-                    const isSelected = selectedLocation?.location === item.location;
-                    const sharePct = Math.round((item.count / Math.max(locationData.totalTracked, 1)) * 100);
-                    return (
-                      <tr
-                        key={item.location || idx}
-                        onClick={() => setSelectedLocation(isSelected ? null : item)}
-                        className={`transition-colors cursor-pointer ${
-                          isSelected
-                            ? locationLogisticsType === "arrival"
-                              ? "bg-emerald-50/70 font-semibold"
-                              : "bg-purple-50/70 font-semibold"
-                            : "hover:bg-slate-50/80"
-                        }`}
-                      >
-                        {/* 1. Location Column */}
-                        <td className="py-2.5 px-3">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs shrink-0 ${
-                              locationLogisticsType === "arrival"
-                                ? "bg-emerald-50 text-emerald-600"
-                                : "bg-purple-50 text-purple-600"
-                            }`}>
-                              <MapPin className="w-3.5 h-3.5" />
-                            </span>
-                            <span className="font-bold text-slate-800 text-xs truncate max-w-[170px]" title={item.location}>
-                              {item.location}
-                            </span>
-                          </div>
-                        </td>
+                  {locationData.locations.length === 0 ? (
+                    <tr>
+                      <td colSpan={2} className="py-12 text-center text-slate-400">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2 text-slate-400">
+                          <MapPin className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <p className="font-bold text-xs text-slate-600">
+                          No {locationLogisticsType === "arrival" ? "arrival" : "departure"} locations in database
+                        </p>
+                        <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
+                          Airport, railway station, and venue points will show here as guests' locations are entered.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    locationData.locations.map((item, idx) => {
+                      const isSelected = selectedLocation?.location === item.location;
+                      const sharePct = Math.round((item.count / Math.max(locationData.totalTracked, 1)) * 100);
+                      return (
+                        <tr
+                          key={item.location || idx}
+                          onClick={() => setSelectedLocation(isSelected ? null : item)}
+                          className={`transition-colors cursor-pointer ${
+                            isSelected
+                              ? locationLogisticsType === "arrival"
+                                ? "bg-emerald-50/70 font-semibold"
+                                : "bg-purple-50/70 font-semibold"
+                              : "hover:bg-slate-50/80"
+                          }`}
+                        >
+                          {/* 1. Location Column */}
+                          <td className="py-2.5 px-3">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs shrink-0 ${
+                                locationLogisticsType === "arrival"
+                                  ? "bg-emerald-50 text-emerald-600"
+                                  : "bg-purple-50 text-purple-600"
+                              }`}>
+                                <MapPin className="w-3.5 h-3.5" />
+                              </span>
+                              <span className="font-bold text-slate-800 text-xs truncate max-w-[170px]" title={item.location}>
+                                {item.location}
+                              </span>
+                            </div>
+                          </td>
 
-                        {/* 2. Count of People Column */}
-                        <td className="py-2.5 px-3 text-right">
-                          <span className={`inline-flex items-center gap-1 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs ${
-                            locationLogisticsType === "arrival"
-                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                              : "bg-purple-50 text-purple-800 border border-purple-200"
-                          }`}>
-                            <Users className="w-3 h-3" />
-                            <span>{item.count} Guests</span>
-                          </span>
-                          <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
-                            {sharePct}% share
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          {/* 2. Count of People Column */}
+                          <td className="py-2.5 px-3 text-right">
+                            <span className={`inline-flex items-center gap-1 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs ${
+                              locationLogisticsType === "arrival"
+                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                : "bg-purple-50 text-purple-800 border border-purple-200"
+                            }`}>
+                              <Users className="w-3 h-3" />
+                              <span>{item.count} Guests</span>
+                            </span>
+                            <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
+                              {sharePct}% share
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1311,154 +1304,174 @@ export default function AnalyticsView({
 
           {/* Peak Date Badge */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs flex items-center gap-1.5">
-              <span>🔥 Peak Arrival:</span>
-              <b className="text-[#FF6574]">{dateInfluxData.peakPoint?.label}</b>
-              <span className="bg-[#FF6574] text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                {dateInfluxData.peakPoint?.count} Guests
+            {dateInfluxData.peakPoint ? (
+              <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs flex items-center gap-1.5">
+                <span>🔥 Peak Arrival:</span>
+                <b className="text-[#FF6574]">{dateInfluxData.peakPoint.label}</b>
+                <span className="bg-[#FF6574] text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                  {dateInfluxData.peakPoint.count} Guests
+                </span>
               </span>
-            </span>
+            ) : (
+              <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 shadow-2xs">
+                No arrival dates recorded
+              </span>
+            )}
           </div>
         </div>
 
         {/* Interactive SVG Line Graph Canvas */}
         <div className="relative pt-2 pb-2">
-          {/* Active Hover Tooltip */}
-          {hoveredDatePoint && (
-            <div
-              style={{
-                left: `${(hoveredDatePoint.x / 600) * 100}%`,
-                top: `${(hoveredDatePoint.y / 200) * 100}%`,
-              }}
-              className="absolute pointer-events-none -translate-x-1/2 -translate-y-12 z-20 bg-slate-900/95 text-white text-xs rounded-xl px-2.5 py-1.5 shadow-xl border border-white/20 whitespace-nowrap animate-fadeIn"
-            >
-              <div className="font-extrabold text-[#FF6574] text-[11px]">{hoveredDatePoint.rawDate}</div>
-              <div className="font-bold flex items-center gap-1 text-[10.5px]">
-                <Users className="w-3 h-3 text-emerald-400" />
-                <span>{hoveredDatePoint.count} Guests Arriving</span>
+          {dateInfluxData.points.length === 0 ? (
+            <div className="w-full h-48 sm:h-56 bg-slate-50/70 rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-center p-4">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                <Calendar className="w-5 h-5 text-slate-400" />
               </div>
+              <p className="font-bold text-xs text-slate-600">No arrival dates recorded in database</p>
+              <p className="text-[11px] text-slate-400 mt-1 max-w-sm">
+                When guests have arrival dates entered in their travel details, the timeline graph will display their arrival distribution automatically.
+              </p>
             </div>
-          )}
-
-          <div className="w-full h-48 sm:h-56 bg-gradient-to-b from-slate-50/70 to-slate-100/30 rounded-2xl border border-slate-100 p-2 sm:p-4">
-            <svg viewBox="0 0 600 200" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="lineGraphGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.30" />
-                  <stop offset="60%" stopColor="#FF6574" stopOpacity="0.10" />
-                  <stop offset="100%" stopColor="#FF6574" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="lineStrokeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#1E3A8A" />
-                  <stop offset="45%" stopColor="#2563EB" />
-                  <stop offset="100%" stopColor="#FF6574" />
-                </linearGradient>
-                <filter id="point-glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.25" />
-                </filter>
-              </defs>
-
-              {/* Grid Horizontal Reference Lines */}
-              {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                const y = 160 - ratio * 135;
-                return (
-                  <g key={idx}>
-                    <line
-                      x1="45"
-                      y1={y}
-                      x2="555"
-                      y2={y}
-                      stroke="#e2e8f0"
-                      strokeDasharray="4 4"
-                      strokeWidth="1"
-                    />
-                    <text
-                      x="36"
-                      y={y + 3}
-                      textAnchor="end"
-                      className="text-[9px] fill-slate-400 font-mono font-bold"
-                    >
-                      {Math.round(ratio * dateInfluxData.maxCount)}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Area Gradient Fill */}
-              {lineGraphCoords.areaPath && (
-                <path d={lineGraphCoords.areaPath} fill="url(#lineGraphGradient)" />
+          ) : (
+            <>
+              {/* Active Hover Tooltip */}
+              {hoveredDatePoint && (
+                <div
+                  style={{
+                    left: `${(hoveredDatePoint.x / 600) * 100}%`,
+                    top: `${(hoveredDatePoint.y / 200) * 100}%`,
+                  }}
+                  className="absolute pointer-events-none -translate-x-1/2 -translate-y-12 z-20 bg-slate-900/95 text-white text-xs rounded-xl px-2.5 py-1.5 shadow-xl border border-white/20 whitespace-nowrap animate-fadeIn"
+                >
+                  <div className="font-extrabold text-[#FF6574] text-[11px]">{hoveredDatePoint.rawDate}</div>
+                  <div className="font-bold flex items-center gap-1 text-[10.5px]">
+                    <Users className="w-3 h-3 text-emerald-400" />
+                    <span>{hoveredDatePoint.count} Guests Arriving</span>
+                  </div>
+                </div>
               )}
 
-              {/* Stroke Curve Line */}
-              {lineGraphCoords.path && (
-                <path
-                  d={lineGraphCoords.path}
-                  fill="none"
-                  stroke="url(#lineStrokeGradient)"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
+              <div className="w-full h-48 sm:h-56 bg-gradient-to-b from-slate-50/70 to-slate-100/30 rounded-2xl border border-slate-100 p-2 sm:p-4">
+                <svg viewBox="0 0 600 200" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="lineGraphGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.30" />
+                      <stop offset="60%" stopColor="#FF6574" stopOpacity="0.10" />
+                      <stop offset="100%" stopColor="#FF6574" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="lineStrokeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#1E3A8A" />
+                      <stop offset="45%" stopColor="#2563EB" />
+                      <stop offset="100%" stopColor="#FF6574" />
+                    </linearGradient>
+                    <filter id="point-glow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.25" />
+                    </filter>
+                  </defs>
 
-              {/* Data Point Dots & Labels */}
-              {lineGraphCoords.coords.map((pt, idx) => {
-                const isHovered = hoveredDatePoint?.rawDate === pt.rawDate;
-                return (
-                  <g
-                    key={pt.rawDate || idx}
-                    className="cursor-pointer"
-                    onMouseEnter={() => setHoveredDatePoint(pt)}
-                    onMouseLeave={() => setHoveredDatePoint(null)}
-                  >
-                    {/* Outer hover ring */}
-                    <circle
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={isHovered ? 8 : 5}
-                      fill="#ffffff"
-                      stroke={isHovered ? "#FF6574" : "#1E3A8A"}
-                      strokeWidth={isHovered ? "3.5" : "2.5"}
-                      filter="url(#point-glow)"
-                      className="transition-all duration-200"
-                    />
-                    {/* Inner point */}
-                    <circle
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={isHovered ? 3.5 : 2}
-                      fill={isHovered ? "#FF6574" : "#1E3A8A"}
-                      className="transition-all duration-200"
-                    />
+                  {/* Grid Horizontal Reference Lines */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                    const y = 160 - ratio * 135;
+                    return (
+                      <g key={idx}>
+                        <line
+                          x1="45"
+                          y1={y}
+                          x2="555"
+                          y2={y}
+                          stroke="#e2e8f0"
+                          strokeDasharray="4 4"
+                          strokeWidth="1"
+                        />
+                        <text
+                          x="36"
+                          y={y + 3}
+                          textAnchor="end"
+                          className="text-[9px] fill-slate-400 font-mono font-bold"
+                        >
+                          {Math.round(ratio * dateInfluxData.maxCount)}
+                        </text>
+                      </g>
+                    );
+                  })}
 
-                    {/* Value Badge above Peak point */}
-                    {pt.count === dateInfluxData.maxCount && !isHovered && (
-                      <text
-                        x={pt.x}
-                        y={pt.y - 10}
-                        textAnchor="middle"
-                        className="text-[10px] font-black fill-[#FF6574] drop-shadow-xs"
+                  {/* Area Gradient Fill */}
+                  {lineGraphCoords.areaPath && (
+                    <path d={lineGraphCoords.areaPath} fill="url(#lineGraphGradient)" />
+                  )}
+
+                  {/* Stroke Curve Line */}
+                  {lineGraphCoords.path && (
+                    <path
+                      d={lineGraphCoords.path}
+                      fill="none"
+                      stroke="url(#lineStrokeGradient)"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* Data Point Dots & Labels */}
+                  {lineGraphCoords.coords.map((pt, idx) => {
+                    const isHovered = hoveredDatePoint?.rawDate === pt.rawDate;
+                    return (
+                      <g
+                        key={pt.rawDate || idx}
+                        className="cursor-pointer"
+                        onMouseEnter={() => setHoveredDatePoint(pt)}
+                        onMouseLeave={() => setHoveredDatePoint(null)}
                       >
-                        {pt.count}
-                      </text>
-                    )}
+                        {/* Outer hover ring */}
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={isHovered ? 8 : 5}
+                          fill="#ffffff"
+                          stroke={isHovered ? "#FF6574" : "#1E3A8A"}
+                          strokeWidth={isHovered ? "3.5" : "2.5"}
+                          filter="url(#point-glow)"
+                          className="transition-all duration-200"
+                        />
+                        {/* Inner point */}
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={isHovered ? 3.5 : 2}
+                          fill={isHovered ? "#FF6574" : "#1E3A8A"}
+                          className="transition-all duration-200"
+                        />
 
-                    {/* X-axis Date Label */}
-                    <text
-                      x={pt.x}
-                      y="185"
-                      textAnchor="middle"
-                      className={`text-[10px] font-sans transition-all ${
-                        isHovered ? "font-black fill-[#FF6574]" : "font-bold fill-slate-600"
-                      }`}
-                    >
-                      {pt.label}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
+                        {/* Value Badge above Peak point */}
+                        {pt.count === dateInfluxData.maxCount && !isHovered && (
+                          <text
+                            x={pt.x}
+                            y={pt.y - 10}
+                            textAnchor="middle"
+                            className="text-[10px] font-black fill-[#FF6574] drop-shadow-xs"
+                          >
+                            {pt.count}
+                          </text>
+                        )}
+
+                        {/* X-axis Date Label */}
+                        <text
+                          x={pt.x}
+                          y="185"
+                          textAnchor="middle"
+                          className={`text-[10px] font-sans transition-all ${
+                            isHovered ? "font-black fill-[#FF6574]" : "font-bold fill-slate-600"
+                          }`}
+                        >
+                          {pt.label}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer Insight */}
