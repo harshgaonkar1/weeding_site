@@ -57,6 +57,7 @@ export default function AnalyticsView({
 }) {
   const [timeRange, setTimeRange] = useState("all"); // 'all', 'bride', 'groom'
   const [flightLogisticsType, setFlightLogisticsType] = useState("arrival"); // 'arrival' | 'departure'
+  const [locationLogisticsType, setLocationLogisticsType] = useState("arrival"); // 'arrival' | 'departure'
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [hoveredDatePoint, setHoveredDatePoint] = useState(null);
 
@@ -325,13 +326,14 @@ export default function AnalyticsView({
   const arrivalData = useMemo(() => computeFlightManifest(true), [filteredGuests]);
   const departureData = useMemo(() => computeFlightManifest(false), [filteredGuests]);
 
-  // ------------------- LOCATION INFLUX AGGREGATION -------------------
+  // ------------------- LOCATION INFLUX AGGREGATION (ARRIVAL & DEPARTURE) -------------------
   const locationData = useMemo(() => {
     const locMap = {};
     let totalTracked = 0;
+    const isArrival = locationLogisticsType === "arrival";
 
     filteredGuests.forEach((g) => {
-      const loc = (g.arrival_location || "").trim();
+      const loc = (isArrival ? g.arrival_location : g.departure_location || "").trim();
       if (!loc) return;
       if (!locMap[loc]) {
         locMap[loc] = { location: loc, count: 0, guests: [] };
@@ -343,15 +345,23 @@ export default function AnalyticsView({
 
     let items = Object.values(locMap);
 
-    // If no arrival location data has been entered yet, provide realistic preview data
+    // If no location data has been entered yet, provide realistic preview data
     if (items.length === 0) {
-      items = [
-        { location: "GOX - Manohar Int'l Airport (Mopa)", count: 72, guests: [] },
-        { location: "GOI - Dabolim Airport (Vasco)", count: 48, guests: [] },
-        { location: "Madgaon Junction Railway Station (MAO)", count: 24, guests: [] },
-        { location: "Thivim Railway Station (THVM)", count: 14, guests: [] },
-        { location: "Direct Venue / Hotel Arrival", count: 18, guests: [] },
-      ];
+      items = isArrival
+        ? [
+            { location: "GOX - Manohar Int'l Airport (Mopa)", count: 72, guests: [] },
+            { location: "GOI - Dabolim Airport (Vasco)", count: 48, guests: [] },
+            { location: "Madgaon Junction Railway Station (MAO)", count: 24, guests: [] },
+            { location: "Thivim Railway Station (THVM)", count: 14, guests: [] },
+            { location: "Direct Venue / Hotel Arrival", count: 18, guests: [] },
+          ]
+        : [
+            { location: "GOX - Manohar Int'l Airport (Mopa)", count: 68, guests: [] },
+            { location: "GOI - Dabolim Airport (Vasco)", count: 52, guests: [] },
+            { location: "Madgaon Junction Railway Station (MAO)", count: 26, guests: [] },
+            { location: "Thivim Railway Station (THVM)", count: 16, guests: [] },
+            { location: "Direct Venue / Hotel Checkout", count: 14, guests: [] },
+          ];
       totalTracked = items.reduce((s, i) => s + i.count, 0);
     }
 
@@ -360,7 +370,7 @@ export default function AnalyticsView({
       locations: items,
       totalTracked,
     };
-  }, [filteredGuests]);
+  }, [filteredGuests, locationLogisticsType]);
 
   // ------------------- DATE-WISE ARRIVAL TIMELINE (LINE GRAPH) -------------------
   const dateInfluxData = useMemo(() => {
@@ -1103,21 +1113,48 @@ export default function AnalyticsView({
           </div>
         </div>
 
-        {/* ================= RIGHT: GUESTS BY ARRIVAL LOCATION TABLE (5 cols) ================= */}
+        {/* ================= RIGHT: GUESTS BY ARRIVAL / DEPARTURE LOCATION TABLE (5 cols) ================= */}
         <div className="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-3">
-          <div className="pb-2 border-b border-slate-100 flex items-center justify-between">
+          <div className="pb-2 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#FF6574]" />
-                <span>Guests by Arrival Location</span>
+                <MapPin className={`w-4 h-4 ${locationLogisticsType === "arrival" ? "text-emerald-600" : "text-purple-600"}`} />
+                <span>Guests by {locationLogisticsType === "arrival" ? "Arrival" : "Departure"} Location</span>
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Count of people arriving at the same transit point / venue
+                {locationLogisticsType === "arrival"
+                  ? "Count of people arriving at each transit point / venue"
+                  : "Count of people departing from each transit point / venue"}
               </p>
             </div>
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-              {locationData.locations.length} Locations
-            </span>
+
+            {/* Inbound (Arrival) vs Outbound (Departure) Location Toggle */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shrink-0 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setLocationLogisticsType("arrival")}
+                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-xs ${
+                  locationLogisticsType === "arrival"
+                    ? "bg-white text-emerald-800 shadow-xs font-black"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                }`}
+              >
+                <PlaneLanding className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Arrival</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocationLogisticsType("departure")}
+                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-xs ${
+                  locationLogisticsType === "departure"
+                    ? "bg-white text-purple-800 shadow-xs font-black"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                }`}
+              >
+                <PlaneTakeoff className="w-3.5 h-3.5 text-purple-600" />
+                <span>Departure</span>
+              </button>
+            </div>
           </div>
 
           {/* Location Table Container */}
@@ -1138,7 +1175,11 @@ export default function AnalyticsView({
                         {/* 1. Location Column */}
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-md bg-rose-50 text-[#FF6574] flex items-center justify-center text-xs shrink-0">
+                            <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs shrink-0 ${
+                              locationLogisticsType === "arrival"
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-purple-50 text-purple-600"
+                            }`}>
                               <MapPin className="w-3.5 h-3.5" />
                             </span>
                             <span className="font-bold text-slate-800 text-xs truncate max-w-[170px]" title={item.location}>
@@ -1149,8 +1190,12 @@ export default function AnalyticsView({
 
                         {/* 2. Count of People Column */}
                         <td className="py-2.5 px-3 text-right">
-                          <span className="inline-flex items-center gap-1 font-black px-2.5 py-0.5 rounded-full text-xs bg-rose-50 text-rose-800 border border-rose-200 shadow-2xs">
-                            <Users className="w-3 h-3 text-[#FF6574]" />
+                          <span className={`inline-flex items-center gap-1 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs ${
+                            locationLogisticsType === "arrival"
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                              : "bg-purple-50 text-purple-800 border border-purple-200"
+                          }`}>
+                            <Users className="w-3 h-3" />
                             <span>{item.count} Guests</span>
                           </span>
                           <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
@@ -1167,7 +1212,9 @@ export default function AnalyticsView({
 
           {/* Location Card Footer */}
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 bg-slate-50/80 p-2 rounded-xl">
-            <span className="font-bold">Total Tracked Influx:</span>
+            <span className="font-bold">
+              Total Tracked {locationLogisticsType === "arrival" ? "Arrivals" : "Departures"}:
+            </span>
             <span className="font-black text-[#1E3A8A] text-xs">
               {locationData.totalTracked} Guests
             </span>
