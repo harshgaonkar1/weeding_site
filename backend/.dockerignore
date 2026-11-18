@@ -1,0 +1,26 @@
+# Dependency cache
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and sensitive keys
+.env
+.env.*
+!.env.example
+
+# Git metadata
+.git
+.gitignore
+
+# Temporary & build files
+exports/*.xlsx
+exports/*.csv
+.DS_Store
+thumbs.db
+
+# Docker files
+Dockerfile
+DockerFile
+.dockerignore
+

@@ -1,0 +1,84 @@
+services:
+  # ==============================================================
+  # 1. Supabase PostgreSQL Database Service
+  # ==============================================================
+  db:
+    image: supabase/postgres:15.1.1.78
+    container_name: wedding-supabase-db
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      # Default Supabase configuration
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+    volumes:
+      # Persistent database storage
+      - supabase_db_data:/var/lib/postgresql/data
+      # Automatically initialize tables, indexes, and triggers from schema.sql on first startup
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wedding-net
+
+  # ==============================================================
+  # 2. Node.js Backend API & Real-time Socket.IO Service
+  # ==============================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: DockerFile
+    container_name: wedding-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      # Direct connection string for PostgreSQL / Supabase DB container
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-postgres}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-postgrespassword}
+      - DB_NAME=${POSTGRES_DB:-postgres}
+    volumes:
+      # Persist generated Excel sheets outside the container
+      - ./backend/exports:/app/exports
+    networks:
+      - wedding-net
+
+  # ==============================================================
+  # 3. Database Web GUI (Adminer) - Optional Table Manager
+  # Browse tables at: http://localhost:8080 (System: PostgreSQL, Server: db)
+  # ==============================================================
+  adminer:
+    image: adminer:latest
+    container_name: wedding-db-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - wedding-net
+
+volumes:
+  supabase_db_data:
+    name: wedding_supabase_db_data
+
+networks:
+  wedding-net:
+    driver: bridge
