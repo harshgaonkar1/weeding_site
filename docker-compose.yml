@@ -1,12 +1,11 @@
 services:
   # ==============================================================
-  # 1. Node.js Backend API & Real-time Socket.IO Service
-  # Connected directly to PostgreSQL on your DigitalOcean Linux VM
+  # 1. Node.js Backend API & Socket.IO
   # ==============================================================
   backend:
     build:
       context: ./backend
-      dockerfile: DockerFile
+      dockerfile: DockerFile # must match the real filename exactly (case-sensitive)
     container_name: wedding-backend
     restart: unless-stopped
     ports:
@@ -16,51 +15,43 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5000
+      # Overrides any DB setting in backend/.env; "db" is the service name below
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     volumes:
-      # Persist generated Excel sheets outside the container
       - ./backend/exports:/app/exports
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
 
   # ==============================================================
-  # 2. (Optional) Local PostgreSQL Database
-  # Run only if you want a local DB container: docker compose --profile local-db up
+  # 2. PostgreSQL (data stored on the VM in ./pgdata)
   # ==============================================================
   db:
-    image: postgres:15-alpine
-    container_name: wedding-local-db
-    profiles:
-      - local-db
+    image: postgres:17
+    container_name: wedding-db
     restart: unless-stopped
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:5432:5432" # reachable only from the VM itself
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - local_pg_data:/var/lib/postgresql/data
-      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # ==============================================================
-  # 3. (Optional) Database Web GUI (Adminer)
-  # Run with: docker compose --profile tools up
+  # 3. Adminer (database web GUI)
   # ==============================================================
   adminer:
     image: adminer:latest
     container_name: wedding-db-adminer
-    profiles:
-      - tools
-      - local-db
     restart: unless-stopped
     ports:
-      - "8080:8080"
-
-volumes:
-  local_pg_data:
-    name: wedding_local_pg_data
+      - "127.0.0.1:8080:8080" # reachable only from the VM itself
+    depends_on:
+      - db
