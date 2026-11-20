@@ -229,15 +229,7 @@ app.put(
 
       res.json({ success: true, message: "Messages marked as read" });
 
-      if (supabase) {
-        supabase
-          .from("wedding_messages")
-          .update({ is_read: true })
-          .eq("wedding_id", cleanWeddingId)
-          .neq("sender_role", readerRole)
-          .then(() => {})
-          .catch(() => {});
-      }
+      MessageModel.markAsRead(cleanWeddingId, readerRole).catch(() => {});
 
       const io = req.app.get("io");
       if (io) {

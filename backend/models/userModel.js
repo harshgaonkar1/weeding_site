@@ -338,6 +338,23 @@ export const UserModel = {
       }
     }
 
+    // Update in PostgreSQL
+    try {
+      if (data.password && data.password.trim()) {
+        await pool.query(
+          `UPDATE users SET name = $1, email = $2, phone = $3, role = $4, avatar = $5, password = $6, updated_at = NOW() WHERE id = $7`,
+          [updatedName, updatedEmail, updatedPhone, updatedRole, updatedAvatar, data.password.trim(), id]
+        );
+      } else {
+        await pool.query(
+          `UPDATE users SET name = $1, email = $2, phone = $3, role = $4, avatar = $5, updated_at = NOW() WHERE id = $6`,
+          [updatedName, updatedEmail, updatedPhone, updatedRole, updatedAvatar, id]
+        );
+      }
+    } catch (e) {
+      console.warn("PostgreSQL user update note:", e.message);
+    }
+
     // Update in store.users
     if (store && Array.isArray(store.users)) {
       const idx = store.users.findIndex((u) => u.id === id);

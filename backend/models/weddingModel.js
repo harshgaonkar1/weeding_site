@@ -380,26 +380,22 @@ export const WeddingModel = {
     return deleted;
   },
 
-  // 7. Delete wedding and all associated guests & logs from DB & memory
+  // 7. Delete wedding and all associated guests & logs from PostgreSQL & memory
   async delete(id) {
     if (!id) return true;
 
     // 1. Purge from in-memory cache & local store immediately (<1ms)
     this.deleteLocal(id);
 
-    // 2. Direct Supabase parallel purge (fast, resilient, non-blocking)
-    if (supabase) {
-      try {
-        await Promise.allSettled([
-          supabase.from("guest_call_logs").delete().eq("wedding_id", id),
-          supabase.from("guests").delete().eq("wedding_id", id),
-          supabase.from("wedding_messages").delete().eq("wedding_id", id),
-          supabase.from("weddings").delete().eq("id", id),
-        ]);
-        console.log(`✅ Supabase records purged for wedding: ${id}`);
-      } catch (err) {
-        console.warn(`Supabase delete notice for ${id}:`, err.message);
-      }
+    // 2. Direct PostgreSQL cascading purge on DigitalOcean VM
+    try {
+      await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [id]).catch(() => {});
+      await pool.query("DELETE FROM guest_call_logs WHERE wedding_id = $1", [id]).catch(() => {});
+      await pool.query("DELETE FROM guests WHERE wedding_id = $1", [id]).catch(() => {});
+      await pool.query("DELETE FROM weddings WHERE id = $1", [id]);
+      console.log(`✅ [PostgreSQL DB] Records purged for wedding: ${id}`);
+    } catch (err) {
+      console.warn(`PostgreSQL delete notice for wedding ${id}:`, err.message);
     }
 
     return true;

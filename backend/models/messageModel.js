@@ -1,4 +1,4 @@
-import { supabase } from "../Db_connection/supabaseClient.js";
+import pool from "../Db_connection/dbconnection.js";
 import { store, saveMessagesToFile } from "../Db_connection/queries.js";
 import crypto from "crypto";
 
@@ -15,47 +15,38 @@ export const MessageModel = {
 
     const localMsgs = (store.messages || []).filter((m) => idVariants.includes(m.wedding_id));
 
-    // Fetch from Supabase database with 12s safety timeout
-    if (supabase) {
-      try {
-        const queryPromise = supabase
-          .from("wedding_messages")
-          .select("*")
-          .in("wedding_id", idVariants)
-          .order("created_at", { ascending: true });
+    // Fetch from PostgreSQL database on Linux VM
+    try {
+      const { rows } = await pool.query(
+        "SELECT * FROM wedding_messages WHERE wedding_id = ANY($1) ORDER BY created_at ASC",
+        [idVariants]
+      );
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Supabase fetch timeout")), 12000)
-        );
+      if (rows && Array.isArray(rows) && rows.length > 0) {
+        // Merge with any in-memory messages not yet in database
+        const seen = new Set(rows.map((m) => m.id));
+        localMsgs.forEach((lm) => {
+          if (!seen.has(lm.id)) {
+            rows.push(lm);
+            seen.add(lm.id);
+          }
+        });
+        rows.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+        // Sync into local in-memory store so it stays fresh
+        if (!store.messages) store.messages = [];
+        const currentStoreIds = new Set(store.messages.map((m) => m.id));
+        rows.forEach((m) => {
+          if (!currentStoreIds.has(m.id)) {
+            store.messages.push(m);
+          }
+        });
+        saveMessagesToFile();
 
-        if (!error && Array.isArray(data)) {
-          // Merge with any in-memory messages not yet in database
-          const seen = new Set(data.map((m) => m.id));
-          localMsgs.forEach((lm) => {
-            if (!seen.has(lm.id)) {
-              data.push(lm);
-              seen.add(lm.id);
-            }
-          });
-          data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-          // Sync into local in-memory store so it stays fresh
-          if (!store.messages) store.messages = [];
-          const currentStoreIds = new Set(store.messages.map((m) => m.id));
-          data.forEach((m) => {
-            if (!currentStoreIds.has(m.id)) {
-              store.messages.push(m);
-            }
-          });
-          saveMessagesToFile();
-
-          return data;
-        }
-      } catch (err) {
-        console.warn("Notice: Live DB fetch fallback to local store:", err.message);
+        return rows;
       }
+    } catch (err) {
+      console.warn("Notice: PostgreSQL fetch fallback to local store:", err.message);
     }
 
     // Local fallback
@@ -63,32 +54,39 @@ export const MessageModel = {
     return localMsgs;
   },
 
-  // Helper: Background asynchronous Supabase persistence
-  async persistToSupabase(newMsg) {
-    if (!supabase) return;
+  // Helper: Asynchronous PostgreSQL persistence on Linux VM
+  async persistToDatabase(newMsg) {
     try {
-      const { error } = await supabase.from("wedding_messages").insert([newMsg]);
-      if (error) {
-        console.warn("Supabase insert note:", error.message);
-        // If foreign key constraint triggered, auto-create parent wedding row and retry
-        if (error.code === "23503" || error.message?.includes("foreign key")) {
-          await supabase.from("weddings").upsert({
-            id: newMsg.wedding_id,
-            groom_name: "Groom",
-            bride_name: "Bride",
-          });
-          await supabase.from("wedding_messages").insert([newMsg]);
-          console.log(`✅ [DB SUCCESS] Saved to Supabase after auto-creating wedding: ${newMsg.id}`);
+      await pool.query(
+        `INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [newMsg.id, newMsg.wedding_id, newMsg.sender_id, newMsg.sender_name, newMsg.sender_role, newMsg.message, false]
+      );
+      console.log(`✅ [PostgreSQL DB] Message saved: ${newMsg.id}`);
+    } catch (err) {
+      // If foreign key constraint triggered, auto-create parent wedding row and retry
+      if (err.code === "23503" || err.message?.includes("foreign key")) {
+        try {
+          await pool.query(
+            "INSERT INTO weddings (id, groom_name, bride_name) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
+            [newMsg.wedding_id, "Groom", "Bride"]
+          );
+          await pool.query(
+            `INSERT INTO wedding_messages (id, wedding_id, sender_id, sender_name, sender_role, message, is_read, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+            [newMsg.id, newMsg.wedding_id, newMsg.sender_id, newMsg.sender_name, newMsg.sender_role, newMsg.message, false]
+          );
+          console.log(`✅ [PostgreSQL DB] Message saved after auto-creating wedding: ${newMsg.id}`);
+        } catch (retryErr) {
+          console.warn("PostgreSQL retry save note:", retryErr.message);
         }
       } else {
-        console.log(`✅ [DB SUCCESS] Message saved to Supabase: ${newMsg.id}`);
+        console.warn("PostgreSQL message save note:", err.message);
       }
-    } catch (err) {
-      console.warn("Supabase save note:", err.message);
     }
   },
 
-  // 2. Create and permanently save a new message in Supabase
+  // 2. Create and permanently save a new message in PostgreSQL
   async create({ wedding_id, sender_id, sender_name, sender_role, message }) {
     const safeWeddingId = wedding_id || "wedding_01";
     const id = `msg_${crypto.randomUUID()}`;
@@ -111,8 +109,8 @@ export const MessageModel = {
     store.messages.push(newMsg);
     saveMessagesToFile();
 
-    // 2. Persist to Supabase in background (non-blocking, never delays response or triggers 502)
-    this.persistToSupabase(newMsg).catch((err) => {
+    // 2. Persist to PostgreSQL in background
+    this.persistToDatabase(newMsg).catch((err) => {
       console.warn("Background persist note:", err.message);
     });
 
@@ -126,10 +124,10 @@ export const MessageModel = {
       store.messages = store.messages.filter((m) => m.wedding_id !== weddingId);
       saveMessagesToFile();
     }
-    if (supabase) {
-      try {
-        await supabase.from("wedding_messages").delete().eq("wedding_id", weddingId);
-      } catch (e) {}
+    try {
+      await pool.query("DELETE FROM wedding_messages WHERE wedding_id = $1", [weddingId]);
+    } catch (e) {
+      console.warn("PostgreSQL delete messages note:", e.message);
     }
     return true;
   },
@@ -145,24 +143,15 @@ export const MessageModel = {
       });
       saveMessagesToFile();
     }
-    if (supabase) {
-      try {
-        await supabase
-          .from("wedding_messages")
-          .update({ is_read: true })
-          .eq("wedding_id", targetWeddingId)
-          .neq("sender_role", readerRole);
-      } catch (e) {}
+    try {
+      await pool.query(
+        "UPDATE wedding_messages SET is_read = true WHERE wedding_id = $1 AND sender_role != $2",
+        [targetWeddingId, readerRole]
+      );
+    } catch (e) {
+      console.warn("PostgreSQL markAsRead note:", e.message);
     }
     return true;
-  },
-
-  // 5. Unread count for a role
-  async getUnreadCount(weddingId, forRole) {
-    const targetWeddingId = weddingId || "wedding_01";
-    return (store.messages || []).filter(
-      (m) => (!targetWeddingId || m.wedding_id === targetWeddingId) && m.sender_role !== forRole && !m.is_read
-    ).length;
   },
 };
 

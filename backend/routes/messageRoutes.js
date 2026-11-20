@@ -4,7 +4,7 @@ import { WeddingModel } from "../models/weddingModel.js";
 import { GuestModel } from "../models/guestModel.js";
 import { ConciergeBotService } from "../services/conciergeBotService.js";
 import { store } from "../Db_connection/queries.js";
-import { supabase } from "../Db_connection/supabaseClient.js";
+import pool from "../Db_connection/dbconnection.js";
 import { getWeddingRoom, authenticate } from "../socket/chatSocket.js";
 
 const router = express.Router();
@@ -20,32 +20,25 @@ const requireAuth = async (req, res, next) => {
 
 // 0. Diagnostic status route to verify database connection and table readiness
 router.get("/debug/status", async (req, res) => {
-  let supaStatus = "not initialized";
-  let supaError = null;
+  let dbStatus = "disconnected";
+  let dbError = null;
   let sampleCount = 0;
 
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from("wedding_messages").select("id, wedding_id, message, created_at").limit(5);
-      if (error) {
-        supaStatus = "error";
-        supaError = error.message;
-      } else {
-        supaStatus = "connected";
-        sampleCount = data ? data.length : 0;
-      }
-    } catch (e) {
-      supaStatus = "exception";
-      supaError = e.message;
-    }
+  try {
+    const { rows } = await pool.query("SELECT count(*)::int AS count FROM wedding_messages");
+    dbStatus = "connected";
+    sampleCount = rows[0]?.count || 0;
+  } catch (e) {
+    dbStatus = "fallback_or_error";
+    dbError = e.message;
   }
 
   res.json({
     success: true,
-    supabase_configured: Boolean(supabase),
-    supabase_status: supaStatus,
-    supabase_error: supaError,
-    supabase_messages_found: sampleCount,
+    database: "PostgreSQL (DigitalOcean Linux VM)",
+    database_status: dbStatus,
+    database_error: dbError,
+    messages_count: sampleCount,
     in_memory_messages_count: (store.messages || []).length,
   });
 });
