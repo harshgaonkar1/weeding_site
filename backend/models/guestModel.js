@@ -714,33 +714,71 @@ export const GuestModel = {
       seenBatchIds.add(item.id);
     }
 
-    // 1. Supabase batch upsert (chunks of 100 for optimal network performance)
-    if (supabase) {
-      const CHUNK_SIZE = 100;
-      for (let i = 0; i < sanitized.length; i += CHUNK_SIZE) {
-        const chunk = sanitized.slice(i, i + CHUNK_SIZE);
-        try {
-          let { error } = await supabase.from("guests").upsert(chunk, { onConflict: "id" });
-          if (error && (error.message?.includes("relation") || error.code === "PGRST204")) {
-            const strippedChunk = chunk.map(({ relation, ...rest }) => rest);
-            const retryRes = await supabase.from("guests").upsert(strippedChunk, { onConflict: "id" });
-            error = retryRes.error;
-          }
-
-          if (error) {
-            console.warn(`Supabase bulkUpsert chunk notice (${error.message || error.code}). Retrying individual rows...`);
-            for (const singleItem of chunk) {
-              const { error: sErr } = await supabase.from("guests").upsert([singleItem], { onConflict: "id" });
-              if (sErr) {
-                const freshItem = { ...singleItem, id: `guest_${crypto.randomUUID().slice(0, 8)}` };
-                await supabase.from("guests").upsert([freshItem], { onConflict: "id" }).catch(() => {});
-              }
-            }
-          }
-        } catch (supaErr) {
-          console.warn("Supabase bulkUpsert chunk notice:", supaErr.message);
-        }
+    // 1. PostgreSQL batch upsert into DigitalOcean Linux VM
+    try {
+      for (const g of sanitized) {
+        const upsertQuery = `
+          INSERT INTO guests (
+            id, wedding_id, sr_no, guest_name, contact, side, relation, rsvp_status, id_card_received,
+            arrival_date, arrival_time, arrival_location, arrival_flight_train_no,
+            departure_date, departure_time, departure_location, departure_flight_train_no,
+            id_card_copy, special_request, call_count, call_status, last_called_at, last_call_summary,
+            updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW())
+          ON CONFLICT (id) DO UPDATE SET
+            wedding_id = EXCLUDED.wedding_id,
+            sr_no = EXCLUDED.sr_no,
+            guest_name = EXCLUDED.guest_name,
+            contact = EXCLUDED.contact,
+            side = EXCLUDED.side,
+            relation = EXCLUDED.relation,
+            rsvp_status = EXCLUDED.rsvp_status,
+            id_card_received = EXCLUDED.id_card_received,
+            arrival_date = EXCLUDED.arrival_date,
+            arrival_time = EXCLUDED.arrival_time,
+            arrival_location = EXCLUDED.arrival_location,
+            arrival_flight_train_no = EXCLUDED.arrival_flight_train_no,
+            departure_date = EXCLUDED.departure_date,
+            departure_time = EXCLUDED.departure_time,
+            departure_location = EXCLUDED.departure_location,
+            departure_flight_train_no = EXCLUDED.departure_flight_train_no,
+            id_card_copy = EXCLUDED.id_card_copy,
+            special_request = EXCLUDED.special_request,
+            call_count = EXCLUDED.call_count,
+            call_status = EXCLUDED.call_status,
+            last_called_at = EXCLUDED.last_called_at,
+            last_call_summary = EXCLUDED.last_call_summary,
+            updated_at = NOW()
+        `;
+        const values = [
+          g.id,
+          g.wedding_id || "wedding_01",
+          g.sr_no || 1,
+          g.guest_name,
+          g.contact || null,
+          g.side || "Groom",
+          g.relation || null,
+          g.rsvp_status || "Confirmed",
+          g.id_card_received || "No",
+          g.arrival_date || null,
+          g.arrival_time || null,
+          g.arrival_location || null,
+          g.arrival_flight_train_no || null,
+          g.departure_date || null,
+          g.departure_time || null,
+          g.departure_location || null,
+          g.departure_flight_train_no || null,
+          g.id_card_copy || null,
+          g.special_request || null,
+          Number(g.call_count) || 0,
+          g.call_status || "Not Called",
+          g.last_called_at || null,
+          g.last_call_summary || null,
+        ];
+        await pool.query(upsertQuery, values);
       }
+    } catch (err) {
+      console.warn("PostgreSQL bulkUpsert note:", err.message);
     }
 
     // 2. Synchronize store.guests in memory
@@ -976,23 +1014,22 @@ export const GuestModel = {
 
   // 6. Get dashboard statistics (optionally scoped to a wedding)
   async getStatistics(weddingId = null) {
-    // Check live Supabase DB
-    if (supabase) {
-      try {
-        let query = supabase.from("guests").select("*");
-        if (weddingId && weddingId !== "All" && weddingId !== "all") {
-          query = query.eq("wedding_id", weddingId);
-        }
-        const { data, error } = await query;
-        if (data && !error) {
-          return calculateGuestStats(data);
-        }
-      } catch (err) {
-        console.warn("Supabase getStatistics notice:", err.message);
+    try {
+      let sql = "SELECT * FROM guests WHERE 1=1";
+      const params = [];
+      if (weddingId && weddingId !== "All" && weddingId !== "all") {
+        params.push(weddingId);
+        sql += ` AND wedding_id = $${params.length}`;
       }
+      const { rows } = await pool.query(sql, params);
+      if (rows && rows.length > 0) {
+        return calculateGuestStats(rows);
+      }
+    } catch (err) {
+      console.warn("PostgreSQL getStatistics note:", err.message);
     }
 
-    // Pool fallback
+    // In-memory fallback
     let list = store.guests || [];
     if (weddingId && weddingId !== "All" && weddingId !== "all") {
       list = list.filter((g) => g.wedding_id === weddingId);
